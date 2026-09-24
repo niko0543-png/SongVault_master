@@ -1,0 +1,8 @@
+@host = http://localhost:5080
+
+### Liste des morceaux
+GET {{host}}/api/songs
+Accept: application/json
+
+### Document OpenAPI
+GET {{host}}/openapi/v1.json

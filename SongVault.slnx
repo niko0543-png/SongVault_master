@@ -1,0 +1,5 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SongVault.Api/SongVault.Api.csproj" />
+  </Folder>
+</Solution>
