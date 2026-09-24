@@ -1,5 +1,9 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/SongVault.Api/SongVault.Api.csproj" />
+    <Project Path="src/SongVault.Domain/SongVault.Domain.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SongVault.Domain.Tests/SongVault.Domain.Tests.csproj" />
   </Folder>
 </Solution>
