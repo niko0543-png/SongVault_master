@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\SongVault.Domain\SongVault.Domain.csproj" />
+    <ProjectReference Include="..\..\src\SongVault.Application\SongVault.Application.csproj" />
   </ItemGroup>
 
 </Project>

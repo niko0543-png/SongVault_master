@@ -1,13 +1,8 @@
-﻿using SongVault.Application._Temporary;
+﻿using SongVault.Application.Abstractions;
 
 namespace SongVault.Application.Songs.ListSongs;
 
-public sealed class ListSongsHandler(InMemorySongStore store)
+public sealed class ListSongsHandler(ISongRepository songs)
 {
-    public Task<IReadOnlyList<SongDto>> HandleAsync(CancellationToken ct)
-    {
-        ct.ThrowIfCancellationRequested();
-        IReadOnlyList<SongDto> result = [.. store.List().Select(SongDto.From)];
-        return Task.FromResult(result);
-    }
+    public Task<IReadOnlyList<SongDto>> HandleAsync(CancellationToken ct) => songs.ListAsync(ct);
 }

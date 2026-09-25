@@ -1,6 +1,4 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-
-using SongVault.Application._Temporary;
 using SongVault.Application.Songs.CreateSong;
 using SongVault.Application.Songs.GetSong;
 using SongVault.Application.Songs.ListSongs;
@@ -17,7 +15,6 @@ public static class DependencyInjection
         services.AddScoped<GetSongHandler>();
         services.AddScoped<ListSongsHandler>();
 
-        services.AddSingleton<InMemorySongStore>(); // TEMPORAIRE
         return services;
     }
 }

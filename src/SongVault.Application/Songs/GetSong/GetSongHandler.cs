@@ -1,13 +1,12 @@
-﻿using SongVault.Application._Temporary;
+﻿using SongVault.Application.Abstractions;
 
 namespace SongVault.Application.Songs.GetSong;
 
-public sealed class GetSongHandler(InMemorySongStore store)
+public sealed class GetSongHandler(ISongRepository songs)
 {
-    public Task<SongDto?> HandleAsync(Guid id, CancellationToken ct)
+    public async Task<SongDto?> HandleAsync(Guid id, CancellationToken ct)
     {
-        ct.ThrowIfCancellationRequested();
-        var song = store.Find(id);
-        return Task.FromResult(song is null ? null : SongDto.From(song));
+        var song = await songs.GetByIdAsync(id, ct);
+        return song is null ? null : SongDto.From(song);
     }
 }

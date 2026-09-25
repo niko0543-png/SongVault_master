@@ -3,8 +3,10 @@
     <Project Path="src/SongVault.Api/SongVault.Api.csproj" />
     <Project Path="src/SongVault.Application/SongVault.Application.csproj" />
     <Project Path="src/SongVault.Domain/SongVault.Domain.csproj" />
+    <Project Path="src/SongVault.Infrastructure/SongVault.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/SongVault.Application.Tests/SongVault.Application.Tests.csproj" />
     <Project Path="tests/SongVault.Domain.Tests/SongVault.Domain.Tests.csproj" />
   </Folder>
 </Solution>

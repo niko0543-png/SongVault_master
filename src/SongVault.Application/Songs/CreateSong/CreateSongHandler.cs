@@ -1,15 +1,15 @@
-﻿using SongVault.Application._Temporary;
+﻿using SongVault.Application.Abstractions;
 using SongVault.Domain.Songs;
 
 namespace SongVault.Application.Songs.CreateSong;
 
-public sealed class CreateSongHandler(InMemorySongStore store, TimeProvider clock)
+public sealed class CreateSongHandler(ISongRepository songs, IUnitOfWork unitOfWork, TimeProvider clock)
 {
-    public Task<SongDto> HandleAsync(CreateSongCommand command, CancellationToken ct)
+    public async Task<SongDto> HandleAsync(CreateSongCommand command, CancellationToken ct)
     {
-        ct.ThrowIfCancellationRequested();
         var song = Song.Create(command.Title, command.Artist, command.Description, clock.GetUtcNow());
-        store.Add(song);
-        return Task.FromResult(SongDto.From(song));
+        songs.Add(song);
+        await unitOfWork.SaveChangesAsync(ct);
+        return SongDto.From(song);
     }
 }
