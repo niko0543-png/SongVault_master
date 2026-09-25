@@ -6,3 +6,22 @@ Accept: application/json
 
 ### Document OpenAPI
 GET {{host}}/openapi/v1.json
+
+### Créer un morceau
+# @name create
+POST {{host}}/api/songs
+Content-Type: application/json
+
+{ "title": "Nocturne en ré mineur", "artist": "SongVault Band", "description": "Ballade piano-voix" }
+
+### Relire le morceau créé
+GET {{host}}/api/songs/{{create.response.body.$.id}}
+
+### Titre manquant → 400 (validation [ApiController])
+POST {{host}}/api/songs
+Content-Type: application/json
+
+{ "artist": "Sans titre" }
+
+### Id inconnu → 404
+GET {{host}}/api/songs/00000000-0000-0000-0000-000000000001
