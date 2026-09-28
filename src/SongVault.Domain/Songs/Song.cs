@@ -4,10 +4,12 @@ namespace SongVault.Domain.Songs;
 
 public sealed class Song
 {
+    private readonly List<SongVersion> _versions = [];
     public const int TitleMaxLength = 200;
     public const int ArtistMaxLength = 200;
     public const int DescriptionMaxLength = 2000;
-
+    public int LastVersionNumber { get; private set; }
+    public IReadOnlyCollection<SongVersion> Versions => _versions.AsReadOnly();
     private Song() { } // réservé à EF Core (jeudi) ; le reste du code passe par Create
 
     public Guid Id { get; private set; }
@@ -30,9 +32,9 @@ public sealed class Song
     // Tout est validé AVANT la moindre affectation : un objet n'est jamais laissé à moitié modifié.
     private void ApplyDetails(string title, string? artist, string? description, DateTimeOffset now)
     {
-        var cleanTitle = Required(title, TitleMaxLength, "titre");
-        var cleanArtist = Optional(artist, ArtistMaxLength, "artiste");
-        var cleanDescription = Optional(description, DescriptionMaxLength, "description");
+        var cleanTitle = Text.Required(title, TitleMaxLength, "titre");
+        var cleanArtist = Text.Optional(artist, ArtistMaxLength, "artiste");
+        var cleanDescription = Text.Optional(description, DescriptionMaxLength, "description");
 
         Title = cleanTitle;
         Artist = cleanArtist;
@@ -40,16 +42,15 @@ public sealed class Song
         UpdatedAt = now;
     }
 
-    private static string Required(string? value, int maxLength, string field)
-        => Optional(value, maxLength, field)
-           ?? throw new DomainException($"Le champ {field} est obligatoire.");
-
-    private static string? Optional(string? value, int maxLength, string field)
+    public SongVersion AddVersion(string title, SongVersionStatus status, string? notes, string? lyrics, DateTimeOffset now)
     {
-        var trimmed = value?.Trim();
-        if (string.IsNullOrEmpty(trimmed)) return null;
-        if (trimmed.Length > maxLength)
-            throw new DomainException($"Le champ {field} ne peut pas dépasser {maxLength} caractères.");
-        return trimmed;
+        var number = LastVersionNumber + 1;
+        var version = SongVersion.Create(Id, number, title, status, notes, lyrics, now); // valide AVANT d'incrémenter
+        LastVersionNumber = number;
+        _versions.Add(version);
+        UpdatedAt = now;
+        return version;
     }
+
+    public SongVersion? FindVersion(Guid versionId) => _versions.SingleOrDefault(v => v.Id == versionId);
 }

@@ -6,6 +6,7 @@
     <Project Path="src/SongVault.Infrastructure/SongVault.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/SongVault.Api.Tests/SongVault.Api.Tests.csproj" />
     <Project Path="tests/SongVault.Application.Tests/SongVault.Application.Tests.csproj" />
     <Project Path="tests/SongVault.Domain.Tests/SongVault.Domain.Tests.csproj" />
   </Folder>

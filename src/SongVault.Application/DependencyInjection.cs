@@ -5,6 +5,7 @@ using SongVault.Application.Songs.DeleteSong;
 using SongVault.Application.Songs.GetSong;
 using SongVault.Application.Songs.ListSongs;
 using SongVault.Application.Songs.UpdateSong;
+using SongVault.Application.Versions;
 
 namespace SongVault.Application;
 
@@ -19,6 +20,10 @@ public static class DependencyInjection
         services.AddScoped<ListSongsHandler>();
         services.AddScoped<UpdateSongHandler>();
         services.AddScoped<DeleteSongHandler>();
+        services.AddScoped<CreateSongVersionHandler>();
+        services.AddScoped<ListSongVersionsHandler>();
+        services.AddScoped<GetSongVersionHandler>();
+        services.AddScoped<UpdateSongVersionHandler>();
 
         return services;
     }

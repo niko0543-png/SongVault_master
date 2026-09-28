@@ -3,6 +3,7 @@
 using SongVault.Application.Abstractions;
 using SongVault.Application.Common;
 using SongVault.Application.Songs;
+using SongVault.Application.Versions;
 using SongVault.Domain.Songs;
 
 namespace SongVault.Infrastructure.Persistence.Repositories;
@@ -30,4 +31,25 @@ internal sealed class SongRepository(SongVaultDbContext db) : ISongRepository
 
         return new PagedResult<SongDto>(items, page, pageSize, total);
     }
+
+    public Task<Song?> GetWithVersionAsync(Guid songId, Guid versionId, CancellationToken ct)
+    => db.Songs
+        .Include(s => s.Versions.Where(v => v.Id == versionId))   // Include filtré : UNE seule version chargée
+        .FirstOrDefaultAsync(s => s.Id == songId, ct);
+
+    public Task<bool> ExistsAsync(Guid songId, CancellationToken ct)
+        => db.Songs.AnyAsync(s => s.Id == songId, ct);
+
+    public async Task<IReadOnlyList<SongVersionSummaryDto>> ListVersionsAsync(Guid songId, CancellationToken ct)
+        => await db.Set<SongVersion>().AsNoTracking()
+            .Where(v => v.SongId == songId)
+            .OrderBy(v => v.Number)
+            .Select(v => new SongVersionSummaryDto(v.Id, v.Number, v.Title, v.Status, v.CreatedAt))
+            .ToListAsync(ct);
+
+    public Task<SongVersionDto?> GetVersionAsync(Guid songId, Guid versionId, CancellationToken ct)
+        => db.Set<SongVersion>().AsNoTracking()
+            .Where(v => v.SongId == songId && v.Id == versionId)
+            .Select(v => new SongVersionDto(v.Id, v.SongId, v.Number, v.Title, v.Status, v.Notes, v.Lyrics, v.CreatedAt, v.UpdatedAt))
+            .FirstOrDefaultAsync(ct);
 }

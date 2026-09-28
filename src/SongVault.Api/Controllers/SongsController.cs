@@ -28,10 +28,7 @@ public sealed class SongsController : ControllerBase
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<SongResponse>> GetById(
         Guid id, [FromServices] GetSongHandler handler, CancellationToken ct)
-    {
-        var song = await handler.HandleAsync(id, ct);
-        return song is null ? NotFound() : Ok(SongResponse.From(song));
-    }
+        => Ok(SongResponse.From(await handler.HandleAsync(id, ct)));
 
     [HttpPost]
     public async Task<ActionResult<SongResponse>> Create(
@@ -45,23 +42,15 @@ public sealed class SongsController : ControllerBase
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> Update(
     Guid id, UpdateSongRequest request, [FromServices] UpdateSongHandler handler, CancellationToken ct)
-    {
-        try
-        {
-            await handler.HandleAsync(new UpdateSongCommand(id, request.Title, request.Artist, request.Description), ct);
-            return NoContent();
-        }
-        catch (NotFoundException) { return NotFound(); }   // TEMPORAIRE : supprimé demain
+    { 
+        await handler.HandleAsync(new UpdateSongCommand(id, request.Title, request.Artist, request.Description), ct);
+        return NoContent();
     }
 
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, [FromServices] DeleteSongHandler handler, CancellationToken ct)
     {
-        try
-        {
-            await handler.HandleAsync(id, ct);
-            return NoContent();
-        }
-        catch (NotFoundException) { return NotFound(); }   // TEMPORAIRE : supprimé demain
+        await handler.HandleAsync(id, ct);
+        return NoContent();
     }
 }
