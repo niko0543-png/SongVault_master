@@ -25,3 +25,18 @@ Content-Type: application/json
 
 ### Id inconnu → 404
 GET {{host}}/api/songs/00000000-0000-0000-0000-000000000001
+
+### Liste paginée
+GET {{host}}/api/songs?page=1&pageSize=2
+
+### pageSize hors bornes → 400
+GET {{host}}/api/songs?pageSize=500
+
+### Modifier le morceau créé plus haut → 204
+PUT {{host}}/api/songs/{{create.response.body.$.id}}
+Content-Type: application/json
+
+{ "title": "Nocturne en ré mineur (arrangement)", "artist": "SongVault Band", "description": "Version cordes" }
+
+### Supprimer → 204 (un second appel → 404)
+DELETE {{host}}/api/songs/{{create.response.body.$.id}}

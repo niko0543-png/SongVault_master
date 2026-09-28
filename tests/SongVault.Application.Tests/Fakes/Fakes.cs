@@ -1,4 +1,5 @@
 ﻿using SongVault.Application.Abstractions;
+using SongVault.Application.Common;
 using SongVault.Application.Songs;
 using SongVault.Domain.Songs;
 
@@ -14,8 +15,14 @@ internal sealed class FakeSongRepository : ISongRepository
     public Task<Song?> GetByIdAsync(Guid id, CancellationToken ct)
         => Task.FromResult(Songs.SingleOrDefault(s => s.Id == id));
 
-    public Task<IReadOnlyList<SongDto>> ListAsync(CancellationToken ct)
-        => Task.FromResult<IReadOnlyList<SongDto>>([.. Songs.Select(SongDto.From)]);
+    public (int Page, int PageSize)? LastListRequest { get; private set; }
+
+    public Task<PagedResult<SongDto>> ListAsync(int page, int pageSize, CancellationToken ct)
+    {
+        LastListRequest = (page, pageSize);
+        IReadOnlyList<SongDto> items = [.. Songs.Skip((page - 1) * pageSize).Take(pageSize).Select(SongDto.From)];
+        return Task.FromResult(new PagedResult<SongDto>(items, page, pageSize, Songs.Count));
+    }
 }
 
 internal sealed class FakeUnitOfWork : IUnitOfWork
