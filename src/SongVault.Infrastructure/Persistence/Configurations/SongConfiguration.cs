@@ -21,5 +21,6 @@ internal sealed class SongConfiguration : IEntityTypeConfiguration<Song>
        .HasForeignKey(v => v.SongId)
        .OnDelete(DeleteBehavior.Cascade);
         builder.Navigation(s => s.Versions).UsePropertyAccessMode(PropertyAccessMode.Field);
+        builder.Property<byte[]>("RowVersion").IsRowVersion();
     }
 }
