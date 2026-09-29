@@ -40,3 +40,39 @@ Content-Type: application/json
 
 ### Supprimer → 204 (un second appel → 404)
 DELETE {{host}}/api/songs/{{create.response.body.$.id}}
+
+
+
+
+
+### Créer un morceau pour les versions
+# @name song
+POST {{host}}/api/songs
+Content-Type: application/json
+
+{ "title": "Lumière froide", "artist": "SongVault Band" }
+
+### Version (à exécuter 3 fois → numéros 1, 2, 3)
+# @name version
+POST {{host}}/api/songs/{{song.response.body.$.id}}/versions
+Content-Type: application/json
+
+{ "title": "Maquette guitare-voix", "status": "Demo", "notes": "Capo 2" }
+
+### Lister les versions
+GET {{host}}/api/songs/{{song.response.body.$.id}}/versions
+
+### Détail
+GET {{host}}/api/songs/{{song.response.body.$.id}}/versions/{{version.response.body.$.id}}
+
+### Modifier le statut → 204
+PUT {{host}}/api/songs/{{song.response.body.$.id}}/versions/{{version.response.body.$.id}}
+Content-Type: application/json
+
+{ "title": "Maquette guitare-voix", "status": "Rehearsal", "notes": "Capo 2, tempo 92" }
+
+### Statut inconnu → 400
+POST {{host}}/api/songs/{{song.response.body.$.id}}/versions
+Content-Type: application/json
+
+{ "title": "X", "status": "Mastering" }

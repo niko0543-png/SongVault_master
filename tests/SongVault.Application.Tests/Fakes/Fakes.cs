@@ -1,5 +1,6 @@
 ﻿using SongVault.Application.Abstractions;
 using SongVault.Application.Common;
+using SongVault.Application.Common.Exceptions;
 using SongVault.Application.Songs;
 using SongVault.Application.Versions;
 using SongVault.Domain.Songs;
@@ -52,11 +53,17 @@ internal sealed class FakeUnitOfWork : IUnitOfWork
 {
     public int SaveCount { get; private set; }
 
+    public int FailuresToSimulate { get; set; }
+    public int DiscardCount { get; private set; }
+
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         SaveCount++;
+        if (FailuresToSimulate-- > 0) throw new ConcurrencyConflictException();
         return Task.FromResult(1);
     }
+
+    public void DiscardChanges() => DiscardCount++;
 }
 
 internal sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
