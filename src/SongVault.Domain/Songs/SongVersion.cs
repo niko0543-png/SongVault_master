@@ -1,9 +1,13 @@
 ﻿using SongVault.Domain.Common;
+using SongVault.Domain.Files;
 
 namespace SongVault.Domain.Songs;
 
 public sealed class SongVersion
 {
+    private readonly List<SongFile> _files = [];
+    public IReadOnlyCollection<SongFile> Files => _files.AsReadOnly();
+
     public const int TitleMaxLength = 200;
     public const int NotesMaxLength = 4000;
     public const int LyricsMaxLength = 20000;
@@ -45,5 +49,20 @@ public sealed class SongVersion
         Notes = cleanNotes;
         Lyrics = cleanLyrics;
         UpdatedAt = now;
+    }
+
+    public SongFile AddFile(string originalFileName, string storageKey, string contentType,
+    long sizeBytes, SongFileType fileType, DateTimeOffset now)
+    {
+        var file = SongFile.Create(Id, originalFileName, storageKey, contentType, sizeBytes, fileType, now);
+        _files.Add(file);
+        return file;
+    }
+
+    public SongFile? RemoveFile(Guid fileId)
+    {
+        var file = _files.SingleOrDefault(f => f.Id == fileId);
+        if (file is not null) _files.Remove(file);
+        return file;
     }
 }

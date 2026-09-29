@@ -2,6 +2,7 @@
 
 using SongVault.Application.Abstractions;
 using SongVault.Application.Common;
+using SongVault.Application.Files;
 using SongVault.Application.Songs;
 using SongVault.Application.Versions;
 using SongVault.Domain.Songs;
@@ -33,9 +34,10 @@ internal sealed class SongRepository(SongVaultDbContext db) : ISongRepository
     }
 
     public Task<Song?> GetWithVersionAsync(Guid songId, Guid versionId, CancellationToken ct)
-    => db.Songs
-        .Include(s => s.Versions.Where(v => v.Id == versionId))   // Include filtré : UNE seule version chargée
-        .FirstOrDefaultAsync(s => s.Id == songId, ct);
+        => db.Songs
+            .Include(s => s.Versions.Where(v => v.Id == versionId))
+                .ThenInclude(v => v.Files)
+            .FirstOrDefaultAsync(s => s.Id == songId, ct);
 
     public Task<bool> ExistsAsync(Guid songId, CancellationToken ct)
         => db.Songs.AnyAsync(s => s.Id == songId, ct);
@@ -50,6 +52,25 @@ internal sealed class SongRepository(SongVaultDbContext db) : ISongRepository
     public Task<SongVersionDto?> GetVersionAsync(Guid songId, Guid versionId, CancellationToken ct)
         => db.Set<SongVersion>().AsNoTracking()
             .Where(v => v.SongId == songId && v.Id == versionId)
-            .Select(v => new SongVersionDto(v.Id, v.SongId, v.Number, v.Title, v.Status, v.Notes, v.Lyrics, v.CreatedAt, v.UpdatedAt))
+            .Select(v => new SongVersionDto(v.Id, v.SongId, v.Number, v.Title, v.Status, v.Notes, v.Lyrics,
+                v.CreatedAt, v.UpdatedAt,
+                v.Files.OrderBy(f => f.UploadedAt)
+                       .Select(f => new SongFileDto(f.Id, f.OriginalFileName, f.ContentType, f.SizeBytes, f.FileType, f.UploadedAt))
+                       .ToList()))
             .FirstOrDefaultAsync(ct);
+
+    public Task<StoredFileInfo?> GetFileAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct)
+    => db.Set<SongVersion>().AsNoTracking()
+        .Where(v => v.SongId == songId && v.Id == versionId)
+        .SelectMany(v => v.Files)
+        .Where(f => f.Id == fileId)
+        .Select(f => new StoredFileInfo(f.StorageKey, f.ContentType, f.OriginalFileName))
+        .FirstOrDefaultAsync(ct);
+
+    public async Task<IReadOnlyList<string>> ListStorageKeysAsync(Guid songId, CancellationToken ct)
+        => await db.Set<SongVersion>().AsNoTracking()
+            .Where(v => v.SongId == songId)
+            .SelectMany(v => v.Files)
+            .Select(f => f.StorageKey)
+            .ToListAsync(ct);
 }

@@ -14,6 +14,7 @@ public sealed class SongCrudHandlersTests
     private readonly FakeSongRepository _songs = new();
     private readonly FakeUnitOfWork _uow = new();
     private readonly FixedTimeProvider _clock = new(Now.AddHours(1));
+    private readonly FakeFileStorageService _storage = new();
 
     private Song ExistingSong()
     {
@@ -60,7 +61,7 @@ public sealed class SongCrudHandlersTests
     {
         var song = ExistingSong();
 
-        await new DeleteSongHandler(_songs, _uow).HandleAsync(song.Id, CancellationToken.None);
+        await new DeleteSongHandler(_songs, _uow, _storage).HandleAsync(song.Id, CancellationToken.None);
 
         Assert.Empty(_songs.Songs);
         Assert.Equal(1, _uow.SaveCount);
@@ -70,7 +71,7 @@ public sealed class SongCrudHandlersTests
     public async Task Delete_morceau_absent_leve_NotFound()
     {
         await Assert.ThrowsAsync<NotFoundException>(
-            () => new DeleteSongHandler(_songs, _uow).HandleAsync(Guid.NewGuid(), CancellationToken.None));
+            () => new DeleteSongHandler(_songs, _uow, _storage).HandleAsync(Guid.NewGuid(), CancellationToken.None));
     }
 
     [Theory]

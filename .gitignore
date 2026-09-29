@@ -6,6 +6,10 @@
 # dotenv files
 .env
 
+# Data directories
+.data/
+samples/
+
 # User-specific files
 *.rsuser
 *.suo

@@ -1,4 +1,5 @@
 ﻿using SongVault.Application.Common;
+using SongVault.Application.Files;
 using SongVault.Application.Songs;
 using SongVault.Application.Versions;
 using SongVault.Domain.Songs;
@@ -15,4 +16,6 @@ public interface ISongRepository
     Task<bool> ExistsAsync(Guid songId, CancellationToken ct);
     Task<IReadOnlyList<SongVersionSummaryDto>> ListVersionsAsync(Guid songId, CancellationToken ct);
     Task<SongVersionDto?> GetVersionAsync(Guid songId, Guid versionId, CancellationToken ct);
+    Task<StoredFileInfo?> GetFileAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct);
+    Task<IReadOnlyList<string>> ListStorageKeysAsync(Guid songId, CancellationToken ct);
 }

@@ -12,10 +12,13 @@ public sealed class SongVaultApiFactory : WebApplicationFactory<Program>, IAsync
     private readonly MsSqlContainer _sql = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-latest")
         .Build();
 
+    private readonly string _filesRoot = Path.Combine(Path.GetTempPath(), "songvault-tests", Guid.NewGuid().ToString("N"));
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseEnvironment("Testing");   // pas de user-secrets, pas d'OpenAPI
+        builder.UseEnvironment("Testing");
         builder.UseSetting("ConnectionStrings:SongVault", _sql.GetConnectionString());
+        builder.UseSetting("FileStorage:RootPath", _filesRoot);
     }
 
     private async Task StartAsync()
@@ -30,6 +33,7 @@ public sealed class SongVaultApiFactory : WebApplicationFactory<Program>, IAsync
     public Task InitializeAsync() => StartAsync();
     async Task IAsyncLifetime.DisposeAsync()
     {
+        if (Directory.Exists(_filesRoot)) Directory.Delete(_filesRoot, recursive: true);
         await _sql.DisposeAsync();
         await base.DisposeAsync();
     }

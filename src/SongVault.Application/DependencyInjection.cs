@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 
+using SongVault.Application.Files;
 using SongVault.Application.Songs.CreateSong;
 using SongVault.Application.Songs.DeleteSong;
 using SongVault.Application.Songs.GetSong;
@@ -24,6 +25,10 @@ public static class DependencyInjection
         services.AddScoped<ListSongVersionsHandler>();
         services.AddScoped<GetSongVersionHandler>();
         services.AddScoped<UpdateSongVersionHandler>();
+        services.AddScoped<DeleteSongHandler>();
+        services.AddScoped<DeleteSongFileHandler>();
+        services.AddScoped<DownloadSongFileHandler>();
+        services.AddScoped<UploadSongFileHandler>();
 
         return services;
     }

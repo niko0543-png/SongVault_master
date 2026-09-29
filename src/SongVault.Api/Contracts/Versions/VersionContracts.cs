@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
+using SongVault.Api.Contracts.Files;
 using SongVault.Application.Versions;
 using SongVault.Domain.Songs;
 
@@ -19,10 +20,10 @@ public sealed record UpdateSongVersionRequest(
 
 public sealed record SongVersionResponse(
     Guid Id, Guid SongId, int Number, string Title, SongVersionStatus Status,
-    string? Notes, string? Lyrics, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt)
+    string? Notes, string? Lyrics, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, IReadOnlyList<SongFileResponse> Files)
 {
     public static SongVersionResponse From(SongVersionDto d) =>
-        new(d.Id, d.SongId, d.Number, d.Title, d.Status, d.Notes, d.Lyrics, d.CreatedAt, d.UpdatedAt);
+        new(d.Id, d.SongId, d.Number, d.Title, d.Status, d.Notes, d.Lyrics, d.CreatedAt, d.UpdatedAt, [.. d.Files.Select(SongFileResponse.From)]);
 }
 
 public sealed record SongVersionSummaryResponse(Guid Id, int Number, string Title, SongVersionStatus Status, DateTimeOffset CreatedAt)

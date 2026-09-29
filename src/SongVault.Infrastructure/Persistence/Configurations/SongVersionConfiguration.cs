@@ -16,5 +16,10 @@ internal sealed class SongVersionConfiguration : IEntityTypeConfiguration<SongVe
         builder.Property(v => v.Notes).HasMaxLength(SongVersion.NotesMaxLength);
         // Lyrics : pas de HasMaxLength → nvarchar(max) ; la limite est garantie par le domaine
         builder.HasIndex(v => new { v.SongId, v.Number }).IsUnique();
+        builder.HasMany(v => v.Files)
+       .WithOne()
+       .HasForeignKey(f => f.SongVersionId)
+       .OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(v => v.Files).UsePropertyAccessMode(PropertyAccessMode.Field);
     }
 }

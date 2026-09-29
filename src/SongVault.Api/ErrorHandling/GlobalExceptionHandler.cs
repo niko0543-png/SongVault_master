@@ -19,6 +19,8 @@ internal sealed class GlobalExceptionHandler(
             NotFoundException => (StatusCodes.Status404NotFound, "Ressource introuvable"),
             ConcurrencyConflictException => (StatusCodes.Status409Conflict, "Conflit de modification"),
             BadHttpRequestException bad => (bad.StatusCode, "Requête invalide"),
+            UnsupportedFileException => (StatusCodes.Status400BadRequest, "Fichier refusé"),
+            FileTooLargeException => (StatusCodes.Status413PayloadTooLarge, "Fichier trop volumineux"),
             _ => (StatusCodes.Status500InternalServerError, "Une erreur interne est survenue"),
         };
 
