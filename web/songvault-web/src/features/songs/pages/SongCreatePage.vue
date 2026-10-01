@@ -7,8 +7,10 @@ import type { SongInput } from '../types'
 import { useAsyncAction } from '@/shared/composables/useAsyncAction'
 import { mapProblemErrors } from '@/shared/api/mapProblemErrors'
 import { getErrorMessage } from '@/shared/api/ApiError'
+import { useSongsStore } from '../stores/songsStore'
 
 const router = useRouter()
+const store = useSongsStore()
 const { isLoading, error, run } = useAsyncAction(songsApi.create)
 
 const fieldErrors = computed(() => mapProblemErrors(error.value))
@@ -19,7 +21,10 @@ const globalError = computed(() =>
 
 async function onSubmit(input: SongInput) {
   const song = await run(input)
-  if (song) await router.push({ name: 'song-detail', params: { songId: song.id } })
+  if (song) {
+    store.upsert(song)
+    await router.push({ name: 'song-detail', params: { songId: song.id } })
+  }
 }
 </script>
 

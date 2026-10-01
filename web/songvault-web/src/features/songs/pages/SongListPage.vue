@@ -1,50 +1,39 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { songsApi } from '../api/songsApi'
-import type { Song } from '../types'
+import { onMounted } from 'vue'
+import { RouterLink, useRouter } from 'vue-router'
+import { storeToRefs } from 'pinia'
+import { useSongsStore } from '../stores/songsStore'
 import SongCard from '../components/SongCard.vue'
 import LoadingState from '@/shared/components/LoadingState.vue'
 import EmptyState from '@/shared/components/EmptyState.vue'
 import ErrorState from '@/shared/components/ErrorState.vue'
 import { getErrorMessage } from '@/shared/api/ApiError'
-import { useRouter } from 'vue-router'
 
-const songs = ref<Song[]>([])
-const isLoading = ref(true)
-const error = ref<unknown>(null)
+const store = useSongsStore()
+const { items, isLoading, isLoaded, error } = storeToRefs(store)   // réactif
 const router = useRouter()
-
-async function load() {
-  isLoading.value = true
-  error.value = null
-  try {
-    songs.value = (await songsApi.list()).items
-  } catch (e) {
-    error.value = e
-  } finally {
-    isLoading.value = false
-  }
-}
 
 function onSelect(id: string) {
   router.push({ name: 'song-detail', params: { songId: id } })
 }
 
-onMounted(load)
+onMounted(() => store.fetchList())
 </script>
 
 <template>
   <section>
-  <header class="page-header">
-    <h1>Morceaux</h1>
-    <RouterLink :to="{ name: 'song-create' }">+ Nouveau morceau</RouterLink>
-  </header>
+    <header class="page-header">
+      <h1>Morceaux</h1>
+      <RouterLink :to="{ name: 'song-create' }">+ Nouveau morceau</RouterLink>
+    </header>
 
-    <LoadingState v-if="isLoading" />
-    <ErrorState v-else-if="error" :message="getErrorMessage(error)" @retry="load" />
-    <EmptyState v-else-if="songs.length === 0" message="Aucun morceau pour l'instant." />
+    <LoadingState v-if="isLoading || (!isLoaded && !error)" />
+    <ErrorState v-else-if="error" :message="getErrorMessage(error)" @retry="store.fetchList(true)" />
+    <EmptyState v-else-if="items.length === 0" message="Aucun morceau pour l'instant.">
+      <RouterLink :to="{ name: 'song-create' }">Créer le premier</RouterLink>
+    </EmptyState>
     <ul v-else class="song-list">
-      <li v-for="song in songs" :key="song.id">
+      <li v-for="song in items" :key="song.id">
         <SongCard :song="song" @select="onSelect" />
       </li>
     </ul>
