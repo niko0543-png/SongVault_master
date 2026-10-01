@@ -35,9 +35,10 @@ onMounted(load)
 
 <template>
   <section>
-    <header class="page-header">
-      <h1>Morceaux</h1>
-    </header>
+  <header class="page-header">
+    <h1>Morceaux</h1>
+    <RouterLink :to="{ name: 'song-create' }">+ Nouveau morceau</RouterLink>
+  </header>
 
     <LoadingState v-if="isLoading" />
     <ErrorState v-else-if="error" :message="getErrorMessage(error)" @retry="load" />

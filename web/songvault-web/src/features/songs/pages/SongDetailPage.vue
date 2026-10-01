@@ -10,6 +10,8 @@ import LoadingState from '@/shared/components/LoadingState.vue'
 import ErrorState from '@/shared/components/ErrorState.vue'
 import { ApiError, getErrorMessage } from '@/shared/api/ApiError'
 import { formatDate } from '@/shared/utils/format'
+import { useRouter } from 'vue-router'
+import { useAsyncAction } from '@/shared/composables/useAsyncAction'
 
 const props = defineProps<{ songId: string }>()
 
@@ -17,6 +19,8 @@ const song = ref<Song | null>(null)
 const versions = ref<SongVersionSummary[]>([])
 const isLoading = ref(true)
 const error = ref<unknown>(null)
+const router = useRouter()
+const deletion = useAsyncAction(songsApi.remove)
 
 const isNotFound = computed(() => error.value instanceof ApiError && error.value.status === 404)
 
@@ -31,6 +35,13 @@ async function load(id: string) {
   } finally {
     isLoading.value = false
   }
+}
+
+async function onDelete() {
+  if (!song.value) return
+  if (!window.confirm(`Supprimer « ${song.value.title} », ses versions et ses fichiers ? Cette action est définitive.`)) return
+  await deletion.run(song.value.id)
+  if (!deletion.error.value) await router.push({ name: 'songs' })
 }
 
 // immediate : charge au premier affichage ET à chaque changement de paramètre
@@ -53,8 +64,12 @@ watch(() => props.songId, load, { immediate: true })
           <h1>{{ song.title }}</h1>
           <p v-if="song.artist" class="muted">{{ song.artist }}</p>
         </div>
-        <!-- boutons Modifier / Supprimer ajoutés demain -->
+        <div class="actions">
+          <RouterLink :to="{ name: 'song-edit', params: { songId: song.id } }">Modifier</RouterLink>
+          <button type="button" class="danger" :disabled="deletion.isLoading.value" @click="onDelete">Supprimer</button>
+        </div>
       </header>
+      <p v-if="deletion.error.value" class="field-error" role="alert">{{ getErrorMessage(deletion.error.value) }}</p>
       <p v-if="song.description">{{ song.description }}</p>
       <p class="muted"><small>Créé le {{ formatDate(song.createdAt) }} · modifié le {{ formatDate(song.updatedAt) }}</small></p>
 
