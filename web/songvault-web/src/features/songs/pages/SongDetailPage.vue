@@ -113,6 +113,9 @@ async function onDelete() {
       <p class="muted"><small>Créé le {{ formatDate(song.createdAt) }} · modifié le {{ formatDate(song.updatedAt) }}</small></p>
 
       <h2>Versions</h2>
+      <RouterLink v-if="versions.length >= 2" :to="{ name: 'version-compare', params: { songId: song.id } }">
+        Comparer des versions
+      </RouterLink>
       <p v-if="lastCreated" class="muted" role="status">Version v{{ lastCreated }} créée.</p>
       <p v-if="statusError" class="field-error" role="alert">{{ statusError }}</p>
       <VersionTimeline :song-id="song.id" :versions="versions" :saving-id="savingId" @change-status="onChangeStatus" />

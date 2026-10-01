@@ -26,5 +26,11 @@ export default createRouter({
       component: () => import('@/features/versions/pages/VersionDetailPage.vue'),
       props: true,
     },
+    {
+      path: '/songs/:songId/compare',
+      name: 'version-compare',
+      component: () => import('@/features/versions/pages/VersionComparePage.vue'),
+      props: true,
+    },
   ],
 })
