@@ -3,10 +3,9 @@ import { request } from '../httpClient'
 import { ApiError } from '../ApiError'
 
 function mockFetch(response: Response | Error) {
-  const fn =
-    response instanceof Error
-      ? vi.fn<() => Promise<never>>().mockRejectedValue(response)
-      : vi.fn<() => Promise<Response>>().mockResolvedValue(response)
+  const fn = vi.fn<typeof fetch>()          // le faux a exactement la signature de fetch
+  if (response instanceof Error) fn.mockRejectedValue(response)
+  else fn.mockResolvedValue(response)
   vi.stubGlobal('fetch', fn)
   return fn
 }
@@ -29,15 +28,17 @@ describe('request', () => {
     )
   })
 
-  it('envoie le corps en JSON', async () => {
-    const fetchMock = mockFetch(json({ id: '1' }, 201))
+it('envoie le corps en JSON', async () => {
+  const fetchMock = mockFetch(json({ id: '1' }, 201))
 
-    await request('/songs', { method: 'POST', body: { title: 'A' } })
+  await request('/songs', { method: 'POST', body: { title: 'A' } })
 
-    const init = fetchMock.mock.calls[0]![1] as RequestInit
-    expect(init.body).toBe('{"title":"A"}')
-    expect((init.headers as Record<string, string>)['Content-Type']).toBe('application/json')
-  })
+  const init = fetchMock.mock.calls[0]?.[1]
+  if (!init) throw new Error("fetch aurait dû recevoir des options")   // garde : init est RequestInit ensuite
+
+  expect(init.body).toBe('{"title":"A"}')
+  expect((init.headers as Record<string, string>)['Content-Type']).toBe('application/json')
+})
 
   it('transforme un ProblemDetails 404 en ApiError', async () => {
     mockFetch(
