@@ -76,3 +76,6 @@ POST {{host}}/api/songs/{{song.response.body.$.id}}/versions
 Content-Type: application/json
 
 { "title": "X", "status": "Mastering" }
+
+### Politique de fichiers
+GET {{host}}/api/files/policy

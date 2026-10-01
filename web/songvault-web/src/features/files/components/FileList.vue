@@ -3,7 +3,8 @@ import type { SongFile, SongFileType } from '../types'
 import { filesApi } from '../api/filesApi'
 import { formatDate, formatFileSize } from '@/shared/utils/format'
 
-defineProps<{ songId: string; versionId: string; files: SongFile[] }>()
+defineProps<{ songId: string; versionId: string; files: SongFile[]; busyId?: string | null }>()
+defineEmits<{ delete: [file: SongFile] }>()
 
 const icons: Record<SongFileType, string> = { Audio: '🎵', Tablature: '🎸', Document: '📄' }
 </script>
@@ -19,6 +20,7 @@ const icons: Record<SongFileType, string> = { Audio: '🎵', Tablature: '🎸', 
       </div>
       <div class="file-actions">
         <a :href="filesApi.contentUrl(songId, versionId, file.id, true)" download>Télécharger</a>
+        <button type="button" class="secondary" :disabled="busyId === file.id" @click="$emit('delete', file)">Supprimer</button>
       </div>
     </li>
   </ul>

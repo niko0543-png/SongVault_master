@@ -12,14 +12,18 @@ import ErrorState from '@/shared/components/ErrorState.vue'
 import { ApiError, getErrorMessage } from '@/shared/api/ApiError'
 import { mapProblemErrors } from '@/shared/api/mapProblemErrors'
 import { formatDate } from '@/shared/utils/format'
+import { ref } from 'vue'   // à ajouter à l'import existant
+import FileUploader from '@/features/files/components/FileUploader.vue'
+import { filesApi } from '@/features/files/api/filesApi'
+import type { SongFile } from '@/features/files/types'
 
 const props = defineProps<{ songId: string; versionId: string }>()
-
 const { song, version, previous, next, isLoading, error, isSaving, saveError, save, reload } =
   useVersion(() => props.songId, () => props.versionId)
-
 const isNotFound = computed(() => error.value instanceof ApiError && error.value.status === 404)
 const fieldErrors = computed(() => mapProblemErrors(saveError.value))
+const deletingId = ref<string | null>(null)
+const fileError = ref<string | null>(null)
 
 // ---- Formulaire : copie locale de la version chargée ----
 const form = reactive({ title: '', status: 'Idea' as SongVersionStatus, notes: '', lyrics: '' })
@@ -61,6 +65,25 @@ onBeforeRouteUpdate(() => confirmLeave())     // vers une autre version (même c
 function onBeforeUnload(event: BeforeUnloadEvent) {
   if (isDirty.value) event.preventDefault()   // fermeture d'onglet, F5
 }
+
+function onUploaded(file: SongFile) {
+  version.value?.files.push(file)       // ajout en place : le formulaire n'est pas réinitialisé
+}
+
+async function onDeleteFile(file: SongFile) {
+  if (!version.value || !window.confirm(`Supprimer « ${file.originalFileName} » ?`)) return
+  deletingId.value = file.id
+  fileError.value = null
+  try {
+    await filesApi.remove(props.songId, version.value.id, file.id)
+    version.value.files = version.value.files.filter((f) => f.id !== file.id)   // après la réponse
+  } catch (e) {
+    fileError.value = getErrorMessage(e)
+  } finally {
+    deletingId.value = null
+  }
+}
+
 onMounted(() => window.addEventListener('beforeunload', onBeforeUnload))
 onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload))
 </script>
@@ -121,9 +144,12 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
         </div>
       </form>
 
-      <SectionCard title="Fichiers">
-        <FileList :song-id="songId" :version-id="version.id" :files="version.files" />
-      </SectionCard>
+<SectionCard title="Fichiers">
+  <p v-if="fileError" class="field-error" role="alert">{{ fileError }}</p>
+  <FileList :song-id="songId" :version-id="version.id" :files="version.files"
+            :busy-id="deletingId" @delete="onDeleteFile" />
+  <FileUploader :song-id="songId" :version-id="version.id" @uploaded="onUploaded" />
+</SectionCard>
     </template>
   </section>
 </template>
