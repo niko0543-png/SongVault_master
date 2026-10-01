@@ -14,11 +14,17 @@ export default createRouter({
     },
     { path: '/:pathMatch(.*)*', name: 'not-found', component: () => import('@/shared/pages/NotFoundPage.vue') },
     { path: '/songs/new', name: 'song-create', component: () => import('@/features/songs/pages/SongCreatePage.vue') },
-{
-  path: '/songs/:songId/edit',
-  name: 'song-edit',
-  component: () => import('@/features/songs/pages/SongEditPage.vue'),
-  props: true,
-},
+    {
+      path: '/songs/:songId/edit',
+      name: 'song-edit',
+      component: () => import('@/features/songs/pages/SongEditPage.vue'),
+      props: true,
+    },
+    {
+      path: '/songs/:songId/versions/:versionId',
+      name: 'version-detail',
+      component: () => import('@/features/versions/pages/VersionDetailPage.vue'),
+      props: true,
+    },
   ],
 })

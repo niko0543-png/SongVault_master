@@ -6,7 +6,8 @@ import StatusBadge from './StatusBadge.vue'
 import StatusSelect from './StatusSelect.vue'
 import { formatDate } from '@/shared/utils/format'
 
-defineProps<{ versions: SongVersionSummary[]; savingId?: string | null }>()
+defineProps<{ songId: string; versions: SongVersionSummary[]; savingId?: string | null }>()
+
 const emit = defineEmits<{ changeStatus: [versionId: string, status: SongVersionStatus] }>()
 </script>
 
@@ -16,7 +17,9 @@ const emit = defineEmits<{ changeStatus: [versionId: string, status: SongVersion
     <li v-for="version in versions" :key="version.id" class="card timeline-item" data-testid="version-item">
       <span class="number">v{{ version.number }}</span>
       <div class="content">
-        <strong>{{ version.title }}</strong>
+        <RouterLink :to="{ name: 'version-detail', params: { songId, versionId: version.id } }">
+          <strong>{{ version.title }}</strong>
+        </RouterLink>
         <small class="muted">{{ formatDate(version.createdAt) }}</small>
       </div>
       <StatusBadge :status="version.status" />
