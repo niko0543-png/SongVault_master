@@ -115,7 +115,7 @@ async function onDelete() {
       <h2>Versions</h2>
       <p v-if="lastCreated" class="muted" role="status">Version v{{ lastCreated }} créée.</p>
       <p v-if="statusError" class="field-error" role="alert">{{ statusError }}</p>
-      <VersionTimeline :versions="versions" :saving-id="savingId" @change-status="onChangeStatus" />
+      <VersionTimeline :song-id="song.id" :versions="versions" :saving-id="savingId" @change-status="onChangeStatus" />
 
       <CreateVersionForm
         :key="formKey"

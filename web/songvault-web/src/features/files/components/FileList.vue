@@ -4,7 +4,7 @@ import { filesApi } from '../api/filesApi'
 import { formatDate, formatFileSize } from '@/shared/utils/format'
 
 defineProps<{ songId: string; versionId: string; files: SongFile[]; busyId?: string | null }>()
-defineEmits<{ delete: [file: SongFile] }>()
+defineEmits<{ play: [file: SongFile]; delete: [file: SongFile] }>()
 
 const icons: Record<SongFileType, string> = { Audio: '🎵', Tablature: '🎸', Document: '📄' }
 </script>
@@ -19,6 +19,7 @@ const icons: Record<SongFileType, string> = { Audio: '🎵', Tablature: '🎸', 
         <small class="muted">{{ formatFileSize(file.sizeBytes) }} · {{ formatDate(file.uploadedAt) }}</small>
       </div>
       <div class="file-actions">
+        <button v-if="file.fileType === 'Audio'" type="button" class="secondary" @click="$emit('play', file)">▶ Écouter</button>
         <a :href="filesApi.contentUrl(songId, versionId, file.id, true)" download>Télécharger</a>
         <button type="button" class="secondary" :disabled="busyId === file.id" @click="$emit('delete', file)">Supprimer</button>
       </div>

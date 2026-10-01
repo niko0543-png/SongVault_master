@@ -16,6 +16,8 @@ import { ref } from 'vue'   // à ajouter à l'import existant
 import FileUploader from '@/features/files/components/FileUploader.vue'
 import { filesApi } from '@/features/files/api/filesApi'
 import type { SongFile } from '@/features/files/types'
+import { usePlayerStore } from '@/features/player/stores/playerStore'
+import { toTrack } from '@/features/player/track'
 
 const props = defineProps<{ songId: string; versionId: string }>()
 const { song, version, previous, next, isLoading, error, isSaving, saveError, save, reload } =
@@ -24,6 +26,7 @@ const isNotFound = computed(() => error.value instanceof ApiError && error.value
 const fieldErrors = computed(() => mapProblemErrors(saveError.value))
 const deletingId = ref<string | null>(null)
 const fileError = ref<string | null>(null)
+const player = usePlayerStore()
 
 // ---- Formulaire : copie locale de la version chargée ----
 const form = reactive({ title: '', status: 'Idea' as SongVersionStatus, notes: '', lyrics: '' })
@@ -82,6 +85,14 @@ async function onDeleteFile(file: SongFile) {
   } finally {
     deletingId.value = null
   }
+}
+
+function onPlay(file: SongFile) {
+  if (!version.value || !song.value) return
+  void player.play(toTrack({
+    songId: props.songId, songTitle: song.value.title,
+    versionId: version.value.id, versionNumber: version.value.number, file,
+  }))
 }
 
 onMounted(() => window.addEventListener('beforeunload', onBeforeUnload))
@@ -147,7 +158,7 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
 <SectionCard title="Fichiers">
   <p v-if="fileError" class="field-error" role="alert">{{ fileError }}</p>
   <FileList :song-id="songId" :version-id="version.id" :files="version.files"
-            :busy-id="deletingId" @delete="onDeleteFile" />
+            :busy-id="deletingId" @delete="onDeleteFile" @play="onPlay"/>
   <FileUploader :song-id="songId" :version-id="version.id" @uploaded="onUploaded" />
 </SectionCard>
     </template>
