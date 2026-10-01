@@ -1,3 +1,9 @@
+import type { SongFile } from '@/features/files/types'
+
+export const VERSION_TITLE_MAX = 200
+export const VERSION_NOTES_MAX = 4000
+export const VERSION_LYRICS_MAX = 20000
+
 export const SONG_VERSION_STATUSES = [
   'Idea',
   'Demo',
@@ -26,4 +32,26 @@ export interface SongVersionSummary {
   title: string
   status: SongVersionStatus
   createdAt: string
+}
+
+/** Détail complet (GET /versions/{id}), reflet de SongVersionResponse. */
+export interface SongVersion {
+  id: string
+  songId: string
+  number: number
+  title: string
+  status: SongVersionStatus
+  notes: string | null
+  lyrics: string | null
+  createdAt: string
+  updatedAt: string
+  files: SongFile[]
+}
+
+/** Corps de POST et PUT : le numéro n'y figure JAMAIS. */
+export interface SongVersionInput {
+  title: string
+  status: SongVersionStatus
+  notes: string | null
+  lyrics: string | null
 }
