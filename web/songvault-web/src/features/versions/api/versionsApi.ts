@@ -20,12 +20,19 @@ function update(songId: string, versionId: string, input: SongVersionInput) {
 }
 
 /**
- * PUT remplace TOUTE la version : pour ne changer que le statut,
- * on relit la version, on renvoie tous ses champs, puis on relit le résultat.
+ * Change uniquement le statut. PUT remplaçant TOUTE la version,
+ * on renvoie tous les champs actuels — y compris bpm et key.
  */
 async function changeStatus(songId: string, versionId: string, status: SongVersionStatus) {
   const current = await get(songId, versionId)
-  await update(songId, versionId, { title: current.title, status, notes: current.notes, lyrics: current.lyrics })
+  await update(songId, versionId, {
+    title: current.title,
+    status,
+    notes: current.notes,
+    lyrics: current.lyrics,
+    bpm: current.bpm,      // NOUVEAU : sans cette ligne, le BPM serait effacé
+    key: current.key,      // NOUVEAU
+  })
   return get(songId, versionId)
 }
 

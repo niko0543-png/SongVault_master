@@ -79,3 +79,21 @@ Content-Type: application/json
 
 ### Politique de fichiers
 GET {{host}}/api/files/policy
+
+### Version avec BPM et tonalité → 201
+POST {{host}}/api/songs/{{song.response.body.$.id}}/versions
+Content-Type: application/json
+
+{ "title": "Arrangement cordes", "status": "Arrangement", "bpm": 92, "key": "F#m" }
+
+### Tonalité invalide → 422
+POST {{host}}/api/songs/{{song.response.body.$.id}}/versions
+Content-Type: application/json
+
+{ "title": "Essai", "status": "Demo", "key": "H" }
+
+### BPM hors limites → 400
+POST {{host}}/api/songs/{{song.response.body.$.id}}/versions
+Content-Type: application/json
+
+{ "title": "Essai", "status": "Demo", "bpm": 500 }

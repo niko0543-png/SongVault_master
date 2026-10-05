@@ -21,20 +21,22 @@ public sealed class SongVersionsController : ControllerBase
 
     [HttpPost]
     public async Task<ActionResult<SongVersionResponse>> Create(
-        Guid songId, CreateSongVersionRequest request, [FromServices] CreateSongVersionHandler handler, CancellationToken ct)
+      Guid songId, CreateSongVersionRequest request, [FromServices] CreateSongVersionHandler handler, CancellationToken ct)
     {
         var version = await handler.HandleAsync(new CreateSongVersionCommand(
-            songId, request.Title, request.Status.GetValueOrDefault(), request.Notes, request.Lyrics), ct);
+            songId, request.Title, request.Status.GetValueOrDefault(), request.Notes, request.Lyrics,
+            request.Bpm, request.Key), ct);
         return CreatedAtAction(nameof(GetById), new { songId, versionId = version.Id }, SongVersionResponse.From(version));
     }
 
     [HttpPut("{versionId:guid}")]
     public async Task<IActionResult> Update(
-        Guid songId, Guid versionId, UpdateSongVersionRequest request,
-        [FromServices] UpdateSongVersionHandler handler, CancellationToken ct)
+      Guid songId, Guid versionId, UpdateSongVersionRequest request,
+      [FromServices] UpdateSongVersionHandler handler, CancellationToken ct)
     {
         await handler.HandleAsync(new UpdateSongVersionCommand(
-            songId, versionId, request.Title, request.Status.GetValueOrDefault(), request.Notes, request.Lyrics), ct);
+            songId, versionId, request.Title, request.Status.GetValueOrDefault(), request.Notes, request.Lyrics,
+            request.Bpm, request.Key), ct);
         return NoContent();
     }
 }

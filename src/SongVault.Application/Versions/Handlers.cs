@@ -1,5 +1,6 @@
 ﻿using SongVault.Application.Abstractions;
 using SongVault.Application.Common.Exceptions;
+using SongVault.Domain.Songs;
 
 namespace SongVault.Application.Versions;
 
@@ -9,13 +10,16 @@ public sealed class CreateSongVersionHandler(ISongRepository songs, IUnitOfWork 
 
     public async Task<SongVersionDto> HandleAsync(CreateSongVersionCommand command, CancellationToken ct)
     {
+        // Validée UNE fois, avant la boucle : une tonalité invalide ne mérite pas de nouvelle tentative
+        var key = MusicalKey.ParseOptional(command.Key);
+
         for (var attempt = 1; ; attempt++)
         {
-            // Relu à CHAQUE tentative : LastVersionNumber et RowVersion à jour
             var song = await songs.GetByIdAsync(command.SongId, ct)
                        ?? throw new NotFoundException("Song", command.SongId);
 
-            var version = song.AddVersion(command.Title, command.Status, command.Notes, command.Lyrics, clock.GetUtcNow());
+            var version = song.AddVersion(command.Title, command.Status, command.Notes, command.Lyrics,
+                clock.GetUtcNow(), command.Bpm, key);
             try
             {
                 await unitOfWork.SaveChangesAsync(ct);
@@ -23,8 +27,8 @@ public sealed class CreateSongVersionHandler(ISongRepository songs, IUnitOfWork 
             }
             catch (ConcurrencyConflictException) when (attempt < MaxAttempts)
             {
-                unitOfWork.DiscardChanges();                                        // sinon EF relit l'entité en cache
-                await Task.Delay(Random.Shared.Next(10, 50) * attempt, ct);         // petite attente aléatoire
+                unitOfWork.DiscardChanges();
+                await Task.Delay(Random.Shared.Next(10, 50) * attempt, ct);
             }
         }
     }
@@ -50,12 +54,15 @@ public sealed class UpdateSongVersionHandler(ISongRepository songs, IUnitOfWork 
 {
     public async Task HandleAsync(UpdateSongVersionCommand command, CancellationToken ct)
     {
+        var key = MusicalKey.ParseOptional(command.Key);
+
         var song = await songs.GetWithVersionAsync(command.SongId, command.VersionId, ct)
                    ?? throw new NotFoundException("Song", command.SongId);
         var version = song.FindVersion(command.VersionId)
                       ?? throw new NotFoundException("SongVersion", command.VersionId);
 
-        version.Update(command.Title, command.Status, command.Notes, command.Lyrics, clock.GetUtcNow());
+        version.Update(command.Title, command.Status, command.Notes, command.Lyrics,
+            clock.GetUtcNow(), command.Bpm, key);
         await unitOfWork.SaveChangesAsync(ct);
     }
 }

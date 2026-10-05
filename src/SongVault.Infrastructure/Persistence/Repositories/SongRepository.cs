@@ -50,14 +50,17 @@ internal sealed class SongRepository(SongVaultDbContext db) : ISongRepository
             .ToListAsync(ct);
 
     public Task<SongVersionDto?> GetVersionAsync(Guid songId, Guid versionId, CancellationToken ct)
-        => db.Set<SongVersion>().AsNoTracking()
-            .Where(v => v.SongId == songId && v.Id == versionId)
-            .Select(v => new SongVersionDto(v.Id, v.SongId, v.Number, v.Title, v.Status, v.Notes, v.Lyrics,
-                v.CreatedAt, v.UpdatedAt,
-                v.Files.OrderBy(f => f.UploadedAt)
-                       .Select(f => new SongFileDto(f.Id, f.OriginalFileName, f.ContentType, f.SizeBytes, f.FileType, f.UploadedAt))
-                       .ToList()))
-            .FirstOrDefaultAsync(ct);
+      => db.Set<SongVersion>().AsNoTracking()
+          .Where(v => v.SongId == songId && v.Id == versionId)
+          .Select(v => new SongVersionDto(
+              v.Id, v.SongId, v.Number, v.Title, v.Status, v.Notes, v.Lyrics,
+              v.Bpm,
+              v.Key == null ? null : v.Key.Value,          // NOUVEAU
+              v.CreatedAt, v.UpdatedAt,
+              v.Files.OrderBy(f => f.UploadedAt)
+                     .Select(f => new SongFileDto(f.Id, f.OriginalFileName, f.ContentType, f.SizeBytes, f.FileType, f.UploadedAt))
+                     .ToList()))
+          .FirstOrDefaultAsync(ct);
 
     public Task<StoredFileInfo?> GetFileAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct)
     => db.Set<SongVersion>().AsNoTracking()

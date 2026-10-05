@@ -42,10 +42,11 @@ public sealed class Song
         UpdatedAt = now;
     }
 
-    public SongVersion AddVersion(string title, SongVersionStatus status, string? notes, string? lyrics, DateTimeOffset now)
+    public SongVersion AddVersion(string title, SongVersionStatus status, string? notes, string? lyrics,
+        DateTimeOffset now, int? bpm = null, MusicalKey? key = null)
     {
         var number = LastVersionNumber + 1;
-        var version = SongVersion.Create(Id, number, title, status, notes, lyrics, now); // valide AVANT d'incrémenter
+        var version = SongVersion.Create(Id, number, title, status, notes, lyrics, now, bpm, key);
         LastVersionNumber = number;
         _versions.Add(version);
         UpdatedAt = now;
