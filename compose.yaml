@@ -1,0 +1,49 @@
+name: songvault
+
+# Ancre YAML réutilisée par plusieurs services (DRY)
+x-connection-string: &conn "Server=db;Database=SongVault;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True"
+
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?définir MSSQL_SA_PASSWORD dans .env}
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    healthcheck:
+      # $$ : Compose transmet un "$" littéral ; c'est le shell DU CONTENEUR qui lit la variable
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$${MSSQL_SA_PASSWORD}\" -C -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  api:
+    build:
+      context: .
+      dockerfile: src/SongVault.Api/Dockerfile
+      target: final
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__SongVault: *conn
+      FileStorage__RootPath: /var/songvault/files
+    volumes:
+      - songvault-files:/var/songvault/files
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    # Pas de "ports" : l'API n'est joignable QUE par nginx (réseau interne)
+
+  web:
+    build: ./web/songvault-web
+    ports:
+      - "8080:8080"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  sqlserver-data:
+  songvault-files:

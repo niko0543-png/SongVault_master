@@ -1,0 +1,11 @@
+# Ajustements de DÉVELOPPEMENT, fusionnés automatiquement avec compose.yaml.
+# En production : docker compose -f compose.yaml up (sans ce fichier).
+services:
+  db:
+    ports:
+      - "1433:1433"        # SSMS / Explorateur SQL / dotnet ef depuis le PC
+  api:
+    ports:
+      - "5081:8080"        # appels directs à l'API, health checks, OpenAPI
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
