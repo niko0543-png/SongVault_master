@@ -23,3 +23,10 @@ artifacts/
 # Secrets : JAMAIS dans une image
 .env
 **/secrets.json
+
+node_modules/
+dist/
+coverage/
+.vscode/
+*.log
+.env*
