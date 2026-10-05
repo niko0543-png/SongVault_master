@@ -1,0 +1,73 @@
+version: 2
+
+updates:
+  # ---------- Backend .NET (Directory.Packages.props) ----------
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: build
+      include: scope                     # → "build(deps): bump …" (Conventional Commits)
+    groups:
+      microsoft:                         # une seule PR pour tous les correctifs Microsoft
+        patterns: ["Microsoft.*", "System.*"]
+        update-types: [minor, patch]
+      tests:
+        patterns: ["xunit*", "Microsoft.NET.Test.Sdk", "coverlet.*", "Testcontainers*"]
+    ignore:
+      # Rester sur .NET 10 (LTS) : refuser les sauts vers les packages .NET 11 (STS)
+      - dependency-name: "Microsoft.*"
+        update-types: ["version-update:semver-major"]
+
+  # ---------- Frontend (npm) ----------
+  - package-ecosystem: npm
+    directory: /web/songvault-web
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: build
+      include: scope
+    groups:
+      vue-vite:
+        patterns: ["vue", "vue-router", "pinia", "@pinia/*", "@vue/*", "vite", "@vitejs/*", "vitest", "@vitest/*", "jsdom"]
+        update-types: [minor, patch]
+      lint-format:
+        patterns: ["eslint*", "@eslint/*", "eslint-plugin-*", "@typescript-eslint/*", "typescript-eslint", "oxlint", "prettier", "@vue/eslint-*"]
+        update-types: [minor, patch]
+    ignore:
+      # TypeScript 7 n'est pas encore compatible avec l'outillage Vue (vue-tsc) : voir § 2.5 du programme
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+
+  # ---------- Actions GitHub (ci.yml) ----------
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: ci
+    groups:
+      actions:
+        patterns: ["*"]                  # une seule PR mensuelle pour toutes les actions
+
+  # ---------- Images Docker (Dockerfiles) ----------
+  - package-ecosystem: docker
+    directories:
+      - /src/SongVault.Api
+      - /web/songvault-web
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: build
+      include: scope
+    ignore:
+      # Images .NET : rester en 10.0 (LTS) ; Node : rester en 24 (LTS)
+      - dependency-name: "*dotnet/*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]

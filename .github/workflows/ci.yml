@@ -24,10 +24,9 @@ jobs:
           global-json-file: global.json
       - run: dotnet restore
       - run: dotnet build --no-restore -c Release
-      # Domain + Application + Api (Testcontainers : Docker est disponible sur le runner)
       - run: dotnet test --no-build -c Release --logger trx --results-directory TestResults
       - uses: actions/upload-artifact@v6
-        if: always()                     # même si les tests échouent : c'est là qu'on en a besoin
+        if: always()
         with:
           name: backend-test-results
           path: TestResults
@@ -51,3 +50,20 @@ jobs:
       - run: npm run type-check
       - run: npm run test:unit -- --run
       - run: npm run build
+
+  docker:
+    name: docker
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      MSSQL_SA_PASSWORD: ci-only-not-a-secret-1A!
+    steps:
+      - uses: actions/checkout@v6
+      - run: docker compose -f compose.yaml build
+      - run: docker compose -f compose.yaml up -d
+      - run: curl --fail --silent --show-error --retry 30 --retry-all-errors --retry-delay 5 http://localhost:8080/api/songs
+      - if: failure()
+        run: docker compose -f compose.yaml logs
+      - if: always()
+        run: docker compose -f compose.yaml down -v
