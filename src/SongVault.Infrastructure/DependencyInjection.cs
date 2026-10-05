@@ -15,10 +15,14 @@ public static class DependencyInjection
     {
         services.AddDbContext<SongVaultDbContext>(options =>
         {
-            var connectionString = configuration.GetConnectionString("SongVault")
-                ?? throw new InvalidOperationException(
-                    "Chaîne de connexion 'SongVault' absente. Configurez-la avec dotnet user-secrets.");
-            options.UseSqlServer(connectionString);
+            var connectionString = configuration.GetConnectionString("SongVault");
+
+            // Absente pendant la conception (dotnet ef, bundle construit dans Docker) :
+            // on configure SQL Server SANS chaîne ; elle sera fournie plus tard (--connection).
+            if (string.IsNullOrWhiteSpace(connectionString))
+                options.UseSqlServer();
+            else
+                options.UseSqlServer(connectionString);
         });
 
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<SongVaultDbContext>());

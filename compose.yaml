@@ -1,6 +1,5 @@
 name: songvault
 
-# Ancre YAML réutilisée par plusieurs services (DRY)
 x-connection-string: &conn "Server=db;Database=SongVault;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True"
 
 services:
@@ -12,12 +11,23 @@ services:
     volumes:
       - sqlserver-data:/var/opt/mssql
     healthcheck:
-      # $$ : Compose transmet un "$" littéral ; c'est le shell DU CONTENEUR qui lit la variable
       test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$${MSSQL_SA_PASSWORD}\" -C -Q 'SELECT 1' || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 30s
+
+  migrator:
+    build:
+      context: .
+      dockerfile: src/SongVault.Api/Dockerfile
+      target: migrator
+    environment:
+      ConnectionStrings__SongVault: *conn
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
 
   api:
     build:
@@ -31,10 +41,9 @@ services:
     volumes:
       - songvault-files:/var/songvault/files
     depends_on:
-      db:
-        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
     restart: unless-stopped
-    # Pas de "ports" : l'API n'est joignable QUE par nginx (réseau interne)
 
   web:
     build: ./web/songvault-web

@@ -17,6 +17,23 @@ RUN dotnet restore src/SongVault.Api/SongVault.Api.csproj
 COPY src/ src/
 RUN dotnet publish src/SongVault.Api/SongVault.Api.csproj -c Release -o /app/publish --no-restore
 
+# ---------- Étape : bundle de migrations (réutilise la compilation de "build") ----------
+FROM build AS bundle
+RUN dotnet tool restore && \
+    dotnet ef migrations bundle \
+      --project src/SongVault.Infrastructure \
+      --startup-project src/SongVault.Api \
+      --configuration Release \
+      -o /app/efbundle
+
+# ---------- Étape : conteneur ponctuel qui applique les migrations ----------
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS migrator
+WORKDIR /app
+COPY --from=bundle /app/efbundle .
+USER $APP_UID
+# La chaîne vient de l'environnement (Compose), jamais de l'image
+ENTRYPOINT ["sh", "-c", "./efbundle --connection \"$ConnectionStrings__SongVault\""]
+
 # ---------- Étape finale : exécution (image runtime ASP.NET, ~230 Mo) ----------
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
