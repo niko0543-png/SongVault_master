@@ -1,0 +1,23 @@
+name: Fonctionnalité
+description: Proposer une nouvelle fonctionnalité
+labels: []
+body:
+  - type: textarea
+    id: context
+    attributes:
+      label: Contexte
+      description: Quel besoin d'un musicien cette fonctionnalité couvre-t-elle ?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Critères d'acceptation
+      placeholder: |
+        - [ ] Étant donné… quand… alors…
+    validations:
+      required: true
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Hors périmètre
