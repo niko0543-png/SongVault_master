@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+      - run: dotnet restore
+      - run: dotnet build --no-restore -c Release
+      # Domain + Application + Api (Testcontainers : Docker est disponible sur le runner)
+      - run: dotnet test --no-build -c Release --logger trx --results-directory TestResults
+      - uses: actions/upload-artifact@v6
+        if: always()                     # même si les tests échouent : c'est là qu'on en a besoin
+        with:
+          name: backend-test-results
+          path: TestResults
+
+  frontend:
+    name: frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web/songvault-web
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: web/songvault-web/.nvmrc
+          cache: npm
+          cache-dependency-path: web/songvault-web/package-lock.json
+      - run: npm ci
+      - run: npm run lint:ci
+      - run: npm run type-check
+      - run: npm run test:unit -- --run
+      - run: npm run build
