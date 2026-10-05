@@ -18,14 +18,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
       - run: dotnet restore
       - run: dotnet build --no-restore -c Release
       - run: dotnet test --no-build -c Release --logger trx --results-directory TestResults
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: backend-test-results
@@ -39,8 +39,8 @@ jobs:
       run:
         working-directory: web/songvault-web
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version-file: web/songvault-web/.nvmrc
           cache: npm
@@ -59,7 +59,7 @@ jobs:
     env:
       MSSQL_SA_PASSWORD: ci-only-not-a-secret-1A!
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - run: docker compose -f compose.yaml build
       - run: docker compose -f compose.yaml up -d
       - run: curl --fail --silent --show-error --retry 30 --retry-all-errors --retry-delay 5 http://localhost:8080/api/songs
