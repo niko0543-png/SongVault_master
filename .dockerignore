@@ -1,0 +1,25 @@
+# Artefacts de build (créés DANS le conteneur, jamais copiés depuis l'hôte)
+**/bin/
+**/obj/
+**/node_modules/
+**/dist/
+
+# Hors périmètre de l'image API
+web/
+tests/
+docs/
+samples/
+backups/
+artifacts/
+
+# Outils et données locales
+.git/
+.vs/
+.vscode/
+.idea/
+.data/
+**/*.user
+
+# Secrets : JAMAIS dans une image
+.env
+**/secrets.json

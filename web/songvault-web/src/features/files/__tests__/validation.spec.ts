@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { validateFile } from '../validation'
 import type { FilePolicy } from '../types'
 
-const policy: FilePolicy = { allowedExtensions: ['.mp3', '.pdf'], maxSizeBytes: 50 * 1024 * 1024 }
+const policy: FilePolicy = { allowedExtensions: ['.mp3', '.pdf'], maxSizeBytes: 100 * 1024 * 1024 }
 const file = (name: string, size = 1024) => ({ name, size })
 
 describe('validateFile', () => {
@@ -15,7 +15,7 @@ describe('validateFile', () => {
   })
 
   it('refuse un fichier trop volumineux', () => {
-    expect(validateFile(file('long.mp3', 60 * 1024 * 1024), policy)).toContain('trop volumineux')
+    expect(validateFile(file('long.mp3', 120 * 1024 * 1024), policy)).toContain('trop volumineux')
   })
 
   it('refuse un fichier vide', () => {

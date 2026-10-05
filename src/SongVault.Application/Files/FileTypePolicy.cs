@@ -6,7 +6,7 @@ public sealed record FileTypeRule(string Extension, SongFileType FileType, strin
 
 public static class FileTypePolicy
 {
-    public const long MaxFileSizeBytes = 50L * 1024 * 1024;                    // 50 Mo
+    public const long MaxFileSizeBytes = 100L * 1024 * 1024;                    // 100 Mo
     public const long MaxRequestSizeBytes = MaxFileSizeBytes + 1024 * 1024;    // + marge pour l'enveloppe multipart
 
     private static readonly Dictionary<string, FileTypeRule> Rules = new FileTypeRule[]
