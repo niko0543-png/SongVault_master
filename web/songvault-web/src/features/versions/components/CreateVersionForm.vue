@@ -22,7 +22,14 @@ const titleError = computed(() => {
 function onSubmit() {
   submitted.value = true
   if (titleError.value) return
-  emit('submit', { title: form.title.trim(), status: form.status, notes: form.notes.trim() || null, lyrics: null })
+  emit('submit', {
+    title: form.title.trim(),
+    status: form.status,
+    notes: form.notes.trim() || null,
+    lyrics: null,
+    bpm: null,          // NOUVEAU : renseignés plus tard, dans le détail de la version
+    key: null,          // NOUVEAU
+  })
 }
 </script>
 

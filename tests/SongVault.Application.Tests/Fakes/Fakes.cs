@@ -46,7 +46,7 @@ internal sealed class FakeSongRepository : ISongRepository
             .Where(s => s.Id == songId)
             .SelectMany(s => s.Versions)
             .Where(v => v.Id == versionId)
-            .Select(v => new SongVersionDto(v.Id, v.SongId, v.Number, v.Title, v.Status, v.Notes, v.Lyrics, v.CreatedAt, v.UpdatedAt, []))
+            .Select(v => new SongVersionDto(v.Id, v.SongId, v.Number, v.Title, v.Status, v.Notes, v.Lyrics, v.Bpm, v.Key?.Value, v.CreatedAt, v.UpdatedAt, []))
             .FirstOrDefault());
 
     public Task<StoredFileInfo?> GetFileAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct)

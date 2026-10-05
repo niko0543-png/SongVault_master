@@ -128,6 +128,10 @@ async function listen(side: Side) {
 
           <template v-if="sides[side]">
             <p><StatusBadge :status="sides[side]!.status" /></p>
+            <p>
+              <strong>BPM :</strong> {{ sides[side]!.bpm ?? '—' }}
+              · <strong>Tonalité :</strong> {{ sides[side]!.key ?? '—' }}
+            </p>
             <p class="muted"><small>Créée le {{ formatDate(sides[side]!.createdAt) }}</small></p>
             <h3>Notes</h3>
             <p class="pre">{{ sides[side]!.notes ?? '—' }}</p>

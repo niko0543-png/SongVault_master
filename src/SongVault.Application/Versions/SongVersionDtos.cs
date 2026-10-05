@@ -5,11 +5,15 @@ namespace SongVault.Application.Versions;
 
 public sealed record SongVersionDto(
     Guid Id, Guid SongId, int Number, string Title, SongVersionStatus Status,
-    string? Notes, string? Lyrics, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt,
+    string? Notes, string? Lyrics,
+    int? Bpm, string? Key,                                     // NOUVEAU (juste après Lyrics)
+    DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt,
     IReadOnlyList<SongFileDto> Files)
 {
     public static SongVersionDto From(SongVersion v) =>
-        new(v.Id, v.SongId, v.Number, v.Title, v.Status, v.Notes, v.Lyrics, v.CreatedAt, v.UpdatedAt,
+        new(v.Id, v.SongId, v.Number, v.Title, v.Status, v.Notes, v.Lyrics,
+            v.Bpm, v.Key?.Value,
+            v.CreatedAt, v.UpdatedAt,
             [.. v.Files.Select(SongFileDto.From)]);
 }
 
