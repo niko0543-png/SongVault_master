@@ -9,10 +9,19 @@ public sealed class UploadSongFileHandler(
     public async Task<SongFileDto> HandleAsync(UploadSongFileCommand command, CancellationToken ct)
     {
         var rule = FileTypePolicy.Resolve(command.FileName)
-            ?? throw new UnsupportedFileException(
-                $"Type de fichier non autorisé. Extensions acceptées : {string.Join(", ", FileTypePolicy.AllowedExtensions)}.");
+        ?? throw new UnsupportedFileException(
+            $"Type de fichier non autorisé. Extensions acceptées : {string.Join(", ", FileTypePolicy.AllowedExtensions)}.");
         if (command.Length <= 0) throw new UnsupportedFileException("Le fichier est vide.");
         if (command.Length > FileTypePolicy.MaxFileSizeBytes) throw new FileTooLargeException(FileTypePolicy.MaxFileSizeBytes);
+
+        // NOUVEAU : vérification du contenu (32 premiers octets seulement)
+        if (!command.Content.CanSeek)
+            throw new InvalidOperationException("Le flux d'upload doit permettre le repositionnement.");
+        var header = new byte[FileSignatureValidator.HeaderLength];
+        var read = await command.Content.ReadAtLeastAsync(header, header.Length, throwOnEndOfStream: false, ct);
+        if (!FileSignatureValidator.Matches(rule.Extension, header.AsSpan(0, read)))
+            throw new UnsupportedFileException($"Le contenu du fichier ne correspond pas à un fichier {rule.Extension}.");
+        command.Content.Position = 0;                                   // sinon l'en-tête manquerait au fichier stocké
 
         var song = await songs.GetWithVersionAsync(command.SongId, command.VersionId, ct)
                    ?? throw new NotFoundException("Song", command.SongId);
@@ -23,7 +32,7 @@ public sealed class UploadSongFileHandler(
         await storage.SaveAsync(storageKey, command.Content, ct);         // 1. fichier
         try
         {
-            var file = version.AddFile(Path.GetFileName(command.FileName), storageKey,
+            var file = version.AddFile(FileNameSanitizer.Sanitize(command.FileName), storageKey,
                 rule.ContentType, command.Length, rule.FileType, clock.GetUtcNow());
             await unitOfWork.SaveChangesAsync(ct);                        // 2. base
             return SongFileDto.From(file);

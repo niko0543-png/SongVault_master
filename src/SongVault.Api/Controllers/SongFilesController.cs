@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 using SongVault.Api.Contracts.Files;
+using SongVault.Api.Security;
 using SongVault.Application.Files;
 
 namespace SongVault.Api.Controllers;
@@ -12,6 +14,7 @@ public sealed class SongFilesController : ControllerBase
     [HttpPost]
     [RequestSizeLimit(FileTypePolicy.MaxRequestSizeBytes)]
     [RequestFormLimits(MultipartBodyLengthLimit = FileTypePolicy.MaxRequestSizeBytes)]
+    [EnableRateLimiting(RateLimiting.Uploads)]
     public async Task<ActionResult<SongFileResponse>> Upload(
         Guid songId, Guid versionId, IFormFile file,
         [FromServices] UploadSongFileHandler handler, CancellationToken ct)
