@@ -8,7 +8,7 @@ namespace SongVault.Api.Tests.Songs;
 [Collection(ApiCollection.Name)]
 public sealed class SongsEndpointsTests(SongVaultApiFactory factory)
 {
-    private readonly HttpClient _client = factory.CreateClient();
+    private readonly HttpClient _client = factory.CreateUserClient();
 
     [Fact]
     public async Task Post_valide_renvoie_201_avec_Location()

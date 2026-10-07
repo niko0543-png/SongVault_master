@@ -1,12 +1,9 @@
 using System.Text.Json.Serialization;
-
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using Microsoft.AspNetCore.HttpOverrides;          // NOUVEAU : ForwardedHeaders
-
-using Scalar.AspNetCore;                            // retirez si vous n'utilisez pas Scalar
-
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Identity;
 using SongVault.Api.ErrorHandling;
-using SongVault.Api.Security;                       // NOUVEAU : middleware et rate limiting
+using SongVault.Api.Security;
 using SongVault.Application;
 using SongVault.Infrastructure;
 using SongVault.Infrastructure.Persistence;
@@ -26,45 +23,78 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<SongVaultDbContext>("database", tags: ["ready"]);
 
-// NOUVEAU (31.7) : limitation de débit
-builder.Services.AddSongVaultRateLimiting(builder.Configuration);
-
-// NOUVEAU (31.8) : lecture des en-têtes posés par nginx
+// --- Derrière nginx (J31) ---
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-    // L'API n'est joignable QUE par nginx (réseau Docker interne) :
-    // on fait donc confiance à n'importe quel proxy de ce réseau.
-    options.KnownIPNetworks.Clear();               // ancien SDK : options.KnownNetworks.Clear();
+    options.KnownIPNetworks.Clear();              // ancien SDK : KnownNetworks
     options.KnownProxies.Clear();
+});
+
+// --- Limitation de débit (J31) ---
+builder.Services.AddSongVaultRateLimiting(builder.Configuration);
+
+// --- Authentification (J32) ---
+builder.Services.AddAuthorization();
+builder.Services.AddIdentityApiEndpoints<IdentityUser>()
+    .AddEntityFrameworkStores<SongVaultDbContext>();
+
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.Cookie.Name = "songvault.auth";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SameSite = SameSiteMode.Strict;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;   // Secure dès que la requête d'origine est en HTTPS
+    options.ExpireTimeSpan = TimeSpan.FromDays(7);
+    options.SlidingExpiration = true;
+
+    // Une API répond 401/403, elle ne redirige JAMAIS vers une page de connexion
+    options.Events.OnRedirectToLogin = context =>
+    {
+        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        return Task.CompletedTask;
+    };
+    options.Events.OnRedirectToAccessDenied = context =>
+    {
+        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+        return Task.CompletedTask;
+    };
 });
 
 var app = builder.Build();
 
+// Échec immédiat et explicite si la configuration est incomplète (semaine 5)
 if (string.IsNullOrWhiteSpace(app.Configuration.GetConnectionString("SongVault")))
     throw new InvalidOperationException(
         "Chaîne de connexion 'SongVault' absente : user-secrets en développement, " +
         "variable ConnectionStrings__SongVault dans un conteneur.");
 
 // ================= Pipeline (l'ordre compte) =================
-app.UseForwardedHeaders();                          // NOUVEAU : EN PREMIER
+app.UseForwardedHeaders();
 app.UseExceptionHandler();
-app.UseMiddleware<SecurityHeadersMiddleware>();     // NOUVEAU
+app.UseMiddleware<SecurityHeadersMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
-    app.MapScalarApiReference();                    // retirez si vous n'utilisez pas Scalar
 }
 
 app.UseHttpsRedirection();
+app.UseAuthentication();
 app.UseAuthorization();
-app.UseRateLimiter();                               // NOUVEAU (31.7)
+app.UseRateLimiter();
 
 // ================= Endpoints =================
 app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false });
 app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = c => c.Tags.Contains("ready") });
-app.MapControllers();
+
+// /api/auth/register, /api/auth/login, /api/auth/manage/… (fournis par Identity)
+app.MapGroup("/api/auth")
+   .MapIdentityApi<IdentityUser>()
+   .RequireRateLimiting(RateLimiting.Auth);      // limite les tentatives de connexion par IP
+
+// TOUS les contrôleurs exigent un utilisateur connecté
+app.MapControllers().RequireAuthorization();
 
 app.Run();
 

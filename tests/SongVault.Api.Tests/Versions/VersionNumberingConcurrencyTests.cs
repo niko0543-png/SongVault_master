@@ -14,7 +14,7 @@ public sealed class VersionNumberingConcurrencyTests(SongVaultApiFactory factory
     private static readonly JsonSerializerOptions Json =
         new(JsonSerializerDefaults.Web) { Converters = { new JsonStringEnumConverter() } };
 
-    private readonly HttpClient _client = factory.CreateClient();
+    private readonly HttpClient _client = factory.CreateUserClient();
 
     [Fact]
     public async Task Dix_creations_paralleles_donnent_des_numeros_distincts_sans_erreur_500()

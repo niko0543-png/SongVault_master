@@ -11,7 +11,7 @@ namespace SongVault.Api.Tests.Files;
 [Collection(ApiCollection.Name)]
 public sealed class SongFilesEndpointsTests(SongVaultApiFactory factory)
 {
-    private readonly HttpClient _client = factory.CreateClient();
+    private readonly HttpClient _client = factory.CreateUserClient();
 
     private async Task<string> CreateVersionUrlAsync()
     {
