@@ -15,7 +15,8 @@ internal sealed class SongConfiguration : IEntityTypeConfiguration<Song>
         builder.Property(s => s.Title).HasMaxLength(Song.TitleMaxLength).IsRequired();
         builder.Property(s => s.Artist).HasMaxLength(Song.ArtistMaxLength);
         builder.Property(s => s.Description).HasMaxLength(Song.DescriptionMaxLength);
-        builder.HasIndex(s => s.Title);
+        builder.Property(s => s.OwnerId).HasMaxLength(Song.OwnerIdMaxLength).IsRequired();
+        builder.HasIndex(s => new { s.OwnerId, s.Title });
         builder.HasMany(s => s.Versions)
        .WithOne()
        .HasForeignKey(v => v.SongId)

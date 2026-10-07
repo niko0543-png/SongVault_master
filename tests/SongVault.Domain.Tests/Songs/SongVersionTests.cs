@@ -10,7 +10,7 @@ public sealed class SongVersionTests
     [Fact]
     public void AddVersion_numerote_1_2_3()
     {
-        var song = Song.Create("Nocturne", null, null, Now);
+        var song = Song.Create("owner-1", "Nocturne", null, null, Now);
 
         var numbers = new[] { "Idée", "Maquette", "Studio" }
             .Select(t => song.AddVersion(t, SongVersionStatus.Demo, null, null, Now).Number)
@@ -24,7 +24,7 @@ public sealed class SongVersionTests
     [Fact]
     public void AddVersion_titre_invalide_n_incremente_pas_le_compteur()
     {
-        var song = Song.Create("Nocturne", null, null, Now);
+        var song = Song.Create("owner-1", "Nocturne", null, null, Now);
         song.AddVersion("v1", SongVersionStatus.Idea, null, null, Now);
 
         Assert.Throws<DomainException>(() => song.AddVersion(" ", SongVersionStatus.Demo, null, null, Now));
@@ -37,7 +37,7 @@ public sealed class SongVersionTests
     [Fact]
     public void AddVersion_statut_inconnu_est_refuse()
     {
-        var song = Song.Create("Nocturne", null, null, Now);
+        var song = Song.Create("owner-1", "Nocturne", null, null, Now);
 
         Assert.Throws<DomainException>(() => song.AddVersion("v1", (SongVersionStatus)99, null, null, Now));
         Assert.Equal(0, song.LastVersionNumber);
@@ -46,7 +46,7 @@ public sealed class SongVersionTests
     [Fact]
     public void Update_modifie_la_version_sans_changer_son_numero()
     {
-        var song = Song.Create("Nocturne", null, null, Now);
+        var song = Song.Create("owner-1", "Nocturne", null, null, Now);
         var version = song.AddVersion("v1", SongVersionStatus.Idea, null, null, Now);
 
         version.Update("v1 retravaillée", SongVersionStatus.Rehearsal, "tempo plus lent", null, Now.AddDays(1));

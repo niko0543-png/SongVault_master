@@ -137,3 +137,8 @@ internal sealed class FakeFileStorageService : IFileStorageService
         return Task.CompletedTask;
     }
 }
+
+internal sealed class FakeCurrentUser(string userId = "owner-1") : ICurrentUser
+{
+    public string UserId { get; } = userId;
+}
