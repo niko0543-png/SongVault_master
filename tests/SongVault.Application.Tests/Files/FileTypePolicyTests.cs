@@ -153,8 +153,8 @@ public sealed class FileTypePolicyTests
 
     // ===== Cas limites : Constantes de limite de taille =====
     [Fact]
-    public void MaxFileSizeBytes_est_100_megabytes()
-        => Assert.Equal(100L * 1024 * 1024, FileTypePolicy.MaxFileSizeBytes);
+    public void MaxFileSizeBytes_est_50_megaoctets()
+        => Assert.Equal(50L * 1024 * 1024, FileTypePolicy.MaxFileSizeBytes);
 
     [Fact]
     public void MaxRequestSizeBytes_est_superieur_MaxFileSizeBytes()
