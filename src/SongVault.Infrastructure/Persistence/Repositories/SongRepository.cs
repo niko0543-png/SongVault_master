@@ -18,15 +18,27 @@ internal sealed class SongRepository(SongVaultDbContext db) : ISongRepository
     public Task<Song?> GetByIdAsync(Guid id, CancellationToken ct)
         => db.Songs.FirstOrDefaultAsync(s => s.Id == id, ct);
 
-    public async Task<PagedResult<SongDto>> ListAsync(int page, int pageSize, CancellationToken ct)
+    public async Task<PagedResult<SongDto>> ListAsync(
+    int page, int pageSize, string? search, SongVersionStatus? status, CancellationToken ct)
     {
         var query = db.Songs.AsNoTracking();
 
+        if (search is not null)
+            // Traduit en LIKE '%…%' (insensible à la casse avec la collation par défaut) ; non sargable : voir 28.1
+            query = query.Where(s => s.Title.Contains(search) || (s.Artist != null && s.Artist.Contains(search)));
+
+        if (status is not null)
+            // Statut "courant" du morceau = statut de sa version la plus récente.
+            // Cast en nullable : sans lui, un morceau SANS version donnerait default(enum) = Idea.
+            query = query.Where(s => s.Versions
+                .OrderByDescending(v => v.Number)
+                .Select(v => (SongVersionStatus?)v.Status)
+                .FirstOrDefault() == status);
+
         var total = await query.CountAsync(ct);
         var items = await query
-            .OrderBy(s => s.Title).ThenBy(s => s.Id)             // ordre déterministe
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
+            .OrderBy(s => s.Title).ThenBy(s => s.Id)
+            .Skip((page - 1) * pageSize).Take(pageSize)
             .Select(s => new SongDto(s.Id, s.Title, s.Artist, s.Description, s.CreatedAt, s.UpdatedAt))
             .ToListAsync(ct);
 
