@@ -8,6 +8,8 @@ public sealed class Song
     public const int TitleMaxLength = 200;
     public const int ArtistMaxLength = 200;
     public const int DescriptionMaxLength = 2000;
+    public const int OwnerIdMaxLength = 450;
+
     public int LastVersionNumber { get; private set; }
     public IReadOnlyCollection<SongVersion> Versions => _versions.AsReadOnly();
     private Song() { } // réservé à EF Core (jeudi) ; le reste du code passe par Create
@@ -18,10 +20,14 @@ public sealed class Song
     public string? Description { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
+    public string OwnerId { get; private set; } = default!;
 
-    public static Song Create(string title, string? artist, string? description, DateTimeOffset now)
+    public static Song Create(string ownerId, string title, string? artist, string? description, DateTimeOffset now)
     {
-        var song = new Song { Id = Guid.CreateVersion7(now), CreatedAt = now };
+        if (string.IsNullOrWhiteSpace(ownerId))
+            throw new DomainException("Un morceau doit avoir un propriétaire.");
+
+        var song = new Song { Id = Guid.CreateVersion7(now), OwnerId = ownerId, CreatedAt = now };
         song.ApplyDetails(title, artist, description, now);
         return song;
     }

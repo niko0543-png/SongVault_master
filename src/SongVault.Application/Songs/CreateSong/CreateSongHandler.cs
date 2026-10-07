@@ -3,11 +3,12 @@ using SongVault.Domain.Songs;
 
 namespace SongVault.Application.Songs.CreateSong;
 
-public sealed class CreateSongHandler(ISongRepository songs, IUnitOfWork unitOfWork, TimeProvider clock)
+public sealed class CreateSongHandler(
+    ISongRepository songs, IUnitOfWork unitOfWork, ICurrentUser currentUser, TimeProvider clock)
 {
     public async Task<SongDto> HandleAsync(CreateSongCommand command, CancellationToken ct)
     {
-        var song = Song.Create(command.Title, command.Artist, command.Description, clock.GetUtcNow());
+        var song = Song.Create(currentUser.UserId, command.Title, command.Artist, command.Description, clock.GetUtcNow());
         songs.Add(song);
         await unitOfWork.SaveChangesAsync(ct);
         return SongDto.From(song);

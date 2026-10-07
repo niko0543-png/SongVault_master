@@ -1,7 +1,9 @@
 using System.Text.Json.Serialization;
+using SongVault.Api.Auth;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
+using SongVault.Application.Abstractions;
 using SongVault.Api.ErrorHandling;
 using SongVault.Api.Security;
 using SongVault.Application;
@@ -60,6 +62,9 @@ builder.Services.ConfigureApplicationCookie(options =>
         return Task.CompletedTask;
     };
 });
+
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
 
 var app = builder.Build();
 

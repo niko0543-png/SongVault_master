@@ -17,7 +17,7 @@ public sealed class UploadSongFileHandlerTests
 
     private UploadSongFileCommand Command(long length, byte[] content, string fileName = "maquette.mp3")
     {
-        var song = Song.Create("Nocturne", null, null, Now);
+        var song = Song.Create("owner-1", "Nocturne", null, null, Now);
         var version = song.AddVersion("v1", SongVersionStatus.Demo, null, null, Now);
         _songs.Songs.Add(song);
         return new UploadSongFileCommand(song.Id, version.Id, fileName, length, new MemoryStream(content));
