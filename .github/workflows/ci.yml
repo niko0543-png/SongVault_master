@@ -18,8 +18,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
       - run: dotnet restore
@@ -39,8 +39,8 @@ jobs:
       run:
         working-directory: web/songvault-web
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version-file: web/songvault-web/.nvmrc
           cache: npm
@@ -59,7 +59,7 @@ jobs:
     env:
       MSSQL_SA_PASSWORD: ci-only-not-a-secret-1A!
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - run: docker compose -f compose.yaml build
       - run: docker compose -f compose.yaml up -d
       # Test de fumée : inscription → connexion (cookie) → lecture, à travers nginx
