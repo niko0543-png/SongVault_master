@@ -8,7 +8,7 @@ namespace SongVault.Api.Tests.Songs;
 [Collection(ApiCollection.Name)]
 public sealed class SongSearchTests(SongVaultApiFactory factory)
 {
-    private readonly HttpClient _client = factory.CreateClient();
+    private readonly HttpClient _client = factory.CreateUserClient();
 
     [Fact]
     public async Task Search_filtre_par_titre_sans_tenir_compte_de_la_casse()

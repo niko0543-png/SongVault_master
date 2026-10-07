@@ -26,7 +26,7 @@ public sealed class FileSecurityTests(SongVaultApiFactory factory)
     [Fact]
     public async Task Exe_renomme_en_mp3_renvoie_400()
     {
-        var client = factory.CreateClient();
+        var client = factory.CreateUserClient();
         var url = await CreateVersionUrlAsync(client);
         byte[] exe = [0x4D, 0x5A, 0x90, 0x00, .. new byte[1020]];           // "MZ…" = exécutable Windows
 
@@ -43,7 +43,7 @@ public sealed class FileSecurityTests(SongVaultApiFactory factory)
     [InlineData(@"..\..\x.mp3")]
     public async Task Nom_avec_chemin_est_nettoye(string maliciousName)
     {
-        var client = factory.CreateClient();
+        var client = factory.CreateUserClient();
         var url = await CreateVersionUrlAsync(client);
 
         var response = await client.PostAsync($"{url}/files", TestFiles.Form(TestFiles.Mp3(1024), maliciousName));
@@ -57,7 +57,7 @@ public sealed class FileSecurityTests(SongVaultApiFactory factory)
     [Fact]
     public async Task Fichier_de_plus_de_50_Mo_renvoie_413()
     {
-        var client = factory.CreateClient();
+        var client = factory.CreateUserClient();
         var url = await CreateVersionUrlAsync(client);
         var tooBig = TestFiles.Mp3(50 * 1024 * 1024 + 1);                    // 1 octet de trop
 
@@ -77,7 +77,7 @@ public sealed class FileSecurityTests(SongVaultApiFactory factory)
     {
         // Hôte dérivé : même base SQL Server, mais limite abaissée à 2 uploads par minute
         await using var limited = factory.WithWebHostBuilder(b => b.UseSetting("RateLimiting:UploadsPerMinute", "2"));
-        var client = limited.CreateClient();
+        var client = await limited.CreateNewUserClientAsync();
         var url = await CreateVersionUrlAsync(client);
 
         var statuses = new List<HttpStatusCode>();
@@ -97,7 +97,7 @@ public sealed class FileSecurityTests(SongVaultApiFactory factory)
     [Fact]
     public async Task Les_reponses_portent_les_en_tetes_de_securite()
     {
-        var response = await factory.CreateClient().GetAsync("/api/songs");
+        var response = await factory.CreateUserClient().GetAsync("/api/songs");
 
         Assert.Equal("nosniff", response.Headers.GetValues("X-Content-Type-Options").Single());
         Assert.Equal("DENY", response.Headers.GetValues("X-Frame-Options").Single());
@@ -107,7 +107,7 @@ public sealed class FileSecurityTests(SongVaultApiFactory factory)
     [Fact]
     public async Task La_CSP_stricte_ne_s_applique_qu_a_l_API()
     {
-        var client = factory.CreateClient();
+        var client = factory.CreateUserClient();
 
         var api = await client.GetAsync("/api/songs");
         var health = await client.GetAsync("/health/live");

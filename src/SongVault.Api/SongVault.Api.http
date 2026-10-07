@@ -1,45 +1,70 @@
 @host = http://localhost:5080
 
+@auth = Bearer {{login.response.body.$.accessToken}}
+
+### 1. Inscription (une seule fois par base de données)
+POST {{host}}/api/auth/register
+Content-Type: application/json
+
+{ "email": "moi@songvault.local", "password": "Mon-Mot-De-Passe1!" }
+
+### 2. Connexion par jeton (à relancer toutes les heures)
+# @name login
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{ "email": "moi@songvault.local", "password": "Mon-Mot-De-Passe1!" }
+
 ### Liste des morceaux
 GET {{host}}/api/songs
+Authorization: {{auth}}
 Accept: application/json
 
 ### Document OpenAPI
 GET {{host}}/openapi/v1.json
+Authorization: {{auth}}
 
 ### Créer un morceau
 # @name create
 POST {{host}}/api/songs
+Authorization: {{auth}}
 Content-Type: application/json
 
 { "title": "Nocturne en ré mineur", "artist": "SongVault Band", "description": "Ballade piano-voix" }
 
 ### Relire le morceau créé
 GET {{host}}/api/songs/{{create.response.body.$.id}}
+Authorization: {{auth}}
 
 ### Titre manquant → 400 (validation [ApiController])
 POST {{host}}/api/songs
+Authorization: {{auth}}
 Content-Type: application/json
 
 { "artist": "Sans titre" }
 
 ### Id inconnu → 404
 GET {{host}}/api/songs/00000000-0000-0000-0000-000000000001
+Authorization: {{auth}}
 
 ### Liste paginée
 GET {{host}}/api/songs?page=1&pageSize=2
+Authorization: {{auth}}
 
 ### pageSize hors bornes → 400
 GET {{host}}/api/songs?pageSize=500
+Authorization: {{auth}}
 
 ### Modifier le morceau créé plus haut → 204
 PUT {{host}}/api/songs/{{create.response.body.$.id}}
+Authorization: {{auth}}
 Content-Type: application/json
 
 { "title": "Nocturne en ré mineur (arrangement)", "artist": "SongVault Band", "description": "Version cordes" }
 
 ### Supprimer → 204 (un second appel → 404)
 DELETE {{host}}/api/songs/{{create.response.body.$.id}}
+Authorization: {{auth}}
 
 
 
@@ -48,6 +73,7 @@ DELETE {{host}}/api/songs/{{create.response.body.$.id}}
 ### Créer un morceau pour les versions
 # @name song
 POST {{host}}/api/songs
+Authorization: {{auth}}
 Content-Type: application/json
 
 { "title": "Lumière froide", "artist": "SongVault Band" }
@@ -55,45 +81,54 @@ Content-Type: application/json
 ### Version (à exécuter 3 fois → numéros 1, 2, 3)
 # @name version
 POST {{host}}/api/songs/{{song.response.body.$.id}}/versions
+Authorization: {{auth}}
 Content-Type: application/json
 
 { "title": "Maquette guitare-voix", "status": "Demo", "notes": "Capo 2" }
 
 ### Lister les versions
 GET {{host}}/api/songs/{{song.response.body.$.id}}/versions
+Authorization: {{auth}}
 
 ### Détail
 GET {{host}}/api/songs/{{song.response.body.$.id}}/versions/{{version.response.body.$.id}}
+Authorization: {{auth}}
 
 ### Modifier le statut → 204
 PUT {{host}}/api/songs/{{song.response.body.$.id}}/versions/{{version.response.body.$.id}}
+Authorization: {{auth}}
 Content-Type: application/json
 
 { "title": "Maquette guitare-voix", "status": "Rehearsal", "notes": "Capo 2, tempo 92" }
 
 ### Statut inconnu → 400
 POST {{host}}/api/songs/{{song.response.body.$.id}}/versions
+Authorization: {{auth}}
 Content-Type: application/json
 
 { "title": "X", "status": "Mastering" }
 
 ### Politique de fichiers
 GET {{host}}/api/files/policy
+Authorization: {{auth}}
 
 ### Version avec BPM et tonalité → 201
 POST {{host}}/api/songs/{{song.response.body.$.id}}/versions
+Authorization: {{auth}}
 Content-Type: application/json
 
 { "title": "Arrangement cordes", "status": "Arrangement", "bpm": 92, "key": "F#m" }
 
 ### Tonalité invalide → 422
 POST {{host}}/api/songs/{{song.response.body.$.id}}/versions
+Authorization: {{auth}}
 Content-Type: application/json
 
 { "title": "Essai", "status": "Demo", "key": "H" }
 
 ### BPM hors limites → 400
 POST {{host}}/api/songs/{{song.response.body.$.id}}/versions
+Authorization: {{auth}}
 Content-Type: application/json
 
 { "title": "Essai", "status": "Demo", "bpm": 500 }
