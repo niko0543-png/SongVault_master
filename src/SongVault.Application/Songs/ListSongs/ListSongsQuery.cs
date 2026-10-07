@@ -1,3 +1,5 @@
-﻿namespace SongVault.Application.Songs.ListSongs;
+﻿using SongVault.Domain.Songs;
 
-public sealed record ListSongsQuery(int Page, int PageSize);
+namespace SongVault.Application.Songs.ListSongs;
+
+public sealed record ListSongsQuery(int Page, int PageSize, string? Search = null, SongVersionStatus? Status = null);
