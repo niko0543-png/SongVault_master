@@ -106,5 +106,14 @@ export const usePlayerStore = defineStore('player', () => {
     if (wasPlaying) await resume()
   }
 
-  return { track, isPlaying, currentTime, duration, error, attach, detach, play, pause, toggle, seek, switchTo }
+  /** Arrête la lecture et masque le lecteur (déconnexion). */
+function stop() {
+  audio?.pause()
+  track.value = null
+  currentTime.value = 0
+  duration.value = 0
+  error.value = null
+}
+
+  return { track, isPlaying, currentTime, duration, error, attach, detach, play, pause, toggle, seek, switchTo, stop }
 })

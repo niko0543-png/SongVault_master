@@ -81,5 +81,15 @@ export const useSongsStore = defineStore('songs', () => {
     isLoaded.value = false
   }
 
-  return { items, isLoading, isLoaded, error, filters, count, fetchList, setFilters, upsert, remove, invalidate }
+  /** Oublie tout (déconnexion) : la personne suivante ne doit rien voir. */
+function reset() {
+  lastRequest++                                   // ignore une éventuelle réponse encore en vol
+  items.value = []
+  filters.value = { search: '', status: '' }
+  isLoaded.value = false
+  isLoading.value = false
+  error.value = null
+}
+  
+  return { items, isLoading, isLoaded, error, filters, count, fetchList, setFilters, upsert, remove, invalidate, reset }
 })

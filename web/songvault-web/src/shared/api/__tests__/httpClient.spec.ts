@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { request } from '../httpClient'
 import { ApiError } from '../ApiError'
+import { request, setUnauthorizedHandler } from '../httpClient'
 
 function mockFetch(response: Response | Error) {
   const fn = vi.fn<typeof fetch>()          // le faux a exactement la signature de fetch
@@ -79,5 +79,23 @@ it('envoie le corps en JSON', async () => {
   it('transforme une panne réseau en ApiError de statut 0', async () => {
     mockFetch(new TypeError('Failed to fetch'))
     await expect(request('/songs')).rejects.toMatchObject({ status: 0 })
+  })
+
+   it('accepte un 200 sans corps', async () => {
+    mockFetch(new Response('', { status: 200 }))
+    await expect(request<void>('/auth/login', { method: 'POST', body: {} })).resolves.toBeUndefined()
+  })
+
+  it("prévient l'application d'un 401 sur une route métier, pas sur /auth/", async () => {
+    const handler = vi.fn<() => void>()
+    setUnauthorizedHandler(handler)
+
+    mockFetch(json({ status: 401 }, 401))
+    await request('/songs').catch(() => {})
+    mockFetch(json({ status: 401 }, 401))
+    await request('/auth/me').catch(() => {})
+
+    expect(handler).toHaveBeenCalledOnce()
+    setUnauthorizedHandler(null)
   })
 })
