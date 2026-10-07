@@ -21,20 +21,13 @@ public sealed class SongFilesEndpointsTests(SongVaultApiFactory factory)
         return versionResponse.Headers.Location!.ToString();
     }
 
-    private static MultipartFormDataContent Form(byte[] bytes, string fileName)
-    {
-        var part = new ByteArrayContent(bytes);
-        part.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
-        return new MultipartFormDataContent { { part, "file", fileName } };
-    }
-
     [Fact]
     public async Task Upload_puis_telechargement_renvoie_exactement_les_memes_octets()
     {
         var versionUrl = await CreateVersionUrlAsync();
-        var bytes = RandomNumberGenerator.GetBytes(64 * 1024);
+        var bytes = TestFiles.Mp3(64 * 1024);
 
-        var upload = await _client.PostAsync($"{versionUrl}/files", Form(bytes, "maquette.mp3"));
+        var upload = await _client.PostAsync($"{versionUrl}/files", TestFiles.Form(bytes, "maquette.mp3"));
 
         Assert.Equal(HttpStatusCode.Created, upload.StatusCode);
         var downloaded = await _client.GetByteArrayAsync(upload.Headers.Location);
@@ -45,7 +38,7 @@ public sealed class SongFilesEndpointsTests(SongVaultApiFactory factory)
     public async Task Requete_Range_renvoie_206()
     {
         var versionUrl = await CreateVersionUrlAsync();
-        var upload = await _client.PostAsync($"{versionUrl}/files", Form(RandomNumberGenerator.GetBytes(4096), "a.mp3"));
+        var upload = await _client.PostAsync($"{versionUrl}/files", TestFiles.Form(TestFiles.Mp3(4096), "a.mp3"));
 
         var request = new HttpRequestMessage(HttpMethod.Get, upload.Headers.Location);
         request.Headers.Range = new RangeHeaderValue(0, 99);
@@ -60,7 +53,7 @@ public sealed class SongFilesEndpointsTests(SongVaultApiFactory factory)
     {
         var versionUrl = await CreateVersionUrlAsync();
 
-        var response = await _client.PostAsync($"{versionUrl}/files", Form([1, 2, 3], "virus.exe"));
+        var response = await _client.PostAsync($"{versionUrl}/files", TestFiles.Form([1, 2, 3], "virus.exe"));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
