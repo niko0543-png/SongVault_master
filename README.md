@@ -1,3 +1,5 @@
+[![CI](https://github.com/niko0543-png/SongVault_master/actions/workflows/ci.yml/badge.svg)](https://github.com/niko0543-png/SongVault_master/actions/workflows/ci.yml)
+
 SongVault — API et outils pour gérer une bibliothèque de chansons.
 
 Prérequis
