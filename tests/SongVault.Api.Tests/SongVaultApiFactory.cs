@@ -28,7 +28,10 @@ public sealed class SongVaultApiFactory : WebApplicationFactory<Program>, IAsync
         builder.UseSetting("ConnectionStrings:SongVault", _sql.GetConnectionString());
         builder.UseSetting("FileStorage:RootPath", _filesRoot);
         builder.UseSetting("RateLimiting:UploadsPerMinute", "1000");
-        builder.UseSetting("RateLimiting:AuthPerMinute", "1000");      // beaucoup d'inscriptions dans les tests
+        builder.UseSetting("RateLimiting:AuthPerMinute", "1000");
+
+        // Masque, dans les tests uniquement, les erreurs SQL attendues du test de concurrence
+        builder.UseSetting("Logging:LogLevel:Microsoft.EntityFrameworkCore.Update", "None");
     }
 
     private async Task StartAsync()
@@ -80,4 +83,6 @@ public sealed class SongVaultApiFactory : WebApplicationFactory<Program>, IAsync
     // public async ValueTask InitializeAsync() => await StartAsync();
     // public override async ValueTask DisposeAsync()
     // { await _sql.DisposeAsync(); await base.DisposeAsync(); if (Directory.Exists(_filesRoot)) Directory.Delete(_filesRoot, true); }
+
+
 }
