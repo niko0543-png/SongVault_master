@@ -2,6 +2,7 @@
 
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -56,6 +57,11 @@ public sealed class SongVaultApiFactory : WebApplicationFactory<Program>, IAsync
         client.DefaultRequestHeaders.Add("Cookie", _defaultUserCookie);
         return client;
     }
+
+    /// <summary>Chaîne de connexion vers une autre base du même conteneur (créée par la première migration).</summary>
+    public string ConnectionStringFor(string database)
+        => new SqlConnectionStringBuilder(_sql.GetConnectionString()) { InitialCatalog = database }.ConnectionString;
+
 
     /// <summary>Inscrit puis connecte un utilisateur ; renvoie son cookie au format "nom=valeur".</summary>
     public static async Task<string> RegisterAndLoginAsync(HttpClient client, string email)

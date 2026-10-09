@@ -16,9 +16,10 @@ public sealed class FileSecurityTests(SongVaultApiFactory factory)
     /// <summary>Crée un morceau et une version ; renvoie l'URL de la version.</summary>
     private static async Task<string> CreateVersionUrlAsync(HttpClient client)
     {
-        var songResponse = await client.PostAsJsonAsync("/api/songs", new { title = "Sécurité" });
+        var songs = await client.SongsUrlAsync();
+        var songResponse = await client.PostAsJsonAsync(songs, new { title = "Sécurité" });
         var song = (await songResponse.Content.ReadFromJsonAsync<SongResponse>())!;
-        var version = await client.PostAsJsonAsync($"/api/songs/{song.Id}/versions", new { title = "v1", status = "Demo" });
+        var version = await client.PostAsJsonAsync($"{songs}/{song.Id}/versions", new { title = "v1", status = "Demo" });
         return version.Headers.Location!.ToString();
     }
 
@@ -97,7 +98,9 @@ public sealed class FileSecurityTests(SongVaultApiFactory factory)
     [Fact]
     public async Task Les_reponses_portent_les_en_tetes_de_securite()
     {
-        var response = await factory.CreateUserClient().GetAsync("/api/songs");
+        var client = factory.CreateUserClient();
+        var songs = await client.SongsUrlAsync();
+        var response = await client.GetAsync(songs);
 
         Assert.Equal("nosniff", response.Headers.GetValues("X-Content-Type-Options").Single());
         Assert.Equal("DENY", response.Headers.GetValues("X-Frame-Options").Single());
@@ -108,8 +111,9 @@ public sealed class FileSecurityTests(SongVaultApiFactory factory)
     public async Task La_CSP_stricte_ne_s_applique_qu_a_l_API()
     {
         var client = factory.CreateUserClient();
+        var songs = await client.SongsUrlAsync();
 
-        var api = await client.GetAsync("/api/songs");
+        var api = await client.GetAsync(songs);
         var health = await client.GetAsync("/health/live");
 
         Assert.Contains("default-src 'none'", api.Headers.GetValues("Content-Security-Policy").Single());

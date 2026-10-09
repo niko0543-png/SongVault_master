@@ -15,9 +15,10 @@ public sealed class SongFilesEndpointsTests(SongVaultApiFactory factory)
 
     private async Task<string> CreateVersionUrlAsync()
     {
-        var song = (await (await _client.PostAsJsonAsync("/api/songs", new { title = "Fichiers" }))
+        var songs = await _client.SongsUrlAsync();
+        var song = (await (await _client.PostAsJsonAsync(songs, new { title = "Fichiers" }))
             .Content.ReadFromJsonAsync<SongResponse>())!;
-        var versionResponse = await _client.PostAsJsonAsync($"/api/songs/{song.Id}/versions", new { title = "v1", status = "Demo" });
+        var versionResponse = await _client.PostAsJsonAsync($"{songs}/{song.Id}/versions", new { title = "v1", status = "Demo" });
         return versionResponse.Headers.Location!.ToString();
     }
 

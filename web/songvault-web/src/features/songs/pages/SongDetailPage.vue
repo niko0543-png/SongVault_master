@@ -103,7 +103,7 @@ async function onDelete() {
 
 <template>
   <section>
-    <RouterLink to="/songs">← Tous les morceaux</RouterLink>
+    <RouterLink to="/">← Tous les morceaux</RouterLink>
 
     <LoadingState v-if="isLoading" />
     <div v-else-if="isNotFound" class="card" role="alert"><p>Ce morceau n'existe pas ou a été supprimé.</p></div>

@@ -38,7 +38,7 @@ public sealed class MusicalKeyTests
     [InlineData(301)]
     public void AddVersion_refuse_un_bpm_hors_limites(int bpm)
     {
-        var song = Song.Create("owner-1", "Nocturne", null, null, Now);
+        var song = Song.Create(Guid.NewGuid(), "Nocturne", null, null, Now);
         Assert.Throws<DomainException>(() => song.AddVersion("v1", SongVersionStatus.Demo, null, null, Now, bpm));
         Assert.Equal(0, song.LastVersionNumber);
     }
@@ -46,7 +46,7 @@ public sealed class MusicalKeyTests
     [Fact]
     public void AddVersion_enregistre_bpm_et_tonalite()
     {
-        var song = Song.Create("owner-1", "Nocturne", null, null, Now);
+        var song = Song.Create(Guid.NewGuid(), "Nocturne", null, null, Now);
         var version = song.AddVersion("v1", SongVersionStatus.Demo, null, null, Now, 92, MusicalKey.Parse("F#m"));
 
         Assert.Equal(92, version.Bpm);

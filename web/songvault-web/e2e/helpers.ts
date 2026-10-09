@@ -10,7 +10,7 @@ export async function registerNewUser(page: Page) {
   await page.getByLabel('Mot de passe', { exact: true }).fill(password)
   await page.getByLabel('Confirmer le mot de passe').fill(password)
   await page.getByRole('button', { name: 'Créer mon compte' }).click()
-  await expect(page).toHaveURL(/\/songs$/)
+  await expect(page).toHaveURL(/\/b\/[^/]+\/songs$/)
 
   return { email, password }
 }

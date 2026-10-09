@@ -72,7 +72,8 @@ jobs:
                -H 'Content-Type: application/json' \
                -d '{"email":"ci@songvault.local","password":"Ci-Password1!"}' \
                'http://localhost:8080/api/auth/login?useCookies=true'
-          curl --fail --silent --show-error -b cookies.txt http://localhost:8080/api/songs
+          BAND_ID=$(curl --fail --silent --show-error -b cookies.txt http://localhost:8080/api/bands | jq -r '.[0].id')
+          curl --fail --silent --show-error -b cookies.txt "http://localhost:8080/api/bands/$BAND_ID/songs"
       - if: failure()
         run: docker compose -f compose.yaml logs
       - if: always()

@@ -4,6 +4,7 @@ using SongVault.Application.Common.Exceptions;
 using SongVault.Application.Files;
 using SongVault.Application.Songs;
 using SongVault.Application.Versions;
+using SongVault.Domain.Bands;
 using SongVault.Domain.Songs;
 
 namespace SongVault.Application.Tests.Fakes;
@@ -138,7 +139,16 @@ internal sealed class FakeFileStorageService : IFileStorageService
     }
 }
 
-internal sealed class FakeCurrentUser(string userId = "owner-1") : ICurrentUser
+internal sealed class FakeCurrentUser(string userId = "owner-1", string? email = "owner-1@test.local") : ICurrentUser
 {
     public string UserId { get; } = userId;
+    public string? Email { get; } = email;
+}
+
+/// <summary>Groupe actif figé, comme si [BandScoped] avait validé l'adhésion.</summary>
+internal sealed class FakeBandContext(Guid bandId) : IBandContext
+{
+    public Guid? BandId { get; } = bandId;
+    public BandRole? Role { get; } = BandRole.Owner;
+    public Guid RequiredBandId { get; } = bandId;
 }

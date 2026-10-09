@@ -15,7 +15,7 @@ public sealed class CreateSongVersionHandlerTests
 
     private CreateSongVersionCommand CommandForNewSong()
     {
-        var song = Song.Create("owner-1", "Nocturne", null, null, Now);
+        var song = Song.Create(Guid.NewGuid(), "Nocturne", null, null, Now);
         _songs.Songs.Add(song);
         return new CreateSongVersionCommand(song.Id, "v1", SongVersionStatus.Demo, null, null);
     }

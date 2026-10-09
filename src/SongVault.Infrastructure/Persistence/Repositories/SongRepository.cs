@@ -10,13 +10,13 @@ using SongVault.Domain.Songs;
 namespace SongVault.Infrastructure.Persistence.Repositories;
 
 /// <summary>
-/// TOUTES les lectures partent de OwnedSongs : un utilisateur ne voit jamais les données d'un autre.
-/// Une ressource d'autrui est donc « introuvable » (404), sans révéler son existence.
+/// TOUTES les lectures partent de BandSongs : un utilisateur ne voit que les morceaux du groupe actif,
+/// dont son adhésion a été vérifiée par [BandScoped]. Une ressource d'un autre groupe est « introuvable » (404).
 /// </summary>
-internal sealed class SongRepository(SongVaultDbContext db, ICurrentUser currentUser) : ISongRepository
+internal sealed class SongRepository(SongVaultDbContext db, IBandContext bandContext) : ISongRepository
 {
-    private IQueryable<Song> OwnedSongs => db.Songs.Where(s => s.OwnerId == currentUser.UserId);
-    private IQueryable<SongVersion> OwnedVersions => OwnedSongs.SelectMany(s => s.Versions);
+    private IQueryable<Song> BandSongs => db.Songs.Where(s => s.BandId == bandContext.RequiredBandId);
+    private IQueryable<SongVersion> BandVersions => BandSongs.SelectMany(s => s.Versions);
 
     // ---------- Écriture ----------
     public void Add(Song song) => db.Songs.Add(song);
@@ -24,15 +24,15 @@ internal sealed class SongRepository(SongVaultDbContext db, ICurrentUser current
 
     // ---------- Morceaux ----------
     public Task<Song?> GetByIdAsync(Guid id, CancellationToken ct)
-        => OwnedSongs.FirstOrDefaultAsync(s => s.Id == id, ct);
+        => BandSongs.FirstOrDefaultAsync(s => s.Id == id, ct);
 
     public Task<bool> ExistsAsync(Guid songId, CancellationToken ct)
-        => OwnedSongs.AnyAsync(s => s.Id == songId, ct);
+        => BandSongs.AnyAsync(s => s.Id == songId, ct);
 
     public async Task<PagedResult<SongDto>> ListAsync(
         int page, int pageSize, string? search, SongVersionStatus? status, CancellationToken ct)
     {
-        var query = OwnedSongs.AsNoTracking();
+        var query = BandSongs.AsNoTracking();
 
         if (search is not null)
             query = query.Where(s => s.Title.Contains(search) || (s.Artist != null && s.Artist.Contains(search)));
@@ -55,20 +55,20 @@ internal sealed class SongRepository(SongVaultDbContext db, ICurrentUser current
 
     // ---------- Versions ----------
     public Task<Song?> GetWithVersionAsync(Guid songId, Guid versionId, CancellationToken ct)
-        => OwnedSongs
+        => BandSongs
             .Include(s => s.Versions.Where(v => v.Id == versionId))
                 .ThenInclude(v => v.Files)
             .FirstOrDefaultAsync(s => s.Id == songId, ct);
 
     public async Task<IReadOnlyList<SongVersionSummaryDto>> ListVersionsAsync(Guid songId, CancellationToken ct)
-        => await OwnedVersions.AsNoTracking()
+        => await BandVersions.AsNoTracking()
             .Where(v => v.SongId == songId)
             .OrderBy(v => v.Number)
             .Select(v => new SongVersionSummaryDto(v.Id, v.Number, v.Title, v.Status, v.CreatedAt))
             .ToListAsync(ct);
 
     public Task<SongVersionDto?> GetVersionAsync(Guid songId, Guid versionId, CancellationToken ct)
-        => OwnedVersions.AsNoTracking()
+        => BandVersions.AsNoTracking()
             .Where(v => v.SongId == songId && v.Id == versionId)
             .Select(v => new SongVersionDto(
                 v.Id, v.SongId, v.Number, v.Title, v.Status, v.Notes, v.Lyrics,
@@ -81,7 +81,7 @@ internal sealed class SongRepository(SongVaultDbContext db, ICurrentUser current
 
     // ---------- Fichiers ----------
     public Task<StoredFileInfo?> GetFileAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct)
-        => OwnedVersions.AsNoTracking()
+        => BandVersions.AsNoTracking()
             .Where(v => v.SongId == songId && v.Id == versionId)
             .SelectMany(v => v.Files)
             .Where(f => f.Id == fileId)
@@ -89,7 +89,7 @@ internal sealed class SongRepository(SongVaultDbContext db, ICurrentUser current
             .FirstOrDefaultAsync(ct);
 
     public async Task<IReadOnlyList<string>> ListStorageKeysAsync(Guid songId, CancellationToken ct)
-        => await OwnedVersions.AsNoTracking()
+        => await BandVersions.AsNoTracking()
             .Where(v => v.SongId == songId)
             .SelectMany(v => v.Files)
             .Select(f => f.StorageKey)

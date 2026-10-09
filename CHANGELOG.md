@@ -2,6 +2,16 @@
 
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) — versions : [SemVer](https://semver.org/lang/fr/).
 
+## [Non publié]
+### Ajouté
+- Groupes : un morceau appartient à un groupe, un utilisateur peut être membre de plusieurs groupes (ADR 0007).
+- Sélecteur de groupe dans l'en-tête ; groupe personnel créé automatiquement pour chaque compte.
+- Script `scripts/purge-orphan-files.ps1` : retire du volume les fichiers qui ne sont plus référencés.
+### Modifié
+- Routes de l'API sous `/api/bands/{bandId}/songs…` et du front sous `/b/{bandId}/songs…`.
+### Supprimé
+- `Song.OwnerId`, remplacé par `Song.BandId`. Les morceaux sans propriétaire valide sont supprimés par la migration `BackfillBands`.
+
 ## [0.6.0] - 2026-10-23
 ### Ajouté
 - BPM et tonalité sur les versions (objet valeur `MusicalKey`, contrainte CHECK SQL).

@@ -8,7 +8,6 @@ public sealed class Song
     public const int TitleMaxLength = 200;
     public const int ArtistMaxLength = 200;
     public const int DescriptionMaxLength = 2000;
-    public const int OwnerIdMaxLength = 450;
 
     public int LastVersionNumber { get; private set; }
     public IReadOnlyCollection<SongVersion> Versions => _versions.AsReadOnly();
@@ -20,14 +19,14 @@ public sealed class Song
     public string? Description { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
-    public string OwnerId { get; private set; } = default!;
+    public Guid BandId { get; private set; }
 
-    public static Song Create(string ownerId, string title, string? artist, string? description, DateTimeOffset now)
+    public static Song Create(Guid bandId, string title, string? artist, string? description, DateTimeOffset now)
     {
-        if (string.IsNullOrWhiteSpace(ownerId))
-            throw new DomainException("Un morceau doit avoir un propriétaire.");
+        if (bandId == Guid.Empty)
+            throw new DomainException("Un morceau doit appartenir à un groupe.");
 
-        var song = new Song { Id = Guid.CreateVersion7(now), OwnerId = ownerId, CreatedAt = now };
+        var song = new Song { Id = Guid.CreateVersion7(now), BandId = bandId, CreatedAt = now };
         song.ApplyDetails(title, artist, description, now);
         return song;
     }

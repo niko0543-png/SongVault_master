@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 
+using SongVault.Api.Auth;
 using SongVault.Api.Contracts.Versions;
 using SongVault.Application.Versions;
 
@@ -7,7 +8,8 @@ namespace SongVault.Api.Controllers;
 
 /// <summary>Versions successives d'un morceau.</summary>
 [ApiController]
-[Route("api/songs/{songId:guid}/versions")]
+[Route("api/bands/{bandId:guid}/songs/{songId:guid}/versions")]
+[BandScoped]
 [ProducesResponseType(StatusCodes.Status401Unauthorized)]
 [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
 public sealed class SongVersionsController : ControllerBase
@@ -45,12 +47,12 @@ public sealed class SongVersionsController : ControllerBase
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
     public async Task<ActionResult<SongVersionResponse>> Create(
-      Guid songId, CreateSongVersionRequest request, [FromServices] CreateSongVersionHandler handler, CancellationToken ct)
+      Guid bandId, Guid songId, CreateSongVersionRequest request, [FromServices] CreateSongVersionHandler handler, CancellationToken ct)
     {
         var version = await handler.HandleAsync(new CreateSongVersionCommand(
             songId, request.Title, request.Status.GetValueOrDefault(), request.Notes, request.Lyrics,
             request.Bpm, request.Key), ct);
-        return CreatedAtAction(nameof(GetById), new { songId, versionId = version.Id }, SongVersionResponse.From(version));
+        return CreatedAtAction(nameof(GetById), new { bandId, songId, versionId = version.Id }, SongVersionResponse.From(version));
     }
 
     /// <summary>Modifie une version (titre, statut, notes, paroles).</summary>

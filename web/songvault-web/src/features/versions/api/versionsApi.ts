@@ -1,7 +1,8 @@
 import { request } from '@/shared/api/httpClient'
+import { bandPath } from '@/shared/api/bandPath'
 import type { SongVersion, SongVersionInput, SongVersionStatus, SongVersionSummary } from '../types'
 
-const base = (songId: string) => `/songs/${songId}/versions`
+const base = (songId: string) => bandPath(`/songs/${songId}/versions`)
 
 function list(songId: string) {
   return request<SongVersionSummary[]>(base(songId))

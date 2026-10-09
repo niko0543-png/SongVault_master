@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -23,10 +24,14 @@ public static class DependencyInjection
                 options.UseSqlServer();
             else
                 options.UseSqlServer(connectionString);
+
+            // Song a un filtre de groupe, SongVersion non : avertissement attendu, voir SongVaultDbContext
+            options.ConfigureWarnings(w => w.Ignore(CoreEventId.PossibleIncorrectRequiredNavigationWithQueryFilterInteractionWarning));
         });
 
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<SongVaultDbContext>());
         services.AddScoped<ISongRepository, SongRepository>();
+        services.AddScoped<IBandRepository, BandRepository>();
 
         services.AddOptions<FileStorageOptions>()
             .Bind(configuration.GetSection(FileStorageOptions.SectionName))
