@@ -6,6 +6,13 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>769a727a-47a0-4fe1-931e-e9420724c4a3</UserSecretsId>
   </PropertyGroup>
+  
+  <PropertyGroup>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- CS1591 : chaque membre public sans commentaire XML produirait un avertissement -->
+    <!-- CS1573 : un <param> documenté oblige à documenter TOUS les paramètres (handler, ct…) -->
+    <NoWarn>$(NoWarn);CS1591;CS1573</NoWarn>
+  </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
