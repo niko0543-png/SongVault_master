@@ -138,3 +138,11 @@ Authorization: {{auth}}
 Content-Type: application/json
 
 { "title": "Essai", "status": "Demo", "bpm": 500 }
+
+### Membres du groupe
+GET {{host}}/api/bands/{{bandId}}/members
+Authorization: {{auth}}
+
+### Quitter son groupe personnel en étant le seul Owner → 409
+DELETE {{host}}/api/bands/{{bandId}}/members/me
+Authorization: {{auth}}

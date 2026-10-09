@@ -30,4 +30,16 @@ public interface IBandRepository
     /// Liste vide si aucun. Lecture sans suivi. Utilisé par GET /api/bands (ListMyBandsHandler).
     /// </summary>
     Task<IReadOnlyList<BandSummaryDto>> ListForUserAsync(string userId, CancellationToken ct);
+
+    /// <summary>
+    /// Groupe suivi par EF AVEC toutes ses adhésions (Band.ChangeRole et Band.RemoveMember en ont besoin),
+    /// ou null s'il n'existe pas. Utilisé par ChangeMemberRoleHandler, RemoveMemberHandler et LeaveBandHandler.
+    /// </summary>
+    Task<Band?> GetWithMembersAsync(Guid bandId, CancellationToken ct);
+
+    /// <summary>
+    /// Membres du groupe avec leur e-mail, triés par e-mail. Lecture sans suivi.
+    /// Utilisé par GET /api/bands/{bandId}/members (ListMembersHandler).
+    /// </summary>
+    Task<IReadOnlyList<BandMemberDto>> ListMembersAsync(Guid bandId, CancellationToken ct);
 }

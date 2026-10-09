@@ -32,6 +32,10 @@ public static class DependencyInjection
         services.AddScoped<ListMyBandsHandler>();
         services.AddScoped<CreateBandHandler>();
         services.AddScoped<RenameBandHandler>();
+        services.AddScoped<ListMembersHandler>();
+        services.AddScoped<ChangeMemberRoleHandler>();
+        services.AddScoped<RemoveMemberHandler>();
+        services.AddScoped<LeaveBandHandler>();
 
         return services;
     }
