@@ -12,3 +12,4 @@ l'ancien, qui passe au statut « remplacé par ADR NNNN ».
 | [0004](0004-cookies-plutot-que-jwt.md) | Authentification par cookie plutôt que par jeton JWT | accepté |
 | [0005](0005-bundle-de-migrations.md) | Migrations appliquées par un bundle dans un conteneur ponctuel | accepté |
 | [0006](0006-pas-de-mediatr.md) | Ni MediatR ni repository générique | accepté |
+| [0007](0007-groupes-et-membres.md) | Les morceaux appartiennent à un groupe, plus à un utilisateur | accepté |
