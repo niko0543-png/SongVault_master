@@ -4,6 +4,8 @@ import { storeToRefs } from 'pinia'
 import { usePlayerStore } from '../stores/playerStore'
 import { useAudioPlayer } from '../composables/useAudioPlayer'
 import { formatTime } from '@/shared/utils/format'
+import { onBeforeUnmount, onMounted } from 'vue'
+import { isGlobalShortcut } from '@/shared/utils/keyboard'
 
 const audioElement = useTemplateRef<HTMLAudioElement>('audio-element')
 useAudioPlayer(audioElement)
@@ -14,6 +16,16 @@ const { track, isPlaying, currentTime, duration, error } = storeToRefs(player)
 function onSeek(event: Event) {
   player.seek(Number((event.target as HTMLInputElement).value))
 }
+
+function onKeydown(event: KeyboardEvent) {
+  if (!track.value || !isGlobalShortcut(event)) return
+  if (event.key === ' ' || event.key === 'k') {
+    event.preventDefault()                         // sinon Espace fait aussi défiler la page
+    void player.toggle()
+  }
+}
+onMounted(() => window.addEventListener('keydown', onKeydown))
+onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 </script>
 
 <template>
@@ -21,7 +33,8 @@ function onSeek(event: Event) {
   <audio ref="audio-element" preload="metadata" />
 
   <div v-if="track" class="player" role="region" aria-label="Lecteur audio">
-    <button type="button" class="play" :aria-label="isPlaying ? 'Mettre en pause' : 'Lire'" @click="player.toggle()">
+    <button type="button" class="play" :aria-label="isPlaying ? 'Mettre en pause' : 'Lire'"
+        aria-keyshortcuts="Space k" :title="isPlaying ? 'Pause (Espace)' : 'Lecture (Espace)'" @click="player.toggle()">
       {{ isPlaying ? '⏸' : '▶' }}
     </button>
     <div class="info">
