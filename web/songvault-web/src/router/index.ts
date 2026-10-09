@@ -38,14 +38,14 @@ const router = createRouter({
       path: '/b/:bandId/songs/new',
       name: 'song-create',
       component: () => import('@/features/songs/pages/SongCreatePage.vue'),
-      meta: { title: 'Nouveau morceau' },
+      meta: { title: 'Nouveau morceau' , write: true },
     },
     {
       path: '/b/:bandId/songs/:songId/edit',
       name: 'song-edit',
       component: () => import('@/features/songs/pages/SongEditPage.vue'),
       props: true,
-      meta: { title: 'Modifier le morceau' },
+      meta: { title: 'Modifier le morceau' , write: true },
     },
     {
       path: '/b/:bandId/songs/:songId/compare',
@@ -67,6 +67,12 @@ const router = createRouter({
       component: () => import('@/features/songs/pages/SongDetailPage.vue'),
       props: true,
       meta: { title: 'Détail du morceau' },
+    },
+    {
+      path: '/b/:bandId/members',
+      name: 'band-members',
+      component: () => import('@/features/bands/pages/MembersPage.vue'),
+      meta: { title: 'Membres' },
     },
 
     {
@@ -96,7 +102,9 @@ router.beforeEach(async (to) => {
   }
   // Groupe inconnu ou dont on n'est pas membre : même page que pour une adresse inexistante
   if (!bands.has(bandId)) return { name: 'not-found', params: { pathMatch: to.path.slice(1).split('/') } }
-  bands.setActive(bandId)
+ bands.setActive(bandId)
+  // Page d'écriture ouverte par un Guest (lien partagé, favori) : retour à la liste
+  if (to.meta.write && !bands.can('write')) return { name: 'songs', params: { bandId } }
   return true
 })
 

@@ -4,6 +4,7 @@ import { RouterLink, useRouter } from 'vue-router'
 import { songsApi } from '../api/songsApi'
 import type { Song } from '../types'
 import { useSongsStore } from '../stores/songsStore'
+import { useBandStore } from '@/features/bands/stores/bandStore'
 import { versionsApi } from '@/features/versions/api/versionsApi'
 import type { SongVersionInput, SongVersionStatus, SongVersionSummary } from '@/features/versions/types'
 import VersionTimeline from '@/features/versions/components/VersionTimeline.vue'
@@ -22,6 +23,7 @@ const router = useRouter()
 const store = useSongsStore()
 const { confirm } = useConfirm()
 const toast = useToast()
+const bands = useBandStore()
 
 // ---- Chargement ----
 const song = ref<Song | null>(null)
@@ -115,7 +117,7 @@ async function onDelete() {
           <h1>{{ song.title }}</h1>
           <p v-if="song.artist" class="muted">{{ song.artist }}</p>
         </div>
-        <div class="actions">
+        <div v-if="bands.can('write')" class="actions">
           <RouterLink :to="{ name: 'song-edit', params: { songId: song.id } }">Modifier</RouterLink>
           <button type="button" class="danger" :disabled="deletion.isLoading.value" @click="onDelete">Supprimer</button>
         </div>
@@ -130,9 +132,11 @@ async function onDelete() {
       </RouterLink>
       <p v-if="lastCreated" class="muted" role="status">Version v{{ lastCreated }} créée.</p>
       <p v-if="statusError" class="field-error" role="alert">{{ statusError }}</p>
-      <VersionTimeline :song-id="song.id" :versions="versions" :saving-id="savingId" @change-status="onChangeStatus" />
+      <VersionTimeline :song-id="song.id" :versions="versions" :saving-id="savingId"
+                       :readonly="!bands.can('write')" @change-status="onChangeStatus" />
 
       <CreateVersionForm
+        v-if="bands.can('write')"
         :key="formKey"
         :submitting="creation.isLoading.value"
         :server-errors="creationErrors"

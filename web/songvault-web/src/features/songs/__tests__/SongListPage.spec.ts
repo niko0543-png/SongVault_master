@@ -6,6 +6,7 @@ import SongListPage from '../pages/SongListPage.vue'
 import { songsApi } from '../api/songsApi'
 import { ApiError } from '@/shared/api/ApiError'
 import type { Song } from '../types'
+import type { BandRole } from '@/features/bands/types'
 
 // Remplace le module entier : aucun appel réseau pendant les tests
 vi.mock('../api/songsApi')
@@ -15,7 +16,7 @@ const song: Song = {
   createdAt: '2026-10-12T09:00:00Z', updatedAt: '2026-10-12T09:00:00Z',
 }
 
-function mountPage() {
+function mountPage(role?: BandRole) {
   const Stub = { render: () => null }
   const router = createRouter({
     history: createMemoryHistory(),
@@ -25,9 +26,11 @@ function mountPage() {
       { path: '/:pathMatch(.*)*', component: Stub },
     ],
   })
+  // Groupe actif avec ce rôle ; sans rôle, aucun groupe actif (donc aucun droit d'écriture)
+  const initialState = role ? { band: { bands: [{ id: 'b1', name: 'Groupe', role }], activeId: 'b1' } } : {}
   return mount(SongListPage, {
     // stubActions: false → les VRAIES actions du store s'exécutent (avec l'API simulée)
-    global: { plugins: [router, createTestingPinia({ createSpy: vi.fn, stubActions: false })] },
+    global: { plugins: [router, createTestingPinia({ createSpy: vi.fn, stubActions: false, initialState })] },
   })
 }
 
@@ -63,5 +66,17 @@ describe('SongListPage', () => {
 
     expect(songsApi.list).toHaveBeenCalledTimes(1)
     expect(wrapper.find('[data-testid="error-state"]').text()).toContain('injoignable')
+  })
+  
+  it.each([
+    ['Member', true],
+    ['Guest', false],
+  ] as const)('lien « Nouveau morceau » pour un %s : %s', async (role, visible) => {
+    vi.mocked(songsApi.list).mockResolvedValue({ items: [song], page: 1, pageSize: 50, totalCount: 1, totalPages: 1 })
+
+    const wrapper = mountPage(role)
+    await flushPromises()
+
+    expect(wrapper.text().includes('Nouveau morceau')).toBe(visible)
   })
 })

@@ -7,6 +7,8 @@ declare module 'vue-router' {
     guestOnly?: boolean
     /** Titre affiché dans l'onglet du navigateur. */
     title?: string
+    /** Page d'écriture : un Guest est renvoyé à la liste des morceaux (#2). */
+    write?: boolean
   }
 }
 

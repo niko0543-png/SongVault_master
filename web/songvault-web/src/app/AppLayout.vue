@@ -35,6 +35,7 @@ async function onLogout() {
     <RouterLink to="/" class="brand">🎸 SongVault</RouterLink>
     <div v-if="isAuthenticated" class="session">
       <BandSwitcher v-if="bands.isLoaded" />
+      <RouterLink v-if="bands.activeId" :to="{ name: 'band-members', params: { bandId: bands.activeId } }">Membres</RouterLink>
       <span class="muted">{{ user?.email }}</span>
       <button type="button" class="secondary" @click="onLogout">Se déconnecter</button>
     </div>

@@ -5,3 +5,10 @@ export interface Band {
   name: string
   role: BandRole
 }
+
+export interface BandMember {
+  userId: string
+  email: string
+  role: BandRole
+  joinedAt: string
+}

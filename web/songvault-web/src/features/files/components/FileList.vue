@@ -3,7 +3,7 @@ import type { SongFile, SongFileType } from '../types'
 import { filesApi } from '../api/filesApi'
 import { formatDate, formatFileSize } from '@/shared/utils/format'
 
-defineProps<{ songId: string; versionId: string; files: SongFile[]; busyId?: string | null }>()
+defineProps<{ songId: string; versionId: string; files: SongFile[]; busyId?: string | null; readonly?: boolean }>()
 defineEmits<{ play: [file: SongFile]; delete: [file: SongFile] }>()
 
 const icons: Record<SongFileType, string> = { Audio: '🎵', Tablature: '🎸', Document: '📄' }
@@ -21,7 +21,7 @@ const icons: Record<SongFileType, string> = { Audio: '🎵', Tablature: '🎸', 
       <div class="file-actions">
         <button v-if="file.fileType === 'Audio'" type="button" class="secondary" @click="$emit('play', file)">▶ Écouter</button>
         <a :href="filesApi.contentUrl(songId, versionId, file.id, true)" download>Télécharger</a>
-        <button type="button" class="secondary" :disabled="busyId === file.id" @click="$emit('delete', file)">Supprimer</button>
+         <button v-if="!readonly" type="button" class="secondary" :disabled="busyId === file.id" @click="$emit('delete', file)">Supprimer</button>
       </div>
     </li>
   </ul>

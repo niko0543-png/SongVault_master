@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useSongsStore } from '../stores/songsStore'
+import { useBandStore } from '@/features/bands/stores/bandStore'
 import SongCard from '../components/SongCard.vue'
 import SearchBar from '../components/SearchBar.vue'
 import LoadingState from '@/shared/components/LoadingState.vue'
@@ -16,6 +17,7 @@ const route = useRoute()
 const router = useRouter()
 const store = useSongsStore()
 const { items, isLoading, isLoaded, error } = storeToRefs(store)   // réactif
+const bands = useBandStore()
 
 // ================= Filtres : l'URL fait foi =================
 
@@ -86,7 +88,7 @@ onMounted(() => {
   <section>
     <header class="page-header">
       <h1>Morceaux</h1>
-      <RouterLink :to="{ name: 'song-create' }">+ Nouveau morceau</RouterLink>
+        <RouterLink v-if="bands.can('write')" :to="{ name: 'song-create' }">+ Nouveau morceau</RouterLink>
     </header>
 
     <SearchBar v-model:search="search" v-model:status="status" />
@@ -99,7 +101,7 @@ onMounted(() => {
       <button v-if="hasFilters" type="button" class="secondary" @click="clearFilters">
         Effacer les filtres
       </button>
-      <RouterLink v-else :to="{ name: 'song-create' }">Créer le premier morceau</RouterLink>
+       <RouterLink v-else-if="bands.can('write')" :to="{ name: 'song-create' }">Créer le premier morceau</RouterLink>
     </EmptyState>
 
     <template v-else>
