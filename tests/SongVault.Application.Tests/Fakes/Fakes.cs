@@ -138,7 +138,8 @@ internal sealed class FakeFileStorageService : IFileStorageService
     }
 }
 
-internal sealed class FakeCurrentUser(string userId = "owner-1") : ICurrentUser
+internal sealed class FakeCurrentUser(string userId = "owner-1", string? email = "owner-1@test.local") : ICurrentUser
 {
     public string UserId { get; } = userId;
+    public string? Email { get; } = email;
 }

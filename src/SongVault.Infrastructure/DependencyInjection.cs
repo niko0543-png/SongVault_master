@@ -27,6 +27,7 @@ public static class DependencyInjection
 
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<SongVaultDbContext>());
         services.AddScoped<ISongRepository, SongRepository>();
+        services.AddScoped<IBandRepository, BandRepository>();
 
         services.AddOptions<FileStorageOptions>()
             .Bind(configuration.GetSection(FileStorageOptions.SectionName))

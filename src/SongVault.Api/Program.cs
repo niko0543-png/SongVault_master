@@ -65,6 +65,8 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
+builder.Services.AddScoped<HttpBandContext>();
+builder.Services.AddScoped<IBandContext>(sp => sp.GetRequiredService<HttpBandContext>());
 
 var app = builder.Build();
 

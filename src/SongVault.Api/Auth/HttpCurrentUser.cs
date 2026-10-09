@@ -9,4 +9,6 @@ internal sealed class HttpCurrentUser(IHttpContextAccessor accessor) : ICurrentU
     public string UserId =>
         accessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier)
         ?? throw new InvalidOperationException("Aucun utilisateur authentifié dans la requête en cours.");
+
+    public string? Email => accessor.HttpContext?.User.FindFirstValue(ClaimTypes.Name);
 }
