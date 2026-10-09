@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 using SongVault.Application.Abstractions;
 using SongVault.Application.Common.Exceptions;
+using SongVault.Domain.Bands;
 using SongVault.Domain.Songs;
 
 namespace SongVault.Infrastructure.Persistence;
@@ -13,6 +14,8 @@ public sealed class SongVaultDbContext(DbContextOptions<SongVaultDbContext> opti
     : IdentityDbContext<IdentityUser>(options), IUnitOfWork
 {
     public DbSet<Song> Songs => Set<Song>();
+    public DbSet<Band> Bands => Set<Band>();
+    public DbSet<BandMembership> BandMemberships => Set<BandMembership>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

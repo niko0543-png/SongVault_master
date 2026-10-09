@@ -21,6 +21,7 @@ public sealed class Song
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
     public string OwnerId { get; private set; } = default!;
+    public Guid? BandId { get; private set; }
 
     public static Song Create(string ownerId, string title, string? artist, string? description, DateTimeOffset now)
     {
