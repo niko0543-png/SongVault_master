@@ -107,4 +107,92 @@ public sealed class BandTests
 
         Assert.Equal("Nouveau Nom", band.Name);
     }
+
+    private static BandRole RoleOf(Band band, string userId) => band.Memberships.Single(m => m.UserId == userId).Role;
+
+    [Fact]
+    public void AddMember_ajoute_un_membre_avec_son_role()
+    {
+        var band = Band.Create("SongVault Band", "owner-1", Now);
+
+        band.AddMember("guest-1", BandRole.Guest, Now);
+
+        var guest = Assert.Single(band.Memberships, m => m.UserId == "guest-1");
+        Assert.Equal(band.Id, guest.BandId);
+        Assert.Equal(BandRole.Guest, guest.Role);
+        Assert.True(band.HasMember("guest-1"));
+    }
+
+    [Fact]
+    public void AddMember_refuse_un_utilisateur_deja_membre()
+    {
+        var band = Band.Create("SongVault Band", "owner-1", Now);
+
+        Assert.Throws<DomainException>(() => band.AddMember("owner-1", BandRole.Member, Now));
+    }
+
+    [Fact]
+    public void ChangeRole_change_le_role_d_un_membre()
+    {
+        var band = Band.Create("SongVault Band", "owner-1", Now);
+        band.AddMember("member-1", BandRole.Member, Now);
+
+        band.ChangeRole("member-1", BandRole.Guest);
+
+        Assert.Equal(BandRole.Guest, RoleOf(band, "member-1"));
+    }
+
+    [Theory]
+    [InlineData(BandRole.Member)]
+    [InlineData(BandRole.Guest)]
+    public void ChangeRole_refuse_de_retrograder_le_dernier_Owner(BandRole role)
+    {
+        var band = Band.Create("SongVault Band", "owner-1", Now);
+        band.AddMember("member-1", BandRole.Member, Now);
+
+        Assert.Throws<LastOwnerException>(() => band.ChangeRole("owner-1", role));
+        Assert.Equal(BandRole.Owner, RoleOf(band, "owner-1"));
+    }
+
+    [Fact]
+    public void ChangeRole_retrograde_un_Owner_quand_il_en_reste_un_autre()
+    {
+        var band = Band.Create("SongVault Band", "owner-1", Now);
+        band.AddMember("owner-2", BandRole.Owner, Now);
+
+        band.ChangeRole("owner-1", BandRole.Member);
+
+        Assert.Equal(BandRole.Member, RoleOf(band, "owner-1"));
+    }
+
+    [Fact]
+    public void RemoveMember_retire_le_membre()
+    {
+        var band = Band.Create("SongVault Band", "owner-1", Now);
+        band.AddMember("member-1", BandRole.Member, Now);
+
+        band.RemoveMember("member-1");
+
+        Assert.False(band.HasMember("member-1"));
+        Assert.Single(band.Memberships);
+    }
+
+    [Fact]
+    public void RemoveMember_refuse_de_retirer_le_dernier_Owner()
+    {
+        var band = Band.Create("SongVault Band", "owner-1", Now);
+        band.AddMember("member-1", BandRole.Member, Now);
+
+        Assert.Throws<LastOwnerException>(() => band.RemoveMember("owner-1"));
+        Assert.True(band.HasMember("owner-1"));
+    }
+
+    [Fact]
+    public void ChangeRole_et_RemoveMember_refusent_un_non_membre()
+    {
+        var band = Band.Create("SongVault Band", "owner-1", Now);
+
+        Assert.Throws<DomainException>(() => band.ChangeRole("inconnu", BandRole.Guest));
+        Assert.Throws<DomainException>(() => band.RemoveMember("inconnu"));
+    }
 }

@@ -13,4 +13,7 @@ public sealed class BandMembership
     public string UserId { get; private set; } = default!;
     public BandRole Role { get; private set; }
     public DateTimeOffset JoinedAt { get; private set; }
+
+    /// <summary>Appelé uniquement par Band.ChangeRole, qui vérifie la règle du dernier Owner.</summary>
+    internal void ChangeRole(BandRole role) => Role = role;
 }
