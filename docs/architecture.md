@@ -39,6 +39,9 @@ classDiagram
         Guid Id
         string Name
         Rename()
+		 AddMember()
+        ChangeRole()
+        RemoveMember()
     }
     class BandMembership {
         Guid BandId
@@ -93,7 +96,7 @@ classDiagram
     SongFile --> SongFileType
 ```
 
-Extensions envisagées hors MVP : `Band` et `Member` (groupes), `Comment` (commentaires horodatés sur l'audio), `Tag`, `Setlist`.
+Extensions envisagées hors MVP : Comment (commentaires horodatés sur l'audio), Tag, Setlist.
 
 ## Création d'une version (numérotation concurrente)
 
