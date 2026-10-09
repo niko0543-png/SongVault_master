@@ -3,6 +3,7 @@
 using SongVault.Api.Auth;
 using SongVault.Api.Contracts.Bands;
 using SongVault.Application.Bands;
+using SongVault.Domain.Bands;
 
 namespace SongVault.Api.Controllers;
 
@@ -39,10 +40,12 @@ public sealed class BandsController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { bandId = band.Id }, BandResponse.From(band));
     }
 
-    /// <summary>Renomme le groupe.</summary>
+    /// <summary>Renomme le groupe. Réservé aux Owner.</summary>
     /// <response code="204">Groupe renommé.</response>
-    [HttpPut("{bandId:guid}"), BandScoped]
+    /// <response code="403">Vous n'êtes pas Owner du groupe.</response>
+    [HttpPut("{bandId:guid}"), BandScoped, MinimumBandRole(BandRole.Owner)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Rename(
