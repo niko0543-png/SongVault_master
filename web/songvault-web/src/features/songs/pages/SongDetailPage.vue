@@ -14,10 +14,14 @@ import { ApiError, getErrorMessage } from '@/shared/api/ApiError'
 import { mapProblemErrors } from '@/shared/api/mapProblemErrors'
 import { useAsyncAction } from '@/shared/composables/useAsyncAction'
 import { formatDate } from '@/shared/utils/format'
+import { useConfirm } from '@/shared/composables/useConfirm'
+import { useToast } from '@/shared/composables/useToast'
 
 const props = defineProps<{ songId: string }>()
 const router = useRouter()
 const store = useSongsStore()
+const { confirm } = useConfirm()
+const toast = useToast()
 
 // ---- Chargement ----
 const song = ref<Song | null>(null)
@@ -79,11 +83,19 @@ const deletion = useAsyncAction(songsApi.remove)
 
 async function onDelete() {
   if (!song.value) return
-  const id = song.value.id
-  if (!window.confirm(`Supprimer « ${song.value.title} », ses versions et ses fichiers ? Cette action est définitive.`)) return
+  const { id, title } = song.value
+  const confirmed = await confirm({
+    title: 'Supprimer ce morceau ?',
+    message: `« ${title} », ses versions et ses fichiers seront supprimés définitivement.`,
+    confirmLabel: 'Supprimer',
+    danger: true,
+  })
+  if (!confirmed) return
+
   await deletion.run(id)
   if (!deletion.error.value) {
     store.remove(id)
+    toast.success(`« ${title} » a été supprimé.`)
     await router.push({ name: 'songs' })
   }
 }

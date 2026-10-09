@@ -3,10 +3,10 @@ import type { RouteLocationNormalized, RouteLocationRaw } from 'vue-router'
 // Champs meta propres à SongVault, typés pour tout le routeur
 declare module 'vue-router' {
   interface RouteMeta {
-    /** Accessible sans connexion (sinon : connexion exigée, par défaut). */
     public?: boolean
-    /** Réservé aux visiteurs NON connectés (connexion, inscription). */
     guestOnly?: boolean
+    /** Titre affiché dans l'onglet du navigateur. */
+    title?: string
   }
 }
 

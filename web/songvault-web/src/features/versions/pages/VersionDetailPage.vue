@@ -12,7 +12,6 @@ import {
 } from '../types'
 import FileList from '@/features/files/components/FileList.vue'
 import FileUploader from '@/features/files/components/FileUploader.vue'
-import { filesApi } from '@/features/files/api/filesApi'
 import type { SongFile } from '@/features/files/types'
 import { usePlayerStore } from '@/features/player/stores/playerStore'
 import { toTrack } from '@/features/player/track'
@@ -22,6 +21,8 @@ import ErrorState from '@/shared/components/ErrorState.vue'
 import { ApiError, getErrorMessage } from '@/shared/api/ApiError'
 import { mapProblemErrors } from '@/shared/api/mapProblemErrors'
 import { formatDate } from '@/shared/utils/format'
+import { useConfirm } from '@/shared/composables/useConfirm'
+import { useToast } from '@/shared/composables/useToast'
 
 const props = defineProps<{ songId: string; versionId: string }>()
 
@@ -30,7 +31,8 @@ const { song, version, previous, next, isLoading, error, isSaving, saveError, sa
 const player = usePlayerStore()
 
 const isNotFound = computed(() => error.value instanceof ApiError && error.value.status === 404)
-
+const { confirm } = useConfirm()
+const toast = useToast()
 // ================= Formulaire =================
 interface VersionForm {
   title: string
@@ -102,8 +104,14 @@ async function onSave() {
 }
 
 // ================= Modifications non enregistrées =================
-function confirmLeave(): boolean {
-  return !isDirty.value || window.confirm('Des modifications ne sont pas enregistrées. Quitter quand même ?')
+async function confirmLeave(): Promise<boolean> {
+  if (!isDirty.value) return true
+  return confirm({
+    title: 'Quitter sans enregistrer ?',
+    message: 'Vos modifications de cette version seront perdues.',
+    confirmLabel: 'Quitter',
+    danger: true,
+  })
 }
 onBeforeRouteLeave(() => confirmLeave())
 onBeforeRouteUpdate(() => confirmLeave())
@@ -123,17 +131,16 @@ function onUploaded(file: SongFile) {
 }
 
 async function onDeleteFile(file: SongFile) {
-  if (!version.value || !window.confirm(`Supprimer « ${file.originalFileName} » ?`)) return
-  deletingId.value = file.id
-  fileError.value = null
-  try {
-    await filesApi.remove(props.songId, version.value.id, file.id)
-    version.value.files = version.value.files.filter((f) => f.id !== file.id)
-  } catch (e) {
-    fileError.value = getErrorMessage(e)
-  } finally {
-    deletingId.value = null
-  }
+  if (!version.value) return
+  const confirmed = await confirm({
+    title: 'Supprimer ce fichier ?',
+    message: `« ${file.originalFileName} » sera supprimé définitivement.`,
+    confirmLabel: 'Supprimer',
+    danger: true,
+  })
+  if (!confirmed) return
+  // … suite inchangée, puis en cas de succès :
+  toast.success('Fichier supprimé.')
 }
 
 // ================= Lecture (semaine 4) =================
