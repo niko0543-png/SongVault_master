@@ -19,11 +19,12 @@ public sealed class VersionNumberingConcurrencyTests(SongVaultApiFactory factory
     [Fact]
     public async Task Dix_creations_paralleles_donnent_des_numeros_distincts_sans_erreur_500()
     {
-        var songResponse = await _client.PostAsJsonAsync("/api/songs", new { title = "Concurrence" });
+        var songs = await _client.SongsUrlAsync();
+        var songResponse = await _client.PostAsJsonAsync(songs, new { title = "Concurrence" });
         var song = (await songResponse.Content.ReadFromJsonAsync<SongResponse>())!;
 
         var responses = await Task.WhenAll(Enumerable.Range(1, 10).Select(i =>
-            _client.PostAsJsonAsync($"/api/songs/{song.Id}/versions", new { title = $"Prise {i}", status = "Demo" })));
+            _client.PostAsJsonAsync($"{songs}/{song.Id}/versions", new { title = $"Prise {i}", status = "Demo" })));
 
         // Seuls 201 (créé) ou 409 (tentatives épuisées) sont acceptables
         Assert.All(responses, r => Assert.True(

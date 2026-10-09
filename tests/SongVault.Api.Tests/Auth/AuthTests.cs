@@ -16,7 +16,7 @@ public sealed class AuthTests(SongVaultApiFactory factory)
         factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, HandleCookies = false });
 
     [Theory]
-    [InlineData("/api/songs")]
+    [InlineData("/api/bands")]
     [InlineData("/api/files/policy")]
     [InlineData("/api/auth/me")]
     public async Task Anonyme_recoit_401_et_pas_une_redirection(string url)
@@ -35,7 +35,8 @@ public sealed class AuthTests(SongVaultApiFactory factory)
     {
         var client = await factory.CreateNewUserClientAsync();
 
-        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/songs")).StatusCode);
+        var songs = await client.SongsUrlAsync();
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync(songs)).StatusCode);
         var me = await client.GetFromJsonAsync<CurrentUserResponse>("/api/auth/me");
         Assert.EndsWith("@test.local", me!.Email);
     }

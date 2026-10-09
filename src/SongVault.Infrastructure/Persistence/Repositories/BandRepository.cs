@@ -20,9 +20,10 @@ internal sealed class BandRepository(SongVaultDbContext db) : IBandRepository
             .FirstOrDefaultAsync(ct);
 
     public async Task<IReadOnlyList<BandSummaryDto>> ListForUserAsync(string userId, CancellationToken ct)
-        => await db.BandMemberships.AsNoTracking()
-            .Where(m => m.UserId == userId)
-            .Join(db.Bands, m => m.BandId, b => b.Id, (m, b) => new BandSummaryDto(b.Id, b.Name, m.Role))
-            .OrderBy(b => b.Name)
-            .ToListAsync(ct);
+         => await db.BandMemberships.AsNoTracking()
+             .Where(m => m.UserId == userId)
+             .Join(db.Bands, m => m.BandId, b => b.Id, (m, b) => new { b.Id, b.Name, m.Role })
+             .OrderBy(x => x.Name)                                  // trier AVANT de construire le DTO
+             .Select(x => new BandSummaryDto(x.Id, x.Name, x.Role))
+             .ToListAsync(ct);
 }

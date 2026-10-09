@@ -1,4 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+
+using SongVault.Api.Auth;
 using SongVault.Api.Contracts.Common;
 using SongVault.Api.Contracts.Songs;
 using SongVault.Application.Common.Exceptions;
@@ -10,14 +12,15 @@ using SongVault.Application.Songs.UpdateSong;
 
 namespace SongVault.Api.Controllers;
 
-/// <summary>Morceaux de l'utilisateur connecté.</summary>
+/// <summary>Morceaux du groupe actif.</summary>
 [ApiController]
-[Route("api/songs")]
+[Route("api/bands/{bandId:guid}/songs")]
+[BandScoped]
 [ProducesResponseType(StatusCodes.Status401Unauthorized)]
 public sealed class SongsController : ControllerBase
 {
     /// <summary>Liste paginée des morceaux.</summary>
-    /// <remarks>Seuls les morceaux de l'utilisateur connecté sont renvoyés.</remarks>
+    /// <remarks>Seuls les morceaux du groupe sont renvoyés.</remarks>
     /// <response code="200">Une page de morceaux (éventuellement vide).</response>
     /// <response code="400">Pagination invalide (page &lt; 1, taille hors limites).</response>
     [HttpGet]
@@ -36,7 +39,7 @@ public sealed class SongsController : ControllerBase
     /// <summary>Détail d'un morceau.</summary>
     /// <param name="id">Identifiant du morceau.</param>
     /// <response code="200">Le morceau.</response>
-    /// <response code="404">Morceau inexistant ou appartenant à un autre utilisateur.</response>
+    /// <response code="404">Morceau inexistant ou d'un groupe dont vous n'êtes pas membre.</response>
     [HttpGet("{id:guid}")]
     [ProducesResponseType<SongResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
@@ -44,7 +47,7 @@ public sealed class SongsController : ControllerBase
         Guid id, [FromServices] GetSongHandler handler, CancellationToken ct)
         => Ok(SongResponse.From(await handler.HandleAsync(id, ct)));
 
-    /// <summary>Crée un morceau appartenant à l'utilisateur connecté.</summary>
+    /// <summary>Crée un morceau dans le groupe actif.</summary>
     /// <response code="201">Morceau créé ; l'en-tête Location pointe vers sa ressource.</response>
     /// <response code="400">Requête invalide (titre manquant, longueurs dépassées).</response>
     /// <response code="422">Règle métier non respectée.</response>
@@ -53,11 +56,11 @@ public sealed class SongsController : ControllerBase
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
     public async Task<ActionResult<SongResponse>> Create(
-        CreateSongRequest request, [FromServices] CreateSongHandler handler, CancellationToken ct)
+        Guid bandId, CreateSongRequest request, [FromServices] CreateSongHandler handler, CancellationToken ct)
     {
         var command = new CreateSongCommand(request.Title, request.Artist, request.Description);
         var song = await handler.HandleAsync(command, ct);
-        return CreatedAtAction(nameof(GetById), new { id = song.Id }, SongResponse.From(song));
+        return CreatedAtAction(nameof(GetById), new { bandId, id = song.Id }, SongResponse.From(song));
     }
 
 

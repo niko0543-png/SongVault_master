@@ -18,7 +18,7 @@ public sealed class SongCrudHandlersTests
 
     private Song ExistingSong()
     {
-        var song = Song.Create("owner-1", "Nocturne", null, null, Now);
+        var song = Song.Create(Guid.NewGuid(), "Nocturne", null, null, Now);
         _songs.Songs.Add(song);
         return song;
     }

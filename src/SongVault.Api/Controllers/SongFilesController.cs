@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-
+using SongVault.Api.Auth;
 using SongVault.Api.Contracts.Files;
 using SongVault.Api.Security;
 using SongVault.Application.Files;
@@ -9,7 +9,8 @@ namespace SongVault.Api.Controllers;
 
 /// <summary>Fichiers (audio, partitions, images) rattachés à une version.</summary>
 [ApiController]
-[Route("api/songs/{songId:guid}/versions/{versionId:guid}/files")]
+[Route("api/bands/{bandId:guid}/songs/{songId:guid}/versions/{versionId:guid}/files")]
+[BandScoped]
 [ProducesResponseType(StatusCodes.Status401Unauthorized)]
 [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
 public sealed class SongFilesController : ControllerBase
@@ -36,14 +37,14 @@ public sealed class SongFilesController : ControllerBase
     [RequestFormLimits(MultipartBodyLengthLimit = FileTypePolicy.MaxRequestSizeBytes)]
     [EnableRateLimiting(RateLimiting.Uploads)]
     public async Task<ActionResult<SongFileResponse>> Upload(
-        Guid songId, Guid versionId, IFormFile file,
+        Guid bandId, Guid songId, Guid versionId, IFormFile file,
         [FromServices] UploadSongFileHandler handler, CancellationToken ct)
     {
         await using var stream = file.OpenReadStream();
         var result = await handler.HandleAsync(
             new UploadSongFileCommand(songId, versionId, file.FileName, file.Length, stream), ct);
 
-        return CreatedAtAction(nameof(Download), new { songId, versionId, fileId = result.Id },
+        return CreatedAtAction(nameof(Download), new { bandId, songId, versionId, fileId = result.Id },
             SongFileResponse.From(result));
     }
 

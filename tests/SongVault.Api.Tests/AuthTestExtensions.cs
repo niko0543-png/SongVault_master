@@ -1,4 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc.Testing;
+﻿using System.Net.Http.Json;
+
+using Microsoft.AspNetCore.Mvc.Testing;
+
+using SongVault.Api.Contracts.Bands;
 
 namespace SongVault.Api.Tests;
 
@@ -14,5 +18,12 @@ public static class AuthTestExtensions
         var cookie = await SongVaultApiFactory.RegisterAndLoginAsync(client, $"user-{Guid.NewGuid():N}@test.local");
         client.DefaultRequestHeaders.Add("Cookie", cookie);
         return client;
+    }
+
+    /// <summary>Route des morceaux du groupe personnel de l'utilisateur du client (créé au premier GET /api/bands).</summary>
+    public static async Task<string> SongsUrlAsync(this HttpClient client)
+    {
+        var bands = await client.GetFromJsonAsync<List<BandResponse>>("/api/bands", TestJson.Options);
+        return $"/api/bands/{bands![0].Id}/songs";
     }
 }
