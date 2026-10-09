@@ -29,15 +29,27 @@ flowchart TB
     Application --> Domain
 ```
 
-Domain ne dépend de rien ; les abstractions (`ISongRepository`, `IFileStorageService`, `ICurrentUser`) sont dans Application, leurs implémentations dans Infrastructure et Api.
+Domain ne dépend de rien ; les abstractions (`ISongRepository`, `IBandRepository`, `IFileStorageService`, `ICurrentUser`, `IBandContext`) sont dans Application, leurs implémentations dans Infrastructure et Api.
 
 ## Modèle métier
 
 ```mermaid
 classDiagram
+    class Band {
+        Guid Id
+        string Name
+        Rename()
+    }
+    class BandMembership {
+        Guid BandId
+        string UserId
+        BandRole Role
+    }
+    Band "1" --> "*" BandMembership
+    Band "1" --> "*" Song
     class Song {
         Guid Id
-        string OwnerId
+        Guid BandId
         string Title
         string? Artist
         int LastVersionNumber
@@ -91,9 +103,9 @@ sequenceDiagram
     participant H as CreateSongVersionHandler
     participant R as SongRepository
     participant DB as SQL Server
-    C->>H: POST /api/songs/{id}/versions
+    C->>H: POST /api/bands/{bandId}/songs/{id}/versions
     loop au plus 3 tentatives
-        H->>R: GetByIdAsync (filtré par propriétaire)
+        H->>R: GetByIdAsync (filtré par groupe actif)
         R->>DB: SELECT Song (LastVersionNumber, RowVersion)
         H->>H: song.AddVersion() : numéro = LastVersionNumber + 1
         H->>DB: INSERT SongVersion + UPDATE Song WHERE RowVersion = @lue
