@@ -16,7 +16,7 @@ export function resolveAuthNavigation(
   isAuthenticated: boolean,
 ): true | RouteLocationRaw {
   if (to.meta.public) {
-    return to.meta.guestOnly && isAuthenticated ? { name: 'songs' } : true
+    return to.meta.guestOnly && isAuthenticated ? { name: 'home' } : true
   }
   return isAuthenticated ? true : { name: 'login', query: { redirect: to.fullPath } }
 }
@@ -25,5 +25,5 @@ export function resolveAuthNavigation(
 export function safeRedirect(value: unknown): string {
   return typeof value === 'string' && value.startsWith('/') && !value.startsWith('//') && !value.startsWith('/\\')
     ? value
-    : '/songs'
+    : '/'
 }

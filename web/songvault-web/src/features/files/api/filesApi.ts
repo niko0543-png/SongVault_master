@@ -1,7 +1,8 @@
 import { request } from '@/shared/api/httpClient'
+import { bandPath } from '@/shared/api/bandPath'
 import type { FilePolicy, SongFile } from '../types'
 
-const base = (songId: string, versionId: string) => `/songs/${songId}/versions/${versionId}/files`
+const base = (songId: string, versionId: string) => bandPath(`/songs/${songId}/versions/${versionId}/files`)
 
 function contentUrl(songId: string, versionId: string, fileId: string, download = false) {
   return `/api${base(songId, versionId)}/${fileId}/content${download ? '?download=true' : ''}`

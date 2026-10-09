@@ -19,18 +19,18 @@ describe('resolveAuthNavigation', () => {
   })
 
   it('renvoie un utilisateur connecté de /login vers la liste', () => {
-    expect(resolveAuthNavigation(route({ public: true, guestOnly: true }, '/login'), true)).toEqual({ name: 'songs' })
+    expect(resolveAuthNavigation(route({ public: true, guestOnly: true }, '/login'), true)).toEqual({ name: 'home' })
   })
 })
 
 describe('safeRedirect', () => {
   it.each([
     ['/songs/123', '/songs/123'],
-    ['//site-malveillant.com', '/songs'],
-    ['https://site-malveillant.com', '/songs'],
-    ['/\\site-malveillant.com', '/songs'],
-    [undefined, '/songs'],
-    [['/songs/1'], '/songs'],
+    ['//site-malveillant.com', '/'],
+    ['https://site-malveillant.com', '/'],
+    ['/\\site-malveillant.com', '/'],
+    [undefined, '/'],
+    [['/songs/1'], '/'],
   ])('%j → %s', (input, expected) => {
     expect(safeRedirect(input)).toBe(expected)
   })

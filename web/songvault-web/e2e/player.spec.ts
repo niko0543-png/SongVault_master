@@ -30,6 +30,6 @@ test('un musicien uploade une maquette, la lance, puis se déconnecte', async ({
   await expect(page).toHaveURL(/\/login/)
   await expect(player).toBeHidden()
 
-  await page.goto('/songs')
+  await page.goto('/')
   await expect(page).toHaveURL(/\/login\?redirect=/)
 })

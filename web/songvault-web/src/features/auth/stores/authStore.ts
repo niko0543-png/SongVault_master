@@ -4,6 +4,7 @@ import { authApi } from '../api/authApi'
 import type { Credentials, CurrentUser } from '../types'
 import { useSongsStore } from '@/features/songs/stores/songsStore'
 import { usePlayerStore } from '@/features/player/stores/playerStore'
+import { useBandStore } from '@/features/bands/stores/bandStore' 
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<CurrentUser | null>(null)
@@ -42,6 +43,7 @@ export const useAuthStore = defineStore('auth', () => {
     isLoaded.value = true
     useSongsStore().reset()
     usePlayerStore().stop()
+    useBandStore().reset()
   }
 
   async function logout() {

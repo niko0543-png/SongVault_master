@@ -4,6 +4,7 @@ import { versionsApi } from '../api/versionsApi'
 import type { SongVersion } from '../types'
 
 vi.mock('@/shared/api/httpClient')     // Vitest remplace automatiquement request par un faux
+vi.mock('@/shared/api/bandPath', () => ({ bandPath: (path: string) => `/bands/b1${path}` }))
 
 const current: SongVersion = {
   id: 'v1', songId: 's1', number: 2, title: 'Arrangement cordes', status: 'Demo',

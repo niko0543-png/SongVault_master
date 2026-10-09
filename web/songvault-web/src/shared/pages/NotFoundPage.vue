@@ -6,6 +6,6 @@ import { RouterLink } from 'vue-router'
   <section class="card">
     <h1>Page introuvable</h1>
     <p>L'adresse demandée n'existe pas.</p>
-    <RouterLink to="/songs">Retour aux morceaux</RouterLink>
+    <RouterLink to="/">Retour aux morceaux</RouterLink>
   </section>
 </template>

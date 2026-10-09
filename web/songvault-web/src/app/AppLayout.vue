@@ -1,14 +1,25 @@
 <script setup lang="ts">
+import { watch } from 'vue'
 import { RouterLink, RouterView, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import AudioPlayer from '@/features/player/components/AudioPlayer.vue'
 import { useAuthStore } from '@/features/auth/stores/authStore'
+import { useBandStore } from '@/features/bands/stores/bandStore'
+import BandSwitcher from '@/features/bands/components/BandSwitcher.vue'
+import { useSongsStore } from '@/features/songs/stores/songsStore'
+import { usePlayerStore } from '@/features/player/stores/playerStore'
 import ToastHost from '@/shared/components/ToastHost.vue'          // S8
 import ConfirmDialog from '@/shared/components/ConfirmDialog.vue'  // S8
 
 const auth = useAuthStore()
 const { user, isAuthenticated } = storeToRefs(auth)
+const bands = useBandStore()
 const router = useRouter()
+
+// Changement de groupe : la liste en cache et la lecture en cours appartiennent à l'ancien groupe
+watch(() => bands.activeId, (next, prev) => {
+  if (prev && next !== prev) { useSongsStore().reset(); usePlayerStore().stop() }
+})
 
 async function onLogout() {
   await auth.logout()
@@ -20,9 +31,10 @@ async function onLogout() {
   <!-- S8 : premier élément de la page, donc premier atteint avec Tab -->
   <a href="#main-content" class="skip-link">Aller au contenu</a>
 
-  <header class="app-header">
-    <RouterLink to="/songs" class="brand">🎸 SongVault</RouterLink>
+ <header class="app-header">
+    <RouterLink to="/" class="brand">🎸 SongVault</RouterLink>
     <div v-if="isAuthenticated" class="session">
+      <BandSwitcher v-if="bands.isLoaded" />
       <span class="muted">{{ user?.email }}</span>
       <button type="button" class="secondary" @click="onLogout">Se déconnecter</button>
     </div>
