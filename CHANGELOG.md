@@ -9,6 +9,8 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) — versions :
 - Script `scripts/purge-orphan-files.ps1` : retire du volume les fichiers qui ne sont plus référencés.
 - Rôles dans le groupe : Owner gère les membres, Member crée et modifie, Guest lit et écoute ; vérifiés par l'API (ADR 0008).
 - Page Membres : liste, changement de rôle, retrait d'un membre, départ du groupe.
+- Invitations par e-mail : lien à usage unique valable 7 jours, page /invite qui enchaîne inscription ou connexion et adhésion, invitations en attente et annulation dans la page Membres (ADR 0009).
+- Envoi d'e-mails derrière `IEmailSender` : journaux en développement, Brevo en production.
 ### Modifié
 - Routes de l'API sous `/api/bands/{bandId}/songs…` et du front sous `/b/{bandId}/songs…`.
 - Renommer un groupe est réservé à ses Owner.
