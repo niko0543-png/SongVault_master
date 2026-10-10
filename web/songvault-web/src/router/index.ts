@@ -26,7 +26,14 @@ const router = createRouter({
       component: () => import('@/features/auth/pages/RegisterPage.vue'),
       meta: { public: true, guestOnly: true, title: 'Créer un compte' },
     },
-
+    {
+      // Lien reçu par e-mail : ouvert à tous, connecté ou non (#3)
+      path: '/invite/:token',
+      name: 'invite',
+      component: () => import('@/features/invitations/pages/InvitePage.vue'),
+      props: true,
+      meta: { public: true, title: 'Invitation' },
+    },
     // ---- Connexion exigée (par défaut), dans un groupe ----
     {
       path: '/b/:bandId/songs',

@@ -12,6 +12,7 @@ import { getErrorMessage } from '@/shared/api/ApiError'
 import { formatDate } from '@/shared/utils/format'
 import { useConfirm } from '@/shared/composables/useConfirm'
 import { useToast } from '@/shared/composables/useToast'
+import InvitationsPanel from '@/features/invitations/components/InvitationsPanel.vue'
 
 const bands = useBandStore()
 const { active } = storeToRefs(bands)
@@ -129,6 +130,7 @@ async function onLeave() {
                 :disabled="busyId === member.userId" @click="onRemove(member)">Retirer</button>
       </li>
     </ul>
+    <InvitationsPanel v-if="isAdmin" />
   </section>
 </template>
 

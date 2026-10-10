@@ -10,7 +10,8 @@ const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
 
-const form = reactive({ email: '', password: '', confirm: '' })
+// Venu d'une invitation : l'adresse invitée est déjà remplie
+const form = reactive({ email: typeof route.query.email === 'string' ? route.query.email : '', password: '', confirm: '' })
 const submitted = ref(false)
 const { isLoading, error, run } = useAsyncAction(auth.register)
 
