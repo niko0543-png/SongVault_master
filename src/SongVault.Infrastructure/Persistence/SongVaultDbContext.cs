@@ -7,6 +7,7 @@ using SongVault.Application.Abstractions;
 using SongVault.Application.Common.Exceptions;
 using SongVault.Domain.Bands;
 using SongVault.Domain.Songs;
+using SongVault.Domain.Invitations;
 
 namespace SongVault.Infrastructure.Persistence;
 
@@ -20,6 +21,7 @@ public sealed class SongVaultDbContext(
     public DbSet<Song> Songs => Set<Song>();
     public DbSet<Band> Bands => Set<Band>();
     public DbSet<BandMembership> BandMemberships => Set<BandMembership>();
+    public DbSet<Invitation> Invitations => Set<Invitation>();
 
     // Relu par EF à chaque requête. null hors requête HTTP : le filtre ne laisse alors passer aucun morceau.
     private Guid? CurrentBandId => bandContext?.BandId;
