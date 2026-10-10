@@ -41,6 +41,7 @@ services:
       Email__Provider: ${EMAIL_PROVIDER:-Log}
       Email__FromAddress: ${EMAIL_FROM:-no-reply@songvault.local}
       Email__Brevo__ApiKey: ${BREVO_API_KEY:-}
+      App__PublicUrl: ${PUBLIC_URL:-http://localhost:8080}
     volumes:
       - songvault-files:/var/songvault/files
     depends_on:
