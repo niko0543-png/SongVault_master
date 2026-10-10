@@ -86,6 +86,8 @@ docker compose down -v       # supprime aussi la base et les fichiers
 - **Recherche et filtres** synchronisés avec l'URL.
 - **Comptes utilisateurs et groupes** : chaque morceau appartient à un groupe, un utilisateur peut être membre de plusieurs groupes et ne voit que les leurs. 
   Trois rôles par groupe : propriétaire (gère les membres), membre (crée et modifie), invité (lit et écoute).
+- **Invitations par e-mail** : le propriétaire invite une adresse comme membre ou invité ; le lien, valable 7 jours et utilisable une seule fois, 
+  mène à l'inscription ou à la connexion puis au groupe.
 - **Accessibilité** : navigation complète au clavier, lien d'évitement, focus géré à
   chaque changement de page, boîtes de confirmation accessibles.
 
@@ -208,6 +210,10 @@ Le contrat OpenAPI est généré depuis le code et ses commentaires XML. En dév
 | `PUT` | `/api/bands/{bandId}/members/{userId}/role` | Changer le rôle d'un membre (Owner) |
 | `DELETE` | `/api/bands/{bandId}/members/{userId}` | Retirer un membre (Owner) |
 | `DELETE` | `/api/bands/{bandId}/members/me` | Quitter le groupe |
+| `GET POST` | /api/bands/{bandId}/invitations | Invitations en attente, inviter une adresse (Owner) |
+| `DELETE` | /api/bands/{bandId}/invitations/{id} | Annuler une invitation (Owner) |
+| `GET` | /api/invitations/{token} | Aperçu d'une invitation, sans connexion |
+| `POST` | /api/invitations/{token}/accept | Rejoindre le groupe avec le compte connecté |
 | `GET` | `/api/bands/{bandId}/songs` | Liste paginée, recherche |
 | `POST` | `/api/bands/{bandId}/songs` | Créer un morceau |
 | `GET` `PUT` `DELETE` | `/api/bands/{bandId}/songs/{id}` | Lire, modifier, supprimer un morceau |
@@ -221,8 +227,9 @@ Le contrat OpenAPI est généré depuis le code et ses commentaires XML. En dév
 Sous /api/bands/{bandId}, les lectures sont ouvertes à tout membre du groupe et les écritures demandent au moins le rôle Member, 
 sauf mention contraire ([ADR 0008](docs/adr/0008-roles-dans-le-groupe.md)).
 Les erreurs suivent la RFC 9457 (application/problem+json) : 400 validation, 401 non
-connecté, 403 rôle insuffisant dans le groupe, 404 introuvable (ou groupe dont on n'est pas
-membre), 409 conflit de concurrence ou dernier propriétaire du groupe, 413 fichier trop
+connecté, 403 rôle insuffisant dans le groupe (ou invitation destinée à une autre adresse),
+404 introuvable (ou groupe dont on n'est pas membre), 409 conflit de concurrence ou dernier
+propriétaire du groupe, 410 invitation déjà utilisée, annulée ou expirée, 413 fichier trop
 volumineux, 422 règle métier, 429 trop de requêtes.
 ---
 
@@ -320,6 +327,10 @@ images Docker et actions GitHub, regroupées pour limiter le bruit.
 ## Exploitation
 
 - **Configuration** : variables d'environnement définies dans `.env` (voir `.env.example`).
+- **E-mails** : `EMAIL_PROVIDER=Log` (défaut) écrit les e-mails dans les journaux de l'API ;
+  `EMAIL_PROVIDER=Brevo` les envoie, avec `BREVO_API_KEY` et `EMAIL_FROM` (adresse validée
+  chez Brevo). `PUBLIC_URL` est l'adresse du site utilisée dans les liens
+  ([ADR 0009](docs/adr/0009-invitations-et-e-mails.md)).
 - **Santé** : `GET /health/live` (processus vivant) et `GET /health/ready` (base joignable)
   sur l'API, utilisés par les healthchecks Compose.
 - **Journaux** : JSON structurés hors développement (`docker compose logs api`).
@@ -345,7 +356,7 @@ Choix assumés pour la v1 :
 
 - Un seul serveur : le stockage des fichiers est local. Une implémentation Azure Blob
   Storage est possible derrière la même interface.
-- Pas encore d'invitations : un membre ne peut être ajouté à un groupe qu'en base.
+- Adresse e-mail des comptes non confirmée (prévu en #4) ; les e-mails partent pendant la requête, sans file d'envoi (#12).
 - Pas de traitement audio côté serveur (forme d'onde, transcodage).
 
 Pistes suivies dans les [issues](https://github.com/<owner>/<repo>/issues).

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using SongVault.Application.Common.Exceptions;
 using SongVault.Domain.Bands;
 using SongVault.Domain.Common;
+using SongVault.Domain.Invitations;
 
 namespace SongVault.Api.ErrorHandling;
 
@@ -21,6 +22,7 @@ internal sealed class GlobalExceptionHandler(
             ForbiddenException => (StatusCodes.Status403Forbidden, "Action non autorisée"),
             ConcurrencyConflictException => (StatusCodes.Status409Conflict, "Conflit de modification"),
             LastOwnerException => (StatusCodes.Status409Conflict, "Dernier propriétaire du groupe"),
+            InvitationUnavailableException => (StatusCodes.Status410Gone, "Invitation indisponible"),
             BadHttpRequestException bad => (bad.StatusCode, "Requête invalide"),
             UnsupportedFileException => (StatusCodes.Status400BadRequest, "Fichier refusé"),
             FileTooLargeException => (StatusCodes.Status413PayloadTooLarge, "Fichier trop volumineux"),

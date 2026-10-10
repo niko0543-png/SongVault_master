@@ -1,13 +1,12 @@
 ﻿using System.Net.Http.Json;
-
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-
+using Microsoft.AspNetCore.TestHost;
+using SongVault.Application.Abstractions;
 using SongVault.Infrastructure.Persistence;
-
 using Testcontainers.MsSql;
 
 namespace SongVault.Api.Tests;
@@ -23,6 +22,9 @@ public sealed class SongVaultApiFactory : WebApplicationFactory<Program>, IAsync
     /// <summary>Cookie de l'utilisateur par défaut, au format "nom=valeur".</summary>
     private string _defaultUserCookie = "";
 
+    /// <summary>E-mails « envoyés » pendant les tests (remplace LogEmailSender).</summary>
+    public CapturingEmailSender Emails { get; } = new();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
@@ -30,7 +32,8 @@ public sealed class SongVaultApiFactory : WebApplicationFactory<Program>, IAsync
         builder.UseSetting("FileStorage:RootPath", _filesRoot);
         builder.UseSetting("RateLimiting:UploadsPerMinute", "1000");
         builder.UseSetting("RateLimiting:AuthPerMinute", "1000");
-
+        builder.UseSetting("App:PublicUrl", "http://localhost:8080");
+        builder.ConfigureTestServices(services => services.AddSingleton<IEmailSender>(Emails));
         // Masque, dans les tests uniquement, les erreurs SQL attendues du test de concurrence
         builder.UseSetting("Logging:LogLevel:Microsoft.EntityFrameworkCore.Update", "None");
     }

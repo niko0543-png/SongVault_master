@@ -1,12 +1,15 @@
 using System.Text.Json.Serialization;
-using SongVault.Api.Auth;
+
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
-using SongVault.Application.Abstractions;
+
+using SongVault.Api.Auth;
 using SongVault.Api.ErrorHandling;
 using SongVault.Api.Security;
 using SongVault.Application;
+using SongVault.Application.Abstractions;
+using SongVault.Application.Common;
 using SongVault.Infrastructure;
 using SongVault.Infrastructure.Persistence;
 
@@ -21,6 +24,11 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddOptions<AppOptions>()
+    .Bind(builder.Configuration.GetSection(AppOptions.SectionName))
+    .Validate(o => Uri.TryCreate(o.PublicUrl, UriKind.Absolute, out _),
+        "App:PublicUrl doit être une URL absolue (ex. http://localhost:8080) : elle sert aux liens des e-mails.")
+    .ValidateOnStart();
 
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<SongVaultDbContext>("database", tags: ["ready"]);

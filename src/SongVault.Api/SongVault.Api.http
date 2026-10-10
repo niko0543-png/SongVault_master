@@ -146,3 +146,18 @@ Authorization: {{auth}}
 ### Quitter son groupe personnel en étant le seul Owner → 409
 DELETE {{host}}/api/bands/{{bandId}}/members/me
 Authorization: {{auth}}
+
+### Inviter une adresse comme Member → 201 (lien dans la réponse)
+# @name invite
+POST {{host}}/api/bands/{{bandId}}/invitations
+Authorization: {{auth}}
+Content-Type: application/json
+
+{ "email": "invite@test.local", "role": "Member" }
+
+### Invitations en attente
+GET {{host}}/api/bands/{{bandId}}/invitations
+Authorization: {{auth}}
+
+### Aperçu d'un lien inconnu → 404
+GET {{host}}/api/invitations/inconnu

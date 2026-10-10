@@ -1,6 +1,8 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+
 using SongVault.Application.Bands;
 using SongVault.Application.Files;
+using SongVault.Application.Invitations;
 using SongVault.Application.Songs.CreateSong;
 using SongVault.Application.Songs.DeleteSong;
 using SongVault.Application.Songs.GetSong;
@@ -32,6 +34,11 @@ public static class DependencyInjection
         services.AddScoped<ListMyBandsHandler>();
         services.AddScoped<CreateBandHandler>();
         services.AddScoped<RenameBandHandler>();
+        services.AddScoped<CreateInvitationHandler>();
+        services.AddScoped<ListInvitationsHandler>();
+        services.AddScoped<RevokeInvitationHandler>();
+        services.AddScoped<PreviewInvitationHandler>();
+        services.AddScoped<AcceptInvitationHandler>();
         services.AddScoped<ListMembersHandler>();
         services.AddScoped<ChangeMemberRoleHandler>();
         services.AddScoped<RemoveMemberHandler>();

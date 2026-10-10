@@ -29,7 +29,7 @@ flowchart TB
     Application --> Domain
 ```
 
-Domain ne dépend de rien ; les abstractions (`ISongRepository`, `IBandRepository`, `IFileStorageService`, `ICurrentUser`, `IBandContext`) sont dans Application, leurs implémentations dans Infrastructure et Api.
+Domain ne dépend de rien ; les abstractions (`ISongRepository`, `IBandRepository`, `IInvitationRepository`, `IFileStorageService`, `IEmailSender`, `ICurrentUser`, `IBandContext`) sont dans Application, leurs implémentations dans Infrastructure et Api.
 
 ## Modèle métier
 
@@ -50,6 +50,16 @@ classDiagram
     }
     Band "1" --> "*" BandMembership
     Band "1" --> "*" Song
+	Band "1" --> "*" Invitation
+    class Invitation {
+        Guid Id
+        string Email
+        BandRole Role
+        byte[] TokenHash
+        DateTimeOffset ExpiresAt
+        Accept()
+        Revoke()
+    }
     class Song {
         Guid Id
         Guid BandId
