@@ -4,7 +4,7 @@ import { createTestingPinia } from '@pinia/testing'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import SongListPage from '../pages/SongListPage.vue'
 import { songsApi } from '../api/songsApi'
-import { ApiError } from '@/shared/api/ApiError'
+import { ApiError } from '../../../shared/api/ApiError'
 import type { Song } from '../types'
 
 // Remplace le module entier : aucun appel réseau pendant les tests
