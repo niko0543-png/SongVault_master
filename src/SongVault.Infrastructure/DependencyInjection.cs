@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 using SongVault.Application.Abstractions;
+using SongVault.Infrastructure.Email;
 using SongVault.Infrastructure.Persistence;
 using SongVault.Infrastructure.Persistence.Repositories;
 using SongVault.Infrastructure.Storage;
@@ -38,6 +39,20 @@ public static class DependencyInjection
             .Validate(o => !string.IsNullOrWhiteSpace(o.RootPath), "FileStorage:RootPath est obligatoire.")
             .ValidateOnStart();                                   // l'API refuse de démarrer si c'est mal configuré
         services.AddSingleton<IFileStorageService, LocalFileStorageService>();
+        services.AddOptions<EmailOptions>()
+            .Bind(configuration.GetSection(EmailOptions.SectionName))
+            .Validate(o => o.Provider is EmailOptions.LogProvider or EmailOptions.BrevoProvider,
+                "Email:Provider doit valoir Log ou Brevo.")
+            .Validate(o => !string.IsNullOrWhiteSpace(o.FromAddress), "Email:FromAddress est obligatoire.")
+            .Validate(o => o.Provider != EmailOptions.BrevoProvider || !string.IsNullOrWhiteSpace(o.Brevo.ApiKey),
+                "Email:Brevo:ApiKey est obligatoire avec le fournisseur Brevo.")
+            .ValidateOnStart();
+
+        // Le fournisseur se choisit au démarrage : changer Email:Provider demande un redémarrage de l'API
+        if (configuration[$"{EmailOptions.SectionName}:Provider"] == EmailOptions.BrevoProvider)
+            services.AddHttpClient<IEmailSender, BrevoEmailSender>(c => c.BaseAddress = new Uri("https://api.brevo.com/"));
+        else
+            services.AddSingleton<IEmailSender, LogEmailSender>();
         return services;
     }
 }
