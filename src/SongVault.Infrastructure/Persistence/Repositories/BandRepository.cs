@@ -26,4 +26,15 @@ internal sealed class BandRepository(SongVaultDbContext db) : IBandRepository
              .OrderBy(x => x.Name)                                  // trier AVANT de construire le DTO
              .Select(x => new BandSummaryDto(x.Id, x.Name, x.Role))
              .ToListAsync(ct);
+
+    public Task<Band?> GetWithMembersAsync(Guid bandId, CancellationToken ct)
+        => db.Bands.Include(b => b.Memberships).FirstOrDefaultAsync(b => b.Id == bandId, ct);
+
+    public async Task<IReadOnlyList<BandMemberDto>> ListMembersAsync(Guid bandId, CancellationToken ct)
+        => await db.BandMemberships.AsNoTracking()
+            .Where(m => m.BandId == bandId)
+            .Join(db.Users, m => m.UserId, u => u.Id, (m, u) => new { m.UserId, u.Email, m.Role, m.JoinedAt })
+            .OrderBy(x => x.Email)                                 // même règle : trier sur le type anonyme
+            .Select(x => new BandMemberDto(x.UserId, x.Email ?? "", x.Role, x.JoinedAt))
+            .ToListAsync(ct);
 }

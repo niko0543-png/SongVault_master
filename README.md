@@ -84,7 +84,8 @@ docker compose down -v       # supprime aussi la base et les fichiers
   morceau (requêtes HTTP `Range`) et raccourci clavier lecture/pause.
 - **Comparaison A/B** de deux versions d'un même morceau, avec une URL partageable.
 - **Recherche et filtres** synchronisés avec l'URL.
-- **Comptes utilisateurs et groupes** : chaque morceau appartient à un groupe, un utilisateur peut être membre de plusieurs groupes et ne voit que les leurs.
+- **Comptes utilisateurs et groupes** : chaque morceau appartient à un groupe, un utilisateur peut être membre de plusieurs groupes et ne voit que les leurs. 
+  Trois rôles par groupe : propriétaire (gère les membres), membre (crée et modifie), invité (lit et écoute).
 - **Accessibilité** : navigation complète au clavier, lien d'évitement, focus géré à
   chaque changement de page, boîtes de confirmation accessibles.
 
@@ -201,20 +202,28 @@ Le contrat OpenAPI est généré depuis le code et ses commentaires XML. En dév
 | `POST` | `/api/auth/login?useCookies=true` | Se connecter (cookie) |
 | `POST` | `/api/auth/logout` | Se déconnecter |
 | `GET` | `/api/auth/me` | Utilisateur connecté |
-| `GET` | `/api/songs` | Liste paginée, recherche |
-| `POST` | `/api/songs` | Créer un morceau |
-| `GET` `PUT` `DELETE` | `/api/songs/{id}` | Lire, modifier, supprimer un morceau |
-| `GET` `POST` | `/api/songs/{songId}/versions` | Lister, créer des versions |
-| `GET` `PUT` | `/api/songs/{songId}/versions/{versionId}` | Lire, modifier une version |
-| `POST` | `/api/songs/{songId}/versions/{versionId}/files` | Envoyer un fichier |
+| `GET` `POST` | `/api/bands` | Mes groupes (avec mon rôle), créer un groupe |
+| `GET` `PUT` | `/api/bands/{bandId}` | Lire, renommer un groupe (renommer : Owner) |
+| `GET` | `/api/bands/{bandId}/members` | Membres du groupe et leurs rôles |
+| `PUT` | `/api/bands/{bandId}/members/{userId}/role` | Changer le rôle d'un membre (Owner) |
+| `DELETE` | `/api/bands/{bandId}/members/{userId}` | Retirer un membre (Owner) |
+| `DELETE` | `/api/bands/{bandId}/members/me` | Quitter le groupe |
+| `GET` | `/api/bands/{bandId}/songs` | Liste paginée, recherche |
+| `POST` | `/api/bands/{bandId}/songs` | Créer un morceau |
+| `GET` `PUT` `DELETE` | `/api/bands/{bandId}/songs/{id}` | Lire, modifier, supprimer un morceau |
+| `GET` `POST` | `/api/bands/{bandId}/songs/{songId}/versions` | Lister, créer des versions |
+| `GET` `PUT` | `…/versions/{versionId}` | Lire, modifier une version |
+| `POST` | `…/versions/{versionId}/files` | Envoyer un fichier |
 | `GET` | `…/files/{fileId}/content` | Lire ou télécharger un fichier (`Range` accepté) |
 | `DELETE` | `…/files/{fileId}` | Supprimer un fichier |
 | `GET` | `/api/files/policy` | Extensions acceptées et taille maximale |
 
-Les erreurs suivent la RFC 9457 (`application/problem+json`) : 400 validation, 401 non
-connecté, 404 introuvable (ou appartenant à un autre utilisateur), 409 conflit de
-concurrence, 413 fichier trop volumineux, 422 règle métier, 429 trop de requêtes.
-
+Sous /api/bands/{bandId}, les lectures sont ouvertes à tout membre du groupe et les écritures demandent au moins le rôle Member, 
+sauf mention contraire ([ADR 0008](docs/adr/0008-roles-dans-le-groupe.md)).
+Les erreurs suivent la RFC 9457 (application/problem+json) : 400 validation, 401 non
+connecté, 403 rôle insuffisant dans le groupe, 404 introuvable (ou groupe dont on n'est pas
+membre), 409 conflit de concurrence ou dernier propriétaire du groupe, 413 fichier trop
+volumineux, 422 règle métier, 429 trop de requêtes.
 ---
 
 ## Qualité et tests
@@ -252,8 +261,9 @@ npx playwright test                           # E2E (application lancée sur :80
 
 - **Authentification** par ASP.NET Core Identity et cookie `HttpOnly`, `SameSite=Strict` :
   aucun jeton accessible à JavaScript.
-- **Isolation des données** : chaque requête filtre par propriétaire ; une ressource d'un
-  autre utilisateur renvoie 404 (OWASP API1 — *Broken Object Level Authorization*).
+- **Isolation des données** : chaque requête est limitée au groupe de l'URL ; un non-membre
+  reçoit 404 (OWASP API1 — *Broken Object Level Authorization*), un membre dont le rôle ne
+  suffit pas reçoit 403 (OWASP API5 — *Broken Function Level Authorization*).
 - **Fichiers** : liste blanche d'extensions, taille maximale, contrôle de la **signature
   binaire** (un `.exe` renommé en `.mp3` est refusé), nom de stockage généré par le serveur.
 - **Limitation de débit** sur l'authentification et l'envoi de fichiers (429).
@@ -335,7 +345,7 @@ Choix assumés pour la v1 :
 
 - Un seul serveur : le stockage des fichiers est local. Une implémentation Azure Blob
   Storage est possible derrière la même interface.
-- Pas de partage de morceaux entre utilisateurs ni de rôles.
+- Pas encore d'invitations : un membre ne peut être ajouté à un groupe qu'en base.
 - Pas de traitement audio côté serveur (forme d'onde, transcodage).
 
 Pistes suivies dans les [issues](https://github.com/<owner>/<repo>/issues).

@@ -1,18 +1,19 @@
-src/features/versions/components/VersionTimeline.vue :
-
 <script setup lang="ts">
 import type { SongVersionStatus, SongVersionSummary } from '../types'
 import StatusBadge from './StatusBadge.vue'
 import StatusSelect from './StatusSelect.vue'
 import { formatDate } from '@/shared/utils/format'
 
-defineProps<{ songId: string; versions: SongVersionSummary[]; savingId?: string | null }>()
+// readonly : Guest du groupe (#2), le statut s'affiche sans sélecteur
+defineProps<{ songId: string; versions: SongVersionSummary[]; savingId?: string | null; readonly?: boolean }>()
 
 const emit = defineEmits<{ changeStatus: [versionId: string, status: SongVersionStatus] }>()
 </script>
 
 <template>
-  <p v-if="versions.length === 0" class="muted">Aucune version pour l'instant. Créez la première ci-dessous.</p>
+  <p v-if="versions.length === 0" class="muted">
+    Aucune version pour l'instant.<template v-if="!readonly"> Créez la première ci-dessous.</template>
+  </p>
   <ol v-else class="timeline">
     <li v-for="version in versions" :key="version.id" class="card timeline-item" data-testid="version-item">
       <span class="number">v{{ version.number }}</span>
@@ -25,6 +26,7 @@ const emit = defineEmits<{ changeStatus: [versionId: string, status: SongVersion
       <StatusBadge :status="version.status" />
       <!-- :model-value + @update plutôt que v-model : la valeur affichée ne change qu'après la réponse serveur -->
       <StatusSelect
+        v-if="!readonly"
         :model-value="version.status"
         :disabled="savingId === version.id"
         :label="`Statut de la version ${version.number}`"

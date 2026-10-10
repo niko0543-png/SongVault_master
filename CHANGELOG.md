@@ -7,8 +7,11 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) — versions :
 - Groupes : un morceau appartient à un groupe, un utilisateur peut être membre de plusieurs groupes (ADR 0007).
 - Sélecteur de groupe dans l'en-tête ; groupe personnel créé automatiquement pour chaque compte.
 - Script `scripts/purge-orphan-files.ps1` : retire du volume les fichiers qui ne sont plus référencés.
+- Rôles dans le groupe : Owner gère les membres, Member crée et modifie, Guest lit et écoute ; vérifiés par l'API (ADR 0008).
+- Page Membres : liste, changement de rôle, retrait d'un membre, départ du groupe.
 ### Modifié
 - Routes de l'API sous `/api/bands/{bandId}/songs…` et du front sous `/b/{bandId}/songs…`.
+- Renommer un groupe est réservé à ses Owner.
 ### Supprimé
 - `Song.OwnerId`, remplacé par `Song.BandId`. Les morceaux sans propriétaire valide sont supprimés par la migration `BackfillBands`.
 

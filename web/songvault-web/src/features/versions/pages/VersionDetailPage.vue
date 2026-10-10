@@ -15,6 +15,7 @@ import FileUploader from '@/features/files/components/FileUploader.vue'
 import type { SongFile } from '@/features/files/types'
 import { usePlayerStore } from '@/features/player/stores/playerStore'
 import { toTrack } from '@/features/player/track'
+import { useBandStore } from '@/features/bands/stores/bandStore'
 import SectionCard from '@/shared/components/SectionCard.vue'
 import LoadingState from '@/shared/components/LoadingState.vue'
 import ErrorState from '@/shared/components/ErrorState.vue'
@@ -29,7 +30,8 @@ const props = defineProps<{ songId: string; versionId: string }>()
 const { song, version, previous, next, isLoading, error, isSaving, saveError, save, reload } =
   useVersion(() => props.songId, () => props.versionId)
 const player = usePlayerStore()
-
+const bands = useBandStore()
+const canWrite = computed(() => bands.can('write'))
 const isNotFound = computed(() => error.value instanceof ApiError && error.value.status === 404)
 const { confirm } = useConfirm()
 const toast = useToast()
@@ -185,52 +187,54 @@ function onPlay(file: SongFile) {
         </RouterLink>
       </nav>
 
-      <form novalidate @submit.prevent="onSave">
+        <form novalidate @submit.prevent="onSave">
+        <!-- #2 : un fieldset désactivé désactive tous les champs qu'il contient -->
+        <fieldset class="bare" :disabled="!canWrite">
         <SectionCard title="Informations">
-          <div class="field">
-            <label for="v-title">Titre *</label>
-            <input id="v-title" v-model="form.title" :maxlength="VERSION_TITLE_MAX" />
-            <p v-if="fieldErrors.title" class="field-error">{{ fieldErrors.title }}</p>
-          </div>
-
-          <div class="field">
-            <label for="v-status">Statut</label>
-            <StatusSelect id="v-status" v-model="form.status" />
-          </div>
-
-          <!-- NOUVEAU : BPM et tonalité côte à côte -->
-          <div class="row">
             <div class="field">
-              <label for="v-bpm">BPM</label>
-              <input id="v-bpm" v-model="form.bpm" type="number" inputmode="numeric" step="1"
-                     :min="VERSION_BPM_MIN" :max="VERSION_BPM_MAX" placeholder="ex. 92"
-                     :aria-invalid="!!(bpmError || fieldErrors.bpm)" aria-describedby="v-bpm-error" />
-              <p v-if="bpmError || fieldErrors.bpm" id="v-bpm-error" class="field-error">
-                {{ bpmError ?? fieldErrors.bpm }}
-              </p>
+              <label for="v-title">Titre *</label>
+              <input id="v-title" v-model="form.title" :maxlength="VERSION_TITLE_MAX" />
+              <p v-if="fieldErrors.title" class="field-error">{{ fieldErrors.title }}</p>
             </div>
 
             <div class="field">
-              <label for="v-key">Tonalité</label>
-              <input id="v-key" v-model="form.key" :maxlength="MUSICAL_KEY_MAX" placeholder="ex. F#m"
-                     autocomplete="off" spellcheck="false"
-                     :aria-invalid="!!(keyError || fieldErrors.key)" aria-describedby="v-key-error" />
-              <p v-if="keyError || fieldErrors.key" id="v-key-error" class="field-error">
-                {{ keyError ?? fieldErrors.key }}
-              </p>
+              <label for="v-status">Statut</label>
+              <StatusSelect id="v-status" v-model="form.status" />
             </div>
-          </div>
-        </SectionCard>
 
-        <SectionCard title="Notes">
-          <textarea v-model="form.notes" rows="4" :maxlength="VERSION_NOTES_MAX" aria-label="Notes" />
-        </SectionCard>
+            <!-- NOUVEAU : BPM et tonalité côte à côte -->
+            <div class="row">
+              <div class="field">
+                <label for="v-bpm">BPM</label>
+                <input id="v-bpm" v-model="form.bpm" type="number" inputmode="numeric" step="1"
+                      :min="VERSION_BPM_MIN" :max="VERSION_BPM_MAX" placeholder="ex. 92"
+                      :aria-invalid="!!(bpmError || fieldErrors.bpm)" aria-describedby="v-bpm-error" />
+                <p v-if="bpmError || fieldErrors.bpm" id="v-bpm-error" class="field-error">
+                  {{ bpmError ?? fieldErrors.bpm }}
+                </p>
+              </div>
 
-        <SectionCard title="Paroles">
-          <textarea v-model="form.lyrics" class="lyrics" rows="14" :maxlength="VERSION_LYRICS_MAX" aria-label="Paroles" />
-        </SectionCard>
+              <div class="field">
+                <label for="v-key">Tonalité</label>
+                <input id="v-key" v-model="form.key" :maxlength="MUSICAL_KEY_MAX" placeholder="ex. F#m"
+                      autocomplete="off" spellcheck="false"
+                      :aria-invalid="!!(keyError || fieldErrors.key)" aria-describedby="v-key-error" />
+                <p v-if="keyError || fieldErrors.key" id="v-key-error" class="field-error">
+                  {{ keyError ?? fieldErrors.key }}
+                </p>
+              </div>
+            </div>
+          </SectionCard>
 
-        <div class="save-bar">
+          <SectionCard title="Notes">
+            <textarea v-model="form.notes" rows="4" :maxlength="VERSION_NOTES_MAX" aria-label="Notes" />
+          </SectionCard>
+
+          <SectionCard title="Paroles">
+            <textarea v-model="form.lyrics" class="lyrics" rows="14" :maxlength="VERSION_LYRICS_MAX" aria-label="Paroles" />
+          </SectionCard>
+        </fieldset>
+        <div v-if="canWrite" class="save-bar">
           <span v-if="isDirty" class="muted" role="status">Modifications non enregistrées</span>
           <p v-if="globalSaveError" class="field-error" role="alert">{{ globalSaveError }}</p>
           <button type="button" class="secondary" :disabled="!isDirty || isSaving" @click="resetForm">Annuler</button>
@@ -240,9 +244,9 @@ function onPlay(file: SongFile) {
 
       <SectionCard title="Fichiers">
         <p v-if="fileError" class="field-error" role="alert">{{ fileError }}</p>
-        <FileList :song-id="songId" :version-id="version.id" :files="version.files"
+        <FileList :song-id="songId" :version-id="version.id" :files="version.files" :readonly="!canWrite"
                   :busy-id="deletingId" @play="onPlay" @delete="onDeleteFile" />
-        <FileUploader :song-id="songId" :version-id="version.id" @uploaded="onUploaded" />
+        <FileUploader v-if="canWrite" :song-id="songId" :version-id="version.id" @uploaded="onUploaded" />
       </SectionCard>
     </template>
   </section>
@@ -254,4 +258,5 @@ function onPlay(file: SongFile) {
 .lyrics { font-family: inherit; line-height: 1.5; }
 .save-bar { display: flex; gap: .75rem; align-items: center; justify-content: flex-end; margin-bottom: 1rem; flex-wrap: wrap; }
 @media (max-width: 600px) { .row { grid-template-columns: 1fr; } }
+.bare { border: 0; padding: 0; margin: 0; min-width: 0; }
 </style>

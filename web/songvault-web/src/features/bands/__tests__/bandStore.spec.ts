@@ -45,4 +45,34 @@ describe('bandStore', () => {
     expect(store.activeId).toBeNull()
     expect(store.isLoaded).toBe(false)
   })
+  it.each([
+    ['Owner', true, true],
+    ['Member', true, false],
+    ['Guest', false, false],
+  ] as const)('can() pour %s : write=%s, admin=%s', async (role, write, admin) => {
+    vi.mocked(bandsApi.mine).mockResolvedValue([{ ...perso, role }])
+    const store = useBandStore()
+    await store.ensureLoaded()
+    store.setActive('b1')
+
+    expect(store.can('write')).toBe(write)
+    expect(store.can('admin')).toBe(admin)
+  })
+
+  it('can() refuse tout sans groupe actif', () => {
+    expect(useBandStore().can('write')).toBe(false)
+  })
+
+  it("remove retire le groupe et force une relecture quand il n'en reste aucun", async () => {
+    vi.mocked(bandsApi.mine).mockResolvedValue([perso])
+    const store = useBandStore()
+    await store.ensureLoaded()
+    store.setActive('b1')
+
+    store.remove('b1')
+
+    expect(store.bands).toEqual([])
+    expect(store.activeId).toBeNull()
+    expect(store.isLoaded).toBe(false)
+  })
 })
