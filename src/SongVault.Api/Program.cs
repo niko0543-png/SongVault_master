@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
-
+using Microsoft.AspNetCore.DataProtection;
 using SongVault.Api.Auth;
 using SongVault.Api.ErrorHandling;
 using SongVault.Api.Security;
@@ -43,6 +43,11 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 
 // --- Limitation de débit (J31) ---
 builder.Services.AddSongVaultRateLimiting(builder.Configuration);
+
+// --- Clés Data Protection en base (#4) : cookies et liens restent valables après un redémarrage ---
+builder.Services.AddDataProtection()
+    .SetApplicationName("SongVault")
+    .PersistKeysToDbContext<SongVaultDbContext>();
 
 // --- Authentification (J32) ---
 builder.Services.AddAuthorization();
