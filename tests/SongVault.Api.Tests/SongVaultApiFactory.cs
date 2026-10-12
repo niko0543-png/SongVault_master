@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.TestHost;
 using SongVault.Application.Abstractions;
 using SongVault.Infrastructure.Persistence;
 using Testcontainers.MsSql;
+using Microsoft.AspNetCore.Identity;
 
 namespace SongVault.Api.Tests;
 
@@ -47,7 +48,7 @@ public sealed class SongVaultApiFactory : WebApplicationFactory<Program>, IAsync
 
         // 2. L'utilisateur par défaut, inscrit et connecté UNE fois pour toute la suite
         using var client = CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
-        _defaultUserCookie = await RegisterAndLoginAsync(client, $"default-{Guid.NewGuid():N}@test.local");
+        _defaultUserCookie = await RegisterAndLoginAsync(Services, client, $"default-{Guid.NewGuid():N}@test.local");
     }
 
     /// <summary>
@@ -66,17 +67,30 @@ public sealed class SongVaultApiFactory : WebApplicationFactory<Program>, IAsync
         => new SqlConnectionStringBuilder(_sql.GetConnectionString()) { InitialCatalog = database }.ConnectionString;
 
 
-    /// <summary>Inscrit puis connecte un utilisateur ; renvoie son cookie au format "nom=valeur".</summary>
-    public static async Task<string> RegisterAndLoginAsync(HttpClient client, string email)
+    /// <summary>Inscrit, confirme l'adresse puis connecte un utilisateur ; renvoie son cookie au format "nom=valeur".</summary>
+    public static async Task<string> RegisterAndLoginAsync(IServiceProvider services, HttpClient client, string email)
     {
         var register = await client.PostAsJsonAsync("/api/auth/register", new { email, password = TestPassword });
         register.EnsureSuccessStatusCode();
+        await ConfirmEmailAsync(services, email);           // #4 : connexion refusée sans adresse confirmée
 
         var login = await client.PostAsJsonAsync("/api/auth/login?useCookies=true", new { email, password = TestPassword });
         login.EnsureSuccessStatusCode();
 
         // "songvault.auth=CfDJ8…; path=/; samesite=strict; httponly" → "songvault.auth=CfDJ8…"
         return login.Headers.GetValues("Set-Cookie").First().Split(';', 2)[0];
+    }
+
+    /// <summary>Marque l'adresse comme confirmée, directement en base. Le parcours par e-mail est testé dans AccountTests.</summary>
+    public static async Task ConfirmEmailAsync(IServiceProvider services, string email)
+    {
+        using var scope = services.CreateScope();
+        var users = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
+        var user = await users.FindByEmailAsync(email) ?? throw new InvalidOperationException($"Compte {email} introuvable.");
+        user.EmailConfirmed = true;
+        var result = await users.UpdateAsync(user);
+        if (!result.Succeeded)
+            throw new InvalidOperationException(string.Join(", ", result.Errors.Select(e => e.Code)));
     }
 
     // ---- xUnit v2 ----

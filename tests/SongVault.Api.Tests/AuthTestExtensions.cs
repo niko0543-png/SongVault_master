@@ -16,7 +16,8 @@ public static class AuthTestExtensions
         this WebApplicationFactory<Program> factory, string? email = null)
     {
         var client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
-        var cookie = await SongVaultApiFactory.RegisterAndLoginAsync(client, email ?? $"user-{Guid.NewGuid():N}@test.local");
+        var cookie = await SongVaultApiFactory.RegisterAndLoginAsync(
+            factory.Services, client, email ?? $"user-{Guid.NewGuid():N}@test.local");
         client.DefaultRequestHeaders.Add("Cookie", cookie);
         return client;
     }

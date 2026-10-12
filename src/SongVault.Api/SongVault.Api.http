@@ -9,6 +9,9 @@ Content-Type: application/json
 
 { "email": "moi@songvault.local", "password": "Mon-Mot-De-Passe1!" }
 
+### 1 bis. Confirmer l'adresse : recopier la query du lien reçu (journaux de l'API avec Email:Provider=Log)
+GET {{host}}/api/auth/confirmEmail?userId=COLLER_ICI&code=COLLER_ICI
+
 ### 2. Connexion par jeton (à relancer toutes les heures)
 # @name login
 POST {{host}}/api/auth/login
@@ -161,3 +164,23 @@ Authorization: {{auth}}
 
 ### Aperçu d'un lien inconnu → 404
 GET {{host}}/api/invitations/inconnu
+
+
+### Mot de passe oublié (toujours 200, compte connu ou non)
+POST {{host}}/api/auth/forgotPassword
+Content-Type: application/json
+
+{ "email": "moi@songvault.local" }
+
+### Nouveau mot de passe, avec le code reçu (valable 2 h)
+POST {{host}}/api/auth/resetPassword
+Content-Type: application/json
+
+{ "email": "moi@songvault.local", "resetCode": "COLLER_LE_CODE", "newPassword": "Nouveau-Mot-De-Passe2!" }
+
+### Changer de mot de passe (connecté ; l'ancien est obligatoire)
+POST {{host}}/api/auth/manage/info
+Authorization: {{auth}}
+Content-Type: application/json
+
+{ "oldPassword": "Mon-Mot-De-Passe1!", "newPassword": "Nouveau-Mot-De-Passe2!" }

@@ -68,6 +68,14 @@ jobs:
                -H 'Content-Type: application/json' \
                -d '{"email":"ci@songvault.local","password":"Ci-Password1!"}' \
                http://localhost:8080/api/auth/register
+      # #4 : connexion refusée tant que l'adresse n'est pas confirmée, puis confirmation en base
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' \
+                    -H 'Content-Type: application/json' \
+                    -d '{"email":"ci@songvault.local","password":"Ci-Password1!"}' \
+                    'http://localhost:8080/api/auth/login?useCookies=true')" = 401
+          docker compose -f compose.yaml exec -T db /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa \
+               -P "$MSSQL_SA_PASSWORD" -C -d SongVault -b \
+               -Q "UPDATE AspNetUsers SET EmailConfirmed = 1 WHERE NormalizedEmail = 'CI@SONGVAULT.LOCAL'"
           curl --fail --silent --show-error -c cookies.txt \
                -H 'Content-Type: application/json' \
                -d '{"email":"ci@songvault.local","password":"Ci-Password1!"}' \

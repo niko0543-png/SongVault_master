@@ -51,8 +51,21 @@ builder.Services.AddDataProtection()
 
 // --- Authentification (J32) ---
 builder.Services.AddAuthorization();
-builder.Services.AddIdentityApiEndpoints<IdentityUser>()
-    .AddEntityFrameworkStores<SongVaultDbContext>();
+builder.Services.AddIdentityApiEndpoints<IdentityUser>(options =>
+{
+    // #4 : pas de connexion tant que l'adresse n'est pas confirmée (ADR 0010)
+    options.SignIn.RequireConfirmedEmail = true;
+    options.Tokens.EmailConfirmationTokenProvider = AccountTokens.EmailConfirmationProvider;
+})
+    .AddEntityFrameworkStores<SongVaultDbContext>()
+    .AddTokenProvider<EmailConfirmationTokenProvider>(AccountTokens.EmailConfirmationProvider);
+
+// Lien de réinitialisation : 2 h (fournisseur par défaut d'Identity)
+builder.Services.Configure<DataProtectionTokenProviderOptions>(o => o.TokenLifespan = AccountTokens.PasswordResetLifetime);
+// Mot de passe changé ou réinitialisé : les autres sessions sont coupées en une minute au plus
+builder.Services.Configure<SecurityStampValidatorOptions>(o => o.ValidationInterval = TimeSpan.FromMinutes(1));
+// E-mails d'Identity en français, liens vers le front, envoyés en arrière-plan
+builder.Services.AddTransient<IEmailSender<IdentityUser>, IdentityEmailSender>();
 
 builder.Services.ConfigureApplicationCookie(options =>
 {

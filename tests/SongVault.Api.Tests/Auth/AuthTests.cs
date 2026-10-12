@@ -47,6 +47,7 @@ public sealed class AuthTests(SongVaultApiFactory factory)
         var client = Anonymous();
         var email = $"cookie-{Guid.NewGuid():N}@test.local";
         await client.PostAsJsonAsync("/api/auth/register", new { email, password = SongVaultApiFactory.TestPassword });
+        await SongVaultApiFactory.ConfirmEmailAsync(factory.Services, email);
 
         var login = await client.PostAsJsonAsync("/api/auth/login?useCookies=true",
             new { email, password = SongVaultApiFactory.TestPassword });
@@ -72,6 +73,7 @@ public sealed class AuthTests(SongVaultApiFactory factory)
         var client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = true });
         var email = $"logout-{Guid.NewGuid():N}@test.local";
         await client.PostAsJsonAsync("/api/auth/register", new { email, password = SongVaultApiFactory.TestPassword });
+        await SongVaultApiFactory.ConfirmEmailAsync(factory.Services, email);
         await client.PostAsJsonAsync("/api/auth/login?useCookies=true", new { email, password = SongVaultApiFactory.TestPassword });
         Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/auth/me")).StatusCode);
 
