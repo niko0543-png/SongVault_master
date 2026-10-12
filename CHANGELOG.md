@@ -11,9 +11,13 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) — versions :
 - Page Membres : liste, changement de rôle, retrait d'un membre, départ du groupe.
 - Invitations par e-mail : lien à usage unique valable 7 jours, page /invite qui enchaîne inscription ou connexion et adhésion, invitations en attente et annulation dans la page Membres (ADR 0009).
 - Envoi d'e-mails derrière `IEmailSender` : journaux en développement, Brevo en production.
+- Compte complet : confirmation de l'adresse à l'inscription, mot de passe oublié et réinitialisation (lien valable 2 h), changement de mot de passe depuis « Mon compte » (ADR 0010).
+- File d'envoi des e-mails en arrière-plan ; clés Data Protection conservées en base.
 ### Modifié
 - Routes de l'API sous `/api/bands/{bandId}/songs…` et du front sous `/b/{bandId}/songs…`.
 - Renommer un groupe est réservé à ses Owner.
+- La connexion exige une adresse confirmée ; les comptes existants sont marqués confirmés par la migration `ConfirmExistingEmails`.
+- L'inscription ne connecte plus directement : elle mène à « Vérifiez votre boîte mail ».
 ### Supprimé
 - `Song.OwnerId`, remplacé par `Song.BandId`. Les morceaux sans propriétaire valide sont supprimés par la migration `BackfillBands`.
 
