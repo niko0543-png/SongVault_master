@@ -40,7 +40,9 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
 
   if (response.status === 204) return undefined as T
   const text = await response.text()                 // corps éventuellement vide (ex. login Identity)
-  return (text ? JSON.parse(text) : undefined) as T
+  // Seul un corps JSON est lu : confirmEmail d'Identity répond par un texte (#4)
+  const isJson = response.headers.get('Content-Type')?.includes('json') ?? false
+  return (text && isJson ? JSON.parse(text) : undefined) as T
 }
 
 async function readProblem(response: Response): Promise<ProblemDetails> {

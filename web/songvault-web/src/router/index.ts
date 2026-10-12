@@ -26,6 +26,31 @@ const router = createRouter({
       component: () => import('@/features/auth/pages/RegisterPage.vue'),
       meta: { public: true, guestOnly: true, title: 'Créer un compte' },
     },
+        {
+      path: '/check-email',
+      name: 'check-email',
+      component: () => import('@/features/auth/pages/CheckEmailPage.vue'),
+      meta: { public: true, guestOnly: true, title: 'Vérifiez votre boîte mail' },
+    },
+    {
+      // Lien de l'e-mail de confirmation (#4) ; ouvert connecté aussi, après un changement d'adresse
+      path: '/confirm-email',
+      name: 'confirm-email',
+      component: () => import('@/features/auth/pages/ConfirmEmailPage.vue'),
+      meta: { public: true, title: "Confirmation de l'adresse" },
+    },
+    {
+      path: '/forgot-password',
+      name: 'forgot-password',
+      component: () => import('@/features/auth/pages/ForgotPasswordPage.vue'),
+      meta: { public: true, guestOnly: true, title: 'Mot de passe oublié' },
+    },
+    {
+      path: '/reset-password',
+      name: 'reset-password',
+      component: () => import('@/features/auth/pages/ResetPasswordPage.vue'),
+      meta: { public: true, guestOnly: true, title: 'Nouveau mot de passe' },
+    },
     {
       // Lien reçu par e-mail : ouvert à tous, connecté ou non (#3)
       path: '/invite/:token',
@@ -34,6 +59,14 @@ const router = createRouter({
       props: true,
       meta: { public: true, title: 'Invitation' },
     },
+        // ---- Connexion exigée, hors groupe ----
+    {
+      path: '/account',
+      name: 'account',
+      component: () => import('@/features/auth/pages/AccountPage.vue'),
+      meta: { title: 'Mon compte' },
+    },
+
     // ---- Connexion exigée (par défaut), dans un groupe ----
     {
       path: '/b/:bandId/songs',
@@ -103,6 +136,7 @@ router.beforeEach(async (to) => {
   const bandId = typeof to.params.bandId === 'string' ? to.params.bandId : null
 
   if (!bandId) {
+    if (to.name !== 'home') return true                 // page hors groupe : Mon compte (#4)
     // « / » : ouvre le dernier groupe utilisé (ou le premier)
     const preferred = bands.preferredId()
     return preferred ? { name: 'songs', params: { bandId: preferred } } : true

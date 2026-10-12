@@ -29,7 +29,7 @@ flowchart TB
     Application --> Domain
 ```
 
-Domain ne dépend de rien ; les abstractions (`ISongRepository`, `IBandRepository`, `IInvitationRepository`, `IFileStorageService`, `IEmailSender`, `ICurrentUser`, `IBandContext`) sont dans Application, leurs implémentations dans Infrastructure et Api.
+Domain ne dépend de rien ; les abstractions (`ISongRepository`, `IBandRepository`, `IInvitationRepository`, `IFileStorageService`, `IEmailSender`, `IEmailQueue`, `ICurrentUser`, `IBandContext`) sont dans Application, leurs implémentations dans Infrastructure et Api.
 
 ## Modèle métier
 

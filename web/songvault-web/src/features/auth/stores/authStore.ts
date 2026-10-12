@@ -32,9 +32,9 @@ export const useAuthStore = defineStore('auth', () => {
     isLoaded.value = true
   }
 
+ /** Crée le compte. La connexion attend la confirmation de l'adresse (#4, ADR 0010). */
   async function register(credentials: Credentials) {
     await authApi.register(credentials)
-    await login(credentials)                       // inscription réussie → connexion directe
   }
 
   /** Efface tout ce qui appartient à l'utilisateur, côté navigateur. */

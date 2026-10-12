@@ -3,7 +3,7 @@ import { computed, reactive, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
 import { registrationErrors } from '../messages'
-import { safeRedirect } from '@/router/authGuard'
+import { rememberAfterConfirm } from '../afterConfirm'
 import { useAsyncAction } from '@/shared/composables/useAsyncAction'
 
 const auth = useAuthStore()
@@ -21,8 +21,11 @@ const messages = computed(() => (error.value ? registrationErrors(error.value) :
 async function onSubmit() {
   submitted.value = true
   if (form.password !== form.confirm || !form.email.trim()) return
-  await run({ email: form.email.trim(), password: form.password })
-  if (!error.value) await router.replace(safeRedirect(route.query.redirect))
+  const email = form.email.trim()
+  await run({ email, password: form.password })
+  if (error.value) return
+  rememberAfterConfirm(route.query.redirect)          // ex. l'invitation, rouverte après la confirmation
+  await router.replace({ name: 'check-email', query: { email } })
 }
 </script>
 

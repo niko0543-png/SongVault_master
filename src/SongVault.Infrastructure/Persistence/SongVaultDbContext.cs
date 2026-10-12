@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using SongVault.Application.Abstractions;
 using SongVault.Application.Common.Exceptions;
 using SongVault.Domain.Bands;
@@ -13,7 +13,7 @@ namespace SongVault.Infrastructure.Persistence;
 
 public sealed class SongVaultDbContext(
     DbContextOptions<SongVaultDbContext> options, IBandContext? bandContext = null)
-    : IdentityDbContext<IdentityUser>(options), IUnitOfWork
+    : IdentityDbContext<IdentityUser>(options), IUnitOfWork, IDataProtectionKeyContext
 {
     /// <summary>Nom du filtre qui limite Songs au groupe actif (IgnoreQueryFilters([BandFilter]) pour l'ôter).</summary>
     public const string BandFilter = "Band";
@@ -22,6 +22,8 @@ public sealed class SongVaultDbContext(
     public DbSet<Band> Bands => Set<Band>();
     public DbSet<BandMembership> BandMemberships => Set<BandMembership>();
     public DbSet<Invitation> Invitations => Set<Invitation>();
+    /// <summary>Clés qui signent cookies et liens (ADR 0010) : en base pour survivre à une reconstruction de l'API.</summary>
+    public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
     // Relu par EF à chaque requête. null hors requête HTTP : le filtre ne laisse alors passer aucun morceau.
     private Guid? CurrentBandId => bandContext?.BandId;

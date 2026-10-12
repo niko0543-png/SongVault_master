@@ -86,6 +86,12 @@ it('envoie le corps en JSON', async () => {
     await expect(request<void>('/auth/login', { method: 'POST', body: {} })).resolves.toBeUndefined()
   })
 
+    it("ignore un corps qui n'est pas du JSON (confirmEmail d'Identity)", async () => {
+    mockFetch(new Response('Thank you for confirming your email.',
+      { status: 200, headers: { 'Content-Type': 'text/plain; charset=utf-8' } }))
+    await expect(request<void>('/auth/confirmEmail?userId=u&code=c')).resolves.toBeUndefined()
+  })
+
   it("prévient l'application d'un 401 sur une route métier, pas sur /auth/", async () => {
     const handler = vi.fn<() => void>()
     setUnauthorizedHandler(handler)

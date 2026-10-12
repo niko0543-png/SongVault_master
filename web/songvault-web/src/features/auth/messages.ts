@@ -9,6 +9,9 @@ const identityMessages: Record<string, string> = {
   DuplicateUserName: 'Un compte existe déjà avec cette adresse.',
   InvalidEmail: "L'adresse e-mail n'est pas valide.",
   InvalidUserName: "L'adresse e-mail n'est pas valide.",
+  PasswordMismatch: 'Le mot de passe actuel est incorrect.',
+  OldPasswordRequired: 'Saisissez votre mot de passe actuel.',
+  InvalidToken: 'Ce lien est invalide ou a expiré : demandez-en un nouveau.',
 }
 
 /** Messages lisibles pour une erreur d'inscription. */
@@ -21,7 +24,15 @@ export function registrationErrors(error: unknown): string[] {
 }
 
 /** Message lisible pour une erreur de connexion. */
+/** Connexion refusée parce que l'adresse n'est pas encore confirmée (#4). */
+export function isUnconfirmed(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 401 && error.problem.detail?.toLowerCase() === 'notallowed'
+}
+
+/** Message lisible pour une erreur de connexion. */
 export function loginError(error: unknown): string {
+  if (isUnconfirmed(error))
+    return 'Adresse pas encore confirmée : cliquez sur le lien reçu par e-mail, ou demandez-en un nouveau.'
   if (error instanceof ApiError && error.status === 401)
     return error.problem.detail?.toLowerCase() === 'lockedout'
       ? 'Compte verrouillé après plusieurs échecs. Réessayez dans quelques minutes.'
