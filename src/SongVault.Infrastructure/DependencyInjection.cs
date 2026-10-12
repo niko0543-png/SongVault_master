@@ -54,6 +54,11 @@ public static class DependencyInjection
             services.AddHttpClient<IEmailSender, BrevoEmailSender>(c => c.BaseAddress = new Uri("https://api.brevo.com/"));
         else
             services.AddSingleton<IEmailSender, LogEmailSender>();
+
+        // #4 : file d'envoi en mémoire, vidée en arrière-plan (e-mails d'Identity, ADR 0010)
+        services.AddSingleton<EmailQueue>();
+        services.AddSingleton<IEmailQueue>(sp => sp.GetRequiredService<EmailQueue>());
+        services.AddHostedService<EmailQueueWorker>();
         return services;
     }
 }
