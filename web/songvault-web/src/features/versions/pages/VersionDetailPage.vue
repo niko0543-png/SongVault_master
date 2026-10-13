@@ -13,6 +13,7 @@ import {
 import FileList from '@/features/files/components/FileList.vue'
 import FileUploader from '@/features/files/components/FileUploader.vue'
 import type { SongFile } from '@/features/files/types'
+import { filesApi } from '@/features/files/api/filesApi'
 import { usePlayerStore } from '@/features/player/stores/playerStore'
 import { toTrack } from '@/features/player/track'
 import { useBandStore } from '@/features/bands/stores/bandStore'
@@ -136,13 +137,22 @@ async function onDeleteFile(file: SongFile) {
   if (!version.value) return
   const confirmed = await confirm({
     title: 'Supprimer ce fichier ?',
-    message: `« ${file.originalFileName} » sera supprimé définitivement.`,
+       message: `« ${file.originalFileName} » sera supprimé définitivement, avec ses commentaires.`,
     confirmLabel: 'Supprimer',
     danger: true,
   })
   if (!confirmed) return
-  // … suite inchangée, puis en cas de succès :
-  toast.success('Fichier supprimé.')
+  deletingId.value = file.id
+  fileError.value = null
+  try {
+    await filesApi.remove(props.songId, version.value.id, file.id)
+    version.value.files = version.value.files.filter((f) => f.id !== file.id)
+    toast.success('Fichier supprimé.')
+  } catch (e) {
+    fileError.value = getErrorMessage(e)
+  } finally {
+    deletingId.value = null
+  }
 }
 
 // ================= Lecture (semaine 4) =================
