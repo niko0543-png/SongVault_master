@@ -50,13 +50,15 @@ try {
     Write-Host "3/4 Migrations (job $migrator)"
     $execution = az containerapp job start --resource-group $ResourceGroup --name $migrator --query name --output tsv
     Assert-LastExit 'lancement des migrations'
+ $deadline = (Get-Date).AddMinutes(15)
     do {
         Start-Sleep -Seconds 10
         $status = az containerapp job execution show --resource-group $ResourceGroup --name $migrator `
             --job-execution-name $execution --query properties.status --output tsv
         Assert-LastExit 'suivi des migrations'
         Write-Host "    $status"
-    } while ($status -in 'Running', 'Processing')
+        if ((Get-Date) -gt $deadline) { throw "Migrations : encore $status après 15 minutes." }
+    } while ($status -notin 'Succeeded', 'Failed', 'Stopped', 'Degraded')
     if ($status -ne 'Succeeded') {
         throw "Migrations : $status. Journaux : portail Azure, job $migrator, Historique d'exécution, $execution."
     }
