@@ -20,7 +20,7 @@ public sealed class AccountExportWriterTests
             Now, Now, [file]);
         var song = new AccountSongData(Guid.NewGuid(), "Export", null, null, Now, Now, [version]);
         var data = new AccountData("u1", "ana@test.local", true,
-            [new AccountBandData(Guid.NewGuid(), "Les Rats", BandRole.Owner, Now, [song])], [], []);
+            [new AccountBandData(Guid.NewGuid(), "Les Rats", BandRole.Owner, Now, [song])], [], [], []);
         using var output = new MemoryStream();
 
         await AccountExportWriter.WriteAsync(output, data, Now,

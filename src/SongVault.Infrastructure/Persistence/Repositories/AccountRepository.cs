@@ -5,6 +5,8 @@ using SongVault.Domain.Accounts;
 using SongVault.Domain.Invitations;
 using Microsoft.AspNetCore.Identity;
 using SongVault.Domain.Bands;
+using SongVault.Domain.Files;
+using SongVault.Domain.Songs;
 
 namespace SongVault.Infrastructure.Persistence.Repositories;
 
@@ -54,6 +56,20 @@ internal sealed class AccountRepository(SongVaultDbContext db, UserManager<Ident
             .Join(db.Bands, i => i.BandId, b => b.Id, (i, b) => new { Invitation = i, BandName = b.Name })
             .ToListAsync(ct);
 
+        // Commentaires écrits par le compte, dans tous les groupes, même ceux qu'il a quittés (ADR 0014)
+        var comments = await (
+                from c in db.Comments.AsNoTracking()
+                join f in db.Set<SongFile>() on c.SongFileId equals f.Id
+                join v in db.Set<SongVersion>() on f.SongVersionId equals v.Id
+                join s in db.Songs.IgnoreQueryFilters([SongVaultDbContext.BandFilter]) on v.SongId equals s.Id
+                join b in db.Bands on s.BandId equals b.Id
+                where c.AuthorId == userId
+                orderby c.CreatedAt
+                select new AccountCommentData(c.Id, b.Name, s.Title, v.Number, f.OriginalFileName,
+                    c.ParentId, c.PositionMs, c.Body, c.CreatedAt, c.EditedAt))
+            .ToListAsync(ct);
+
+
         AccountInvitationData ToData(Invitation i, string bandName)
             => new(i.BandId, bandName, i.Email, i.Role, i.CreatedAt, i.StatusAt(now));
 
@@ -70,7 +86,8 @@ internal sealed class AccountRepository(SongVaultDbContext db, UserManager<Ident
                     .ToList()))
                 .ToList(),
             sent.OrderBy(x => x.Invitation.CreatedAt).Select(x => ToData(x.Invitation, x.BandName)).ToList(),
-            received.OrderBy(x => x.Invitation.CreatedAt).Select(x => ToData(x.Invitation, x.BandName)).ToList());
+                        received.OrderBy(x => x.Invitation.CreatedAt).Select(x => ToData(x.Invitation, x.BandName)).ToList(),
+            comments);
     }
 
 
@@ -118,6 +135,12 @@ internal sealed class AccountRepository(SongVaultDbContext db, UserManager<Ident
         await songs.ExecuteDeleteAsync(ct);
         await db.Bands.Where(b => soloBandIds.Contains(b.Id)).ExecuteDeleteAsync(ct);
         await db.Invitations.Where(i => i.Email == email).ExecuteDeleteAsync(ct);
+        // Commentaires dans les groupes partagés : gardés pour le fil de discussion, sans auteur (ADR 0014).
+        // Ceux des groupes effacés juste au-dessus sont partis avec leurs fichiers.
+        await db.Comments.Where(c => c.AuthorId == userId)
+            .ExecuteUpdateAsync(s => s.SetProperty(c => c.AuthorId, (string?)null), ct);
+        await db.Comments.Where(c => c.ResolvedById == userId)
+            .ExecuteUpdateAsync(s => s.SetProperty(c => c.ResolvedById, (string?)null), ct);
         await db.Users.Where(u => u.Id == userId).ExecuteDeleteAsync(ct);
 
         await transaction.CommitAsync(ct);

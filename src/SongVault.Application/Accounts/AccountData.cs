@@ -11,7 +11,8 @@ public sealed record AccountData(
     string UserId, string Email, bool EmailConfirmed,
     IReadOnlyList<AccountBandData> Bands,
     IReadOnlyList<AccountInvitationData> InvitationsSent,
-    IReadOnlyList<AccountInvitationData> InvitationsReceived);
+    IReadOnlyList<AccountInvitationData> InvitationsReceived,
+    IReadOnlyList<AccountCommentData> Comments);
 
 public sealed record AccountBandData(
     Guid Id, string Name, BandRole Role, DateTimeOffset JoinedAt, IReadOnlyList<AccountSongData> Songs);
@@ -31,6 +32,11 @@ public sealed record AccountFileData(
     /// <summary>Emplacement du fichier dans l'archive.</summary>
     public string Path => $"files/{Id}/{FileName}";
 }
+
+/// <summary>Un commentaire écrit par le compte, avec de quoi le situer (#8). ParentId : réponse à ce commentaire.</summary>
+public sealed record AccountCommentData(
+    Guid Id, string BandName, string SongTitle, int VersionNumber, string FileName,
+    Guid? ParentId, int? PositionMs, string Body, DateTimeOffset CreatedAt, DateTimeOffset? EditedAt);
 
 public sealed record AccountInvitationData(
     Guid BandId, string BandName, string Email, BandRole Role, DateTimeOffset CreatedAt, InvitationStatus Status);

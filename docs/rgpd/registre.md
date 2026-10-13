@@ -78,6 +78,20 @@ fonctionnalité qui collecte, conserve ou transmet des données personnelles.
 | Durée | 30 jours (rétention de Log Analytics, `infra/main.bicep`) |
 | Sécurité | Aucun mot de passe ni jeton dans les journaux ; accès réservé à l'exploitant |
 
+## 7. Commentaires sur l'audio
+
+| | |
+|---|---|
+| Finalité | Échanger entre membres d'un groupe sur un enregistrement, à un instant précis |
+| Base légale | Exécution du contrat (art. 6.1.b) |
+| Personnes | Membres des groupes, Guests compris ; personnes éventuellement citées dans un commentaire |
+| Données | Texte du commentaire, position dans l'enregistrement, auteur, dates d'écriture, de modification et de résolution |
+| Destinataires | Les autres membres du groupe, quel que soit leur rôle (ADR 0014) |
+| Sous-traitants | Hébergeur (base de données) |
+| Transferts hors UE | Aucun |
+| Durée | Tant que le fichier commenté existe ; dans un groupe partagé, gardé sans auteur après la purge du compte |
+| Sécurité | Isolation par groupe ; seul l'auteur modifie, l'auteur ou un Owner supprime |
+
 ## Sous-traitants
 
 | Sous-traitant | Rôle | Localisation | Contrat de traitement (DPA) | État |
@@ -102,6 +116,8 @@ fonctionnalité qui collecte, conserve ou transmet des données personnelles.
 
 - Les invitations envoyées par le compte dans des groupes qui ont d'autres membres : elles
   appartiennent au groupe, l'identifiant de leur auteur ne renvoie plus à personne.
+- Ses commentaires dans les groupes partagés : gardés pour que les fils restent lisibles,
+  sans auteur (« Compte supprimé »). Il peut les supprimer lui-même avant de partir.
 - Les sauvegardes, jusqu'à leur rotation : 7 jours pour la base (restauration à un instant
   donné), 14 jours pour les fichiers (suppression réversible), voir
   `docs/runbook-sauvegardes.md`.
