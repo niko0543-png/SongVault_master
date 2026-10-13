@@ -8,6 +8,7 @@ using SongVault.Infrastructure.Email;
 using SongVault.Infrastructure.Persistence;
 using SongVault.Infrastructure.Persistence.Repositories;
 using SongVault.Infrastructure.Storage;
+using Microsoft.Extensions.Options;
 
 namespace SongVault.Infrastructure;
 
@@ -37,10 +38,24 @@ public static class DependencyInjection
         services.AddScoped<IAccountRepository, AccountRepository>();
 
         services.AddOptions<FileStorageOptions>()
-            .Bind(configuration.GetSection(FileStorageOptions.SectionName))
-            .Validate(o => !string.IsNullOrWhiteSpace(o.RootPath), "FileStorage:RootPath est obligatoire.")
-            .ValidateOnStart();                                   // l'API refuse de démarrer si c'est mal configuré
-        services.AddSingleton<IFileStorageService, LocalFileStorageService>();
+     .Bind(configuration.GetSection(FileStorageOptions.SectionName))
+     .Validate(o => o.Provider is FileStorageOptions.LocalProvider or FileStorageOptions.AzureBlobProvider,
+         "FileStorage:Provider doit valoir Local ou AzureBlob.")
+     .Validate(o => o.Provider != FileStorageOptions.LocalProvider || !string.IsNullOrWhiteSpace(o.RootPath),
+         "FileStorage:RootPath est obligatoire avec le stockage Local.")
+     .Validate(o => o.Provider != FileStorageOptions.AzureBlobProvider
+                    || !string.IsNullOrWhiteSpace(o.AzureBlob.ConnectionString),
+         "FileStorage:AzureBlob:ConnectionString est obligatoire avec le stockage AzureBlob.")
+     .ValidateOnStart();                                   // l'API refuse de démarrer si c'est mal configuré
+
+        // #6 : Local ou AzureBlob, choisi par FileStorage:Provider (ADR 0012). Seul le stockage choisi est construit.
+        services.AddSingleton<LocalFileStorageService>();
+        services.AddSingleton<AzureBlobFileStorageService>();
+        services.AddSingleton<IFileStorageService>(sp =>
+            sp.GetRequiredService<IOptions<FileStorageOptions>>().Value.Provider == FileStorageOptions.AzureBlobProvider
+                ? sp.GetRequiredService<AzureBlobFileStorageService>()
+                : sp.GetRequiredService<LocalFileStorageService>());
+        services.AddHostedService<AzureBlobStorageInitializer>();
         services.AddOptions<EmailOptions>()
             .Bind(configuration.GetSection(EmailOptions.SectionName))
             .Validate(o => o.Provider is EmailOptions.LogProvider or EmailOptions.BrevoProvider,
