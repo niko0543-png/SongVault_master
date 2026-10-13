@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS  Déploie SongVault sur Azure (ADR 0012) : infrastructure, migrations, puis redémarrage de l'API.
 .EXAMPLE   $env:SONGVAULT_SQL_PASSWORD = '…' ; .\scripts\deploy-azure.ps1 -ImageTag v1.1.0
 .NOTES     Prérequis : Azure CLI connecté (az login) et images publiées par le workflow « images ».
