@@ -55,7 +55,11 @@ public sealed class DownloadDataExportHandler(
         if (export is null || !export.IsDownloadableAt(clock.GetUtcNow()))
             throw new NotFoundException("DataExport", currentUser.UserId);
 
+        var fileName = $"songvault-export-{export.CompletedAt:yyyy-MM-dd}.zip";
+        var url = storage.CreateDownloadUrl(export.StorageKey!, "application/zip", fileName);
+        if (url is not null) return new FileDownload(null, "application/zip", fileName, url);
+
         var content = await storage.OpenReadAsync(export.StorageKey!, ct);
-        return new FileDownload(content, "application/zip", $"songvault-export-{export.CompletedAt:yyyy-MM-dd}.zip");
+        return new FileDownload(content, "application/zip", fileName);
     }
 }

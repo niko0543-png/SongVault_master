@@ -47,10 +47,16 @@ public sealed class UploadSongFileHandler(
 
 public sealed class DownloadSongFileHandler(ISongRepository songs, IFileStorageService storage)
 {
-    public async Task<FileDownload> HandleAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct)
+    /// <param name="asAttachment">true : téléchargement sous le nom d'origine ; false : lecture dans le navigateur.</param>
+    public async Task<FileDownload> HandleAsync(Guid songId, Guid versionId, Guid fileId, bool asAttachment, CancellationToken ct)
     {
         var info = await songs.GetFileAsync(songId, versionId, fileId, ct)
                    ?? throw new NotFoundException("SongFile", fileId);
+
+        // Stockage objet : le navigateur lit le stockage lui-même (ADR 0012)
+        var url = storage.CreateDownloadUrl(info.StorageKey, info.ContentType, asAttachment ? info.OriginalFileName : null);
+        if (url is not null) return new FileDownload(null, info.ContentType, info.OriginalFileName, url);
+
         var stream = await storage.OpenReadAsync(info.StorageKey, ct);
         return new FileDownload(stream, info.ContentType, info.OriginalFileName);
     }

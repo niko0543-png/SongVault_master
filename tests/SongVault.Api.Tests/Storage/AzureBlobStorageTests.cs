@@ -1,11 +1,9 @@
 ﻿using System.Net;
-
 using Azure;
-
+using SongVault.Api.Tests.Files;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
-
 using SongVault.Application.Abstractions;
 
 namespace SongVault.Api.Tests.Storage;
@@ -108,5 +106,34 @@ public sealed class AzureBlobStorageTests(SongVaultApiFactory factory, AzuriteFi
         var response = await StorageHttp.Client.GetAsync(storage.CreateDownloadUrl(key, "audio/mpeg", null));
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+
+    [Fact]
+    public async Task En_AzureBlob_le_contenu_ne_passe_jamais_par_l_API()
+    {
+        await using var host = BlobHost();
+        var client = await host.CreateNewUserClientAsync();
+        var versionUrl = await client.CreateVersionUrlAsync();
+        var bytes = TestFiles.Mp3(512 * 1024);
+
+        // Envoi : l'API donne une URL signée, le fichier part vers le stockage
+        var upload = await client.StartOkAsync(versionUrl, "Studio été.mp3", bytes.Length);
+        Assert.Contains("sig=", upload.UploadUrl);
+        Assert.Equal("BlockBlob", upload.Headers["x-ms-blob-type"]);
+        Assert.Equal(HttpStatusCode.Created, (await client.PutAsync(upload, bytes)).StatusCode);
+        var complete = await client.CompleteAsync(versionUrl, upload.UploadId);
+        Assert.Equal(HttpStatusCode.Created, complete.StatusCode);
+
+        // Lecture : l'API vérifie l'accès, puis redirige vers une URL signée
+        var noRedirect = host.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, HandleCookies = false });
+        noRedirect.DefaultRequestHeaders.Add("Cookie", client.DefaultRequestHeaders.GetValues("Cookie"));
+        var response = await noRedirect.GetAsync($"{complete.Headers.Location}?download=true");
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.True(response.Headers.CacheControl?.NoStore);
+        var file = await StorageHttp.Client.GetAsync(response.Headers.Location);
+        Assert.Equal(bytes, await file.Content.ReadAsByteArrayAsync());
+        Assert.Equal("Studio été.mp3", file.Content.Headers.ContentDisposition?.FileNameStar);
     }
 }

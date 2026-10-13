@@ -29,12 +29,14 @@ public sealed record SongFileDto(Guid Id, string OriginalFileName, string Conten
 public sealed record StoredFileInfo(string StorageKey, string ContentType, string OriginalFileName);
 
 /// <summary>
-/// Représente un fichier téléchargé par le client avec son contenu et métadonnées.
+/// Un fichier à rendre au client : son contenu (stockage local), ou une URL signée vers laquelle
+/// le rediriger (stockage objet, ADR 0012). Un seul des deux est renseigné.
 /// </summary>
-/// <param name="Content">Flux du contenu du fichier</param>
+/// <param name="Content">Flux du contenu du fichier, ou null si RedirectUrl est renseignée</param>
 /// <param name="ContentType">Type MIME du fichier</param>
 /// <param name="FileName">Nom du fichier à utiliser lors du téléchargement</param>
-public sealed record FileDownload(Stream Content, string ContentType, string FileName);
+/// <param name="RedirectUrl">URL signée de lecture, valable peu de temps</param>
+public sealed record FileDownload(Stream? Content, string ContentType, string FileName, Uri? RedirectUrl = null);
 
 /// <summary>
 /// Commande pour télécharger un fichier de chanson vers une version spécifique.

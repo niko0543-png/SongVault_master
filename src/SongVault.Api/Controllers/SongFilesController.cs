@@ -119,16 +119,18 @@ public sealed class SongFilesController : ControllerBase
     /// <param name="download">true : propose l'enregistrement sous son nom d'origine.</param>
     /// <response code="200">Le contenu complet.</response>
     /// <response code="206">Une partie du contenu (requête Range).</response>
+    /// <response code="302">Stockage Azure Blob : redirection vers une URL signée, valable 30 minutes.</response>
     [HttpGet("{fileId:guid}/content")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status206PartialContent)]
+    [ProducesResponseType(StatusCodes.Status302Found)]
     public async Task<IActionResult> Download(
         Guid songId, Guid versionId, Guid fileId, [FromQuery] bool download,
         [FromServices] DownloadSongFileHandler handler, CancellationToken ct)
     {
-        var result = await handler.HandleAsync(songId, versionId, fileId, ct);
+        var result = await handler.HandleAsync(songId, versionId, fileId, download, ct);
         // download=true → Content-Disposition: attachment ; sinon lecture dans le navigateur (lecteur audio en S4)
-        return File(result.Content, result.ContentType, download ? result.FileName : null, enableRangeProcessing: true);
+        return this.ToResult(result, asAttachment: download, enableRangeProcessing: true);
     }
 
     /// <summary>Supprime un fichier de la version.</summary>
