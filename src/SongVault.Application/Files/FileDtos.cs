@@ -1,4 +1,5 @@
-﻿using SongVault.Domain.Files;
+﻿using SongVault.Application.Abstractions;
+using SongVault.Domain.Files;
 
 namespace SongVault.Application.Files;
 
@@ -44,3 +45,13 @@ public sealed record FileDownload(Stream Content, string ContentType, string Fil
 /// <param name="Length">Taille du fichier en octets</param>
 /// <param name="Content">Flux contenant le contenu du fichier</param>
 public sealed record UploadSongFileCommand(Guid SongId, Guid VersionId, string FileName, long Length, Stream Content);
+
+
+/// <summary>Annonce d'un envoi direct : nom et taille du fichier que le navigateur va envoyer.</summary>
+public sealed record StartFileUploadCommand(Guid SongId, Guid VersionId, string FileName, long SizeBytes);
+
+/// <summary>
+/// Réponse à une annonce. Direct est l'URL signée du stockage ; null en stockage local,
+/// où le navigateur envoie le fichier à l'API (PUT …/uploads/{id}/content).
+/// </summary>
+public sealed record FileUploadTicket(Guid UploadId, DirectUpload? Direct, DateTimeOffset ExpiresAt);

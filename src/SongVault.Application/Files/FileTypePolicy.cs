@@ -6,8 +6,12 @@ public sealed record FileTypeRule(string Extension, SongFileType FileType, strin
 
 public static class FileTypePolicy
 {
-    public const long MaxFileSizeBytes = 50L * 1024 * 1024;                    // 100 Mo
+    /// <summary>Envoi multipart à travers l'API (POST …/files) : scripts et petits fichiers.</summary>
+    public const long MaxFileSizeBytes = 50L * 1024 * 1024;                    // 50 Mo
     public const long MaxRequestSizeBytes = MaxFileSizeBytes + 1024 * 1024;    // + marge pour l'enveloppe multipart
+
+    /// <summary>Envoi direct vers le stockage (ADR 0012) : les WAV de studio.</summary>
+    public const long MaxDirectUploadBytes = 2L * 1024 * 1024 * 1024;          // 2 Go
 
     private static readonly Dictionary<string, FileTypeRule> Rules = new FileTypeRule[]
     {

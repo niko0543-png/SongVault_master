@@ -15,7 +15,7 @@ namespace SongVault.Api.Controllers;
 [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
 public sealed class SongFilesController : ControllerBase
 {
-    /// <summary>Envoie un fichier et le rattache à la version.</summary>
+    /// <summary>Envoie un fichier de 50 Mo au plus à travers l'API et le rattache à la version.</summary>
     /// <remarks>
     /// Extensions acceptées et taille maximale : voir GET /api/files/policy.
     /// Le contenu réel est contrôlé (signature) : un .exe renommé en .mp3 est refusé.
@@ -47,6 +47,69 @@ public sealed class SongFilesController : ControllerBase
         return CreatedAtAction(nameof(Download), new { bandId, songId, versionId, fileId = result.Id },
             SongFileResponse.From(result));
     }
+
+    /// <summary>Annonce l'envoi direct d'un fichier (jusqu'à 2 Go) et renvoie l'adresse où l'envoyer.</summary>
+    /// <remarks>
+    /// Parcours en trois temps : cette annonce, un PUT du fichier à UploadUrl avec Headers, puis
+    /// POST …/uploads/{uploadId}/complete. L'adresse est valable une heure.
+    /// </remarks>
+    /// <response code="200">Adresse d'envoi.</response>
+    /// <response code="400">Extension non autorisée ou fichier vide.</response>
+    /// <response code="413">Fichier trop volumineux.</response>
+    /// <response code="429">Trop d'envois en peu de temps ; réessayez dans une minute.</response>
+    [HttpPost("uploads")]
+    [ProducesResponseType<FileUploadResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status413PayloadTooLarge)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
+    [EnableRateLimiting(RateLimiting.Uploads)]
+    public async Task<ActionResult<FileUploadResponse>> StartUpload(
+        Guid bandId, Guid songId, Guid versionId, StartFileUploadRequest request,
+        [FromServices] StartFileUploadHandler handler, CancellationToken ct)
+    {
+        var ticket = await handler.HandleAsync(
+            new StartFileUploadCommand(songId, versionId, request.FileName, request.SizeBytes), ct);
+
+        // Stockage local : le navigateur envoie le fichier à l'API, sur la route ci-dessous
+        var url = ticket.Direct?.Url.ToString()
+                  ?? Url.Action(nameof(ReceiveUpload), new { bandId, songId, versionId, uploadId = ticket.UploadId })!;
+        return Ok(new FileUploadResponse(ticket.UploadId, url,
+            ticket.Direct?.Headers ?? new Dictionary<string, string>(), ticket.ExpiresAt));
+    }
+
+    /// <summary>Stockage local seulement : reçoit le contenu d'un envoi annoncé.</summary>
+    /// <response code="204">Fichier reçu ; il reste à confirmer l'envoi.</response>
+    /// <response code="400">Taille différente de la taille annoncée.</response>
+    /// <response code="409">Fichier déjà reçu.</response>
+    [HttpPut("uploads/{uploadId:guid}/content")]
+    [DisableRequestSizeLimit]                                   // la taille annoncée (2 Go au plus) fait foi
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> ReceiveUpload(
+        Guid songId, Guid versionId, Guid uploadId, [FromServices] ReceiveFileUploadHandler handler, CancellationToken ct)
+    {
+        await handler.HandleAsync(songId, versionId, uploadId, Request.ContentLength, Request.Body, ct);
+        return NoContent();
+    }
+
+    /// <summary>Confirme un envoi : contrôle la taille et la signature, puis rattache le fichier à la version.</summary>
+    /// <response code="201">Fichier rattaché ; Location pointe vers son contenu.</response>
+    /// <response code="400">Taille ou contenu différents de ce qui a été annoncé ; le fichier est effacé.</response>
+    /// <response code="409">Le fichier n'est pas encore arrivé.</response>
+    [HttpPost("uploads/{uploadId:guid}/complete")]
+    [ProducesResponseType<SongFileResponse>(StatusCodes.Status201Created)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<SongFileResponse>> CompleteUpload(
+        Guid bandId, Guid songId, Guid versionId, Guid uploadId,
+        [FromServices] CompleteFileUploadHandler handler, CancellationToken ct)
+    {
+        var result = await handler.HandleAsync(songId, versionId, uploadId, ct);
+        return CreatedAtAction(nameof(Download), new { bandId, songId, versionId, fileId = result.Id },
+            SongFileResponse.From(result));
+    }
+
 
     /// <summary>Contenu du fichier, pour lecture dans le navigateur ou téléchargement.</summary>
     /// <remarks>Prend en charge l'en-tête Range (lecture audio avec déplacement dans le morceau).</remarks>

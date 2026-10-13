@@ -23,5 +23,5 @@ public sealed class FilePolicyController : ControllerBase
     [HttpGet]
     [ProducesResponseType<FilePolicyResponse>(StatusCodes.Status200OK)]
     public ActionResult<FilePolicyResponse> Get()
-        => Ok(new FilePolicyResponse([.. FileTypePolicy.AllowedExtensions.Order()], FileTypePolicy.MaxFileSizeBytes));
+        => Ok(new FilePolicyResponse([.. FileTypePolicy.AllowedExtensions.Order()], FileTypePolicy.MaxDirectUploadBytes));
 }
