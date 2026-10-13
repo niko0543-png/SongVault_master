@@ -60,6 +60,19 @@ const router = createRouter({
       props: true,
       meta: { public: true, title: 'Invitation' },
     },
+    {
+      // Pages légales : lisibles par tous, connecté ou non (#5)
+      path: '/mentions-legales',
+      name: 'legal-notice',
+      component: () => import('@/features/legal/pages/LegalNoticePage.vue'),
+      meta: { public: true, title: 'Mentions légales' },
+    },
+    {
+      path: '/confidentialite',
+      name: 'privacy',
+      component: () => import('@/features/legal/pages/PrivacyPage.vue'),
+      meta: { public: true, title: 'Politique de confidentialité' },
+    },
         // ---- Connexion exigée, hors groupe ----
     {
       path: '/account',

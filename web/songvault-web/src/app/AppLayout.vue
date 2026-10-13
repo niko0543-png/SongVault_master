@@ -46,6 +46,11 @@ async function onLogout() {
     <RouterView />
   </main>
 
+  <footer class="app-footer">
+    <RouterLink :to="{ name: 'legal-notice' }">Mentions légales</RouterLink>
+    <RouterLink :to="{ name: 'privacy' }">Confidentialité</RouterLink>
+  </footer>
+
   <AudioPlayer v-if="isAuthenticated" />
 
   <!-- S8 : montés une seule fois pour toute l'application -->
@@ -58,8 +63,11 @@ async function onLogout() {
               padding: 1rem 1.5rem; background: var(--surface); border-bottom: 1px solid var(--border); }
 .brand { font-weight: 700; text-decoration: none; font-size: 1.2rem; }
 .session { display: flex; align-items: center; gap: .75rem; }
-.app-main { max-width: 900px; margin: 0 auto; padding: 1.5rem 1.5rem 7rem; }
-
+.app-main { max-width: 900px; margin: 0 auto; padding: 1.5rem 1.5rem 2rem; }
+/* #5 : la marge basse laisse la place au lecteur audio, fixé en bas de l'écran */
+.app-footer { display: flex; justify-content: center; gap: 1.5rem; padding: 1rem 1.5rem 7rem;
+              border-top: 1px solid var(--border); font-size: .9rem; }
+              
 /* S8 : lien d'évitement, caché au-dessus de l'écran tant qu'il n'a pas le focus */
 .skip-link { position: absolute; left: .5rem; top: -3rem; padding: .5rem 1rem;
              background: var(--primary); color: #fff; border-radius: var(--radius);
