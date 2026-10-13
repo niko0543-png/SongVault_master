@@ -19,10 +19,9 @@ internal sealed class EmailQueueWorker(EmailQueue queue, IServiceScopeFactory sc
                 await using var scope = scopes.CreateAsyncScope();
                 await scope.ServiceProvider.GetRequiredService<IEmailSender>().SendAsync(message, stoppingToken);
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
             {
-                // Pas de nouvel essai : l'utilisateur peut redemander l'e-mail depuis l'écran.
-                // Une exception non rattrapée arrêterait le service, et avec lui toute l'API.
+                // Un délai dépassé côté HttpClient lève aussi une OperationCanceledException : seul l'arrêt de l'API la laisse passer.
                 logger.LogError(ex, "E-mail « {Subject} » non envoyé à {To}.", message.Subject, message.To);
             }
         }

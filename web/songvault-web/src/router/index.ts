@@ -45,11 +45,12 @@ const router = createRouter({
       component: () => import('@/features/auth/pages/ForgotPasswordPage.vue'),
       meta: { public: true, guestOnly: true, title: 'Mot de passe oublié' },
     },
-    {
+   {
+      // Lien de l'e-mail : ouvert connecté aussi, sinon le code serait perdu dans la redirection
       path: '/reset-password',
       name: 'reset-password',
       component: () => import('@/features/auth/pages/ResetPasswordPage.vue'),
-      meta: { public: true, guestOnly: true, title: 'Nouveau mot de passe' },
+      meta: { public: true, title: 'Nouveau mot de passe' },
     },
     {
       // Lien reçu par e-mail : ouvert à tous, connecté ou non (#3)
