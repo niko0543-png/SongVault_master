@@ -1,0 +1,36 @@
+name: restore-drill
+
+# Rappel trimestriel de l'exercice de restauration (ADR 0013, docs/runbook-sauvegardes.md).
+# Ouvre une issue ; l'exercice lui-même se lance à la main, il n'a aucun accès à Azure ici.
+on:
+  schedule:
+    - cron: '0 7 1 1,4,7,10 *'        # 1er janvier, avril, juillet et octobre, 7 h UTC
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  reminder:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ouvrir l'issue du trimestre
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          title="Exercice de restauration du trimestre ($(date -u +%Y-%m))"
+          if gh issue list --state open --search "\"$title\" in:title" --json number --jq 'length' | grep -qv '^0$'; then
+            echo "Issue déjà ouverte : $title"
+            exit 0
+          fi
+          gh issue create --title "$title" --body "$(cat <<'BODY'
+          Exercice de restauration trimestriel (ADR 0013).
+
+          - [ ] Lancer `scripts/restore-drill-azure.ps1` (docs/runbook-sauvegardes.md, « Exercice de restauration »)
+          - [ ] Vérifier un morceau, sa lecture et un téléchargement sur le site d'exercice
+          - [ ] Noter la date, le point de restauration et la durée dans le tableau des exercices du runbook
+          - [ ] Supprimer le groupe de ressources `songvault-drill`
+          BODY
+          )"
