@@ -14,8 +14,9 @@ import FileList from '@/features/files/components/FileList.vue'
 import FileUploader from '@/features/files/components/FileUploader.vue'
 import type { SongFile } from '@/features/files/types'
 import { filesApi } from '@/features/files/api/filesApi'
+import CommentsPanel from '@/features/comments/components/CommentsPanel.vue'
 import { usePlayerStore } from '@/features/player/stores/playerStore'
-import { toTrack } from '@/features/player/track'
+import { toTrack, type Track } from '@/features/player/track'
 import { useBandStore } from '@/features/bands/stores/bandStore'
 import SectionCard from '@/shared/components/SectionCard.vue'
 import LoadingState from '@/shared/components/LoadingState.vue'
@@ -156,13 +157,25 @@ async function onDeleteFile(file: SongFile) {
 }
 
 // ================= Lecture (semaine 4) =================
+function trackOf(file: SongFile): Track {
+  return toTrack({
+    songId: props.songId, songTitle: song.value?.title ?? '',
+    versionId: props.versionId, versionNumber: version.value?.number ?? 0, file,
+  })
+}
+
 function onPlay(file: SongFile) {
   if (!version.value || !song.value) return
-  void player.play(toTrack({
-    songId: props.songId, songTitle: song.value.title,
-    versionId: version.value.id, versionNumber: version.value.number, file,
-  }))
+  commentedId.value = file.id            // les commentaires suivent le fichier écouté
+  void player.play(trackOf(file))
 }
+
+// ================= Commentaires (#8) =================
+const audioFiles = computed(() => version.value?.files.filter((f) => f.fileType === 'Audio') ?? [])
+const commentedId = ref<string | null>(null)
+/** Fichier dont on affiche les commentaires : celui choisi, sinon le premier fichier audio. */
+const commentedFile = computed(() =>
+  audioFiles.value.find((f) => f.id === commentedId.value) ?? audioFiles.value[0] ?? null)
 </script>
 
 <template>
@@ -258,6 +271,17 @@ function onPlay(file: SongFile) {
                   :busy-id="deletingId" @play="onPlay" @delete="onDeleteFile" />
         <FileUploader v-if="canWrite" :song-id="songId" :version-id="version.id" @uploaded="onUploaded" />
       </SectionCard>
+      
+      <SectionCard v-if="commentedFile" title="Commentaires">
+        <template v-if="audioFiles.length > 1" #actions>
+          <select :value="commentedFile.id" aria-label="Fichier commenté" class="commented-file"
+                  @change="commentedId = ($event.target as HTMLSelectElement).value">
+            <option v-for="file in audioFiles" :key="file.id" :value="file.id">{{ file.originalFileName }}</option>
+          </select>
+        </template>
+        <CommentsPanel :target="{ songId, versionId: version.id, fileId: commentedFile.id }"
+                       :track="trackOf(commentedFile)" />
+      </SectionCard>
     </template>
   </section>
 </template>
@@ -269,4 +293,5 @@ function onPlay(file: SongFile) {
 .save-bar { display: flex; gap: .75rem; align-items: center; justify-content: flex-end; margin-bottom: 1rem; flex-wrap: wrap; }
 @media (max-width: 600px) { .row { grid-template-columns: 1fr; } }
 .bare { border: 0; padding: 0; margin: 0; min-width: 0; }
+.commented-file { width: auto; max-width: 16rem; }
 </style>
