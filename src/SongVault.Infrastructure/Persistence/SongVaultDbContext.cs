@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-
 using SongVault.Application.Abstractions;
 using SongVault.Application.Common.Exceptions;
 using SongVault.Domain.Accounts;
@@ -12,6 +11,7 @@ using SongVault.Domain.Files;
 using SongVault.Domain.Invitations;
 using SongVault.Domain.Songs;
 using SongVault.Infrastructure.Jobs;
+using SongVault.Domain.Comments;
 
 namespace SongVault.Infrastructure.Persistence;
 
@@ -31,6 +31,8 @@ public sealed class SongVaultDbContext(
     public DbSet<DataExport> DataExports => Set<DataExport>();
     /// <summary>Envois directs annoncés, pas encore confirmés (ADR 0012).</summary>
     public DbSet<FileUpload> FileUploads => Set<FileUpload>();
+    /// <summary>Commentaires horodatés sur les fichiers audio (ADR 0014).</summary>
+    public DbSet<Comment> Comments => Set<Comment>();
     /// <summary>Clés qui signent cookies et liens (ADR 0010) : en base pour survivre à une reconstruction de l'API.</summary>
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 

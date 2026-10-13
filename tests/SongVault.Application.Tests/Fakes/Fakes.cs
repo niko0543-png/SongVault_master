@@ -6,6 +6,7 @@ using SongVault.Application.Songs;
 using SongVault.Application.Versions;
 using SongVault.Domain.Bands;
 using SongVault.Domain.Songs;
+using SongVault.Domain.Files;
 
 namespace SongVault.Application.Tests.Fakes;
 
@@ -82,6 +83,11 @@ internal sealed class FakeSongRepository : ISongRepository
             .Files.SingleOrDefault(f => f.Id == fileId);
         return Task.FromResult(file is null ? null : new StoredFileInfo(file.StorageKey, file.ContentType, file.OriginalFileName));
     }
+
+    public Task<SongFileType?> GetFileTypeAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct)
+        => Task.FromResult(Songs.SingleOrDefault(s => s.Id == songId)?
+            .FindVersion(versionId)?
+            .Files.SingleOrDefault(f => f.Id == fileId)?.FileType);
 
     public Task<IReadOnlyList<string>> ListStorageKeysAsync(Guid songId, CancellationToken ct)
     {
