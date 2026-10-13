@@ -1,6 +1,7 @@
 ﻿<#
 .SYNOPSIS  Déploie SongVault sur Azure (ADR 0012) : infrastructure, migrations, puis redémarrage de l'API.
 .EXAMPLE   $env:SONGVAULT_SQL_PASSWORD = '…' ; .\scripts\deploy-azure.ps1 -ImageTag v1.1.0
+.EXAMPLE   .\scripts\deploy-azure.ps1 -ImageTag v1.1.0 -ResourceGroup songvault-drill -NoDeleteLocks
 .NOTES     Prérequis : Azure CLI connecté (az login) et images publiées par le workflow « images ».
            Secrets lus dans l'environnement, jamais en paramètre :
              SONGVAULT_SQL_PASSWORD  mot de passe de l'administrateur SQL (obligatoire, toujours le même)
@@ -11,7 +12,9 @@ param(
     [string]$ResourceGroup = 'songvault-prod',
     [string]$Location = 'francecentral',
     [ValidateSet('Log', 'Brevo')][string]$EmailProvider = 'Log',
-    [string]$EmailFrom = 'no-reply@songvault.local'
+	[string]$EmailFrom = 'no-reply@songvault.local',
+    # Sans verrous sur la base et le stockage : environnement d'exercice, supprimé ensuite (ADR 0013)
+    [switch]$NoDeleteLocks
 )
 $ErrorActionPreference = 'Stop'
 . "$PSScriptRoot\_common.ps1"
@@ -38,9 +41,11 @@ try {
     Assert-LastExit 'création du groupe de ressources'
 
     Write-Host "2/4 Infrastructure (infra/main.bicep), images $ImageTag"
+	$locks = if ($NoDeleteLocks) { 'false' } else { 'true' }
     $json = az deployment group create --resource-group $ResourceGroup --name "songvault-$ImageTag" `
         --template-file infra/main.bicep `
         --parameters "@$secrets" imageTag=$ImageTag emailProvider=$EmailProvider emailFrom=$EmailFrom `
+            enableDeleteLocks=$locks `
         --query properties.outputs --output json
     Assert-LastExit 'déploiement Bicep'
     $outputs = $json | Out-String | ConvertFrom-Json
@@ -50,7 +55,7 @@ try {
     Write-Host "3/4 Migrations (job $migrator)"
     $execution = az containerapp job start --resource-group $ResourceGroup --name $migrator --query name --output tsv
     Assert-LastExit 'lancement des migrations'
- $deadline = (Get-Date).AddMinutes(15)
+    $deadline = (Get-Date).AddMinutes(15)
     do {
         Start-Sleep -Seconds 10
         $status = az containerapp job execution show --resource-group $ResourceGroup --name $migrator `

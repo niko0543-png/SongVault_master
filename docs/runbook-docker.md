@@ -217,8 +217,8 @@ docker compose exec db ls -la /var/lib/postgresql/data
 # 0 2 * * * docker compose -f /path/to/docker-compose.yml exec db pg_dump -U postgres -d songvault | gzip > /backups/songvault-$(date +\%Y\%m\%d-\%H\%M\%S).sql.gz
 ```
 > Les scripts de sauvegarde et `scripts/purge-orphan-files.ps1` portent sur le volume
-> `songvault-files` : ils ne concernent que le stockage `Local`. Sur Azure, les sauvegardes
-> sont traitées en #7.
+> `songvault-files` : ils ne concernent que le stockage `Local`. Sur Azure, voir le
+> [runbook des sauvegardes](runbook-sauvegardes.md).
 
 ---
 

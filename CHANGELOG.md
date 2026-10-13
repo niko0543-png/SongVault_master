@@ -21,6 +21,8 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) — versions :
 - Envoi direct des fichiers au stockage par URL signée, jusqu'à 2 Go, avec la progression ; lecture et téléchargement par URL signée.
 - Hébergement Azure France Central : `infra/main.bicep`, workflow `images` (GitHub Container Registry) et `scripts/deploy-azure.ps1` ; runbook `docs/runbook-azure.md`.
 - Clés Data Protection chiffrées par Key Vault quand `DataProtection:KeyVaultKeyUri` est défini.
+- Sauvegardes sur Azure : restauration de la base à un instant donné sur 7 jours, fichiers supprimés récupérables 14 jours, verrous contre la suppression de la base et du stockage (ADR 0013).
+- `scripts/undelete-files-azure.ps1` et `scripts/restore-drill-azure.ps1` (exercice de restauration chronométré) ; rappel trimestriel par le workflow `restore-drill` ; runbook `docs/runbook-sauvegardes.md`.
 ### Modifié
 - Routes de l'API sous `/api/bands/{bandId}/songs…` et du front sous `/b/{bandId}/songs…`.
 - Renommer un groupe est réservé à ses Owner.

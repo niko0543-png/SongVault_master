@@ -6,7 +6,7 @@ fonctionnalité qui collecte, conserve ou transmet des données personnelles.
 - **Responsable du traitement** : [Nom ou raison sociale], [adresse], [e-mail de contact]
 - **Délégué à la protection des données** : aucun (non obligatoire à cette taille) ;
   contact pour les demandes : [e-mail de contact]
-- **Dernière mise à jour** : 2026-10-12
+- **Dernière mise à jour** : 2026-10-14
 
 ## 1. Comptes utilisateurs
 
@@ -102,7 +102,9 @@ fonctionnalité qui collecte, conserve ou transmet des données personnelles.
 
 - Les invitations envoyées par le compte dans des groupes qui ont d'autres membres : elles
   appartiennent au groupe, l'identifiant de leur auteur ne renvoie plus à personne.
-- Les sauvegardes, jusqu'à leur rotation : [durée fixée en #7].
+- Les sauvegardes, jusqu'à leur rotation : 7 jours pour la base (restauration à un instant
+  donné), 14 jours pour les fichiers (suppression réversible), voir
+  `docs/runbook-sauvegardes.md`.
 
 ## Avant l'ouverture au public
 

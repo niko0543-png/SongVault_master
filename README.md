@@ -370,8 +370,10 @@ images Docker et actions GitHub, regroupées pour limiter le bruit.
 - **Journaux** : JSON structurés hors développement (`docker compose logs api`).
 - **Tâches de fond** : table `BackgroundJobs`, consultée toutes les 5 secondes par l'API (export, expiration des archives, purge des comptes) ; 
 trois essais, puis `Failed` avec le message d'erreur. Tâches en échec et réactivation d'un compte supprimé : [runbook](docs/runbook-docker.md#comptes-supprimés-et-tâches-de-fond).
-- **Sauvegarde** de la base et du volume de fichiers : `scripts/` et
-  [docs/runbook-docker.md](docs/runbook-docker.md).
+- **Sauvegarde** : sur Azure, restauration de la base à un instant donné (7 jours) et
+  fichiers supprimés récupérables 14 jours ; RPO 1 h, RTO 4 h, exercice de restauration
+  chaque trimestre ([runbook des sauvegardes](docs/runbook-sauvegardes.md)). Avec Docker :
+  `scripts/` et [docs/runbook-docker.md](docs/runbook-docker.md).
 
 ---
 
@@ -382,6 +384,7 @@ trois essais, puis `Failed` avec le message d'erreur. Tâches en échec et réac
 - [Registre des traitements (RGPD)](docs/rgpd/registre.md) — données, durées de conservation, sous-traitants
 - [Exploitation Docker](docs/runbook-docker.md) — démarrage, sauvegarde, restauration, dépannage
 - [Exploitation sur Azure](docs/runbook-azure.md) — déploiement, retour arrière, journaux, coût
+- [Sauvegardes et reprise sur Azure](docs/runbook-sauvegardes.md) — objectifs, restauration, exercice trimestriel
 - [Couverture des tests](docs/test-coverage.md)
 - [Usage de l'IA](docs/ai-usage.md) — comment l'IA a été utilisée et ce qui a été vérifié
 - [CHANGELOG](CHANGELOG.md)

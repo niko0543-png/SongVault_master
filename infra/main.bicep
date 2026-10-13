@@ -27,6 +27,9 @@ param emailFrom string = 'no-reply@songvault.local'
 @secure()
 param brevoApiKey string = ''
 
+@description('Verrous « suppression impossible » sur la base et le stockage. false seulement pour l\'exercice de restauration, supprimé ensuite.')
+param enableDeleteLocks bool = true
+
 var suffix = uniqueString(resourceGroup().id)          // 13 caractères, stable pour ce groupe de ressources
 var storageName = take('${prefix}${suffix}', 24)
 var keyVaultName = take('${prefix}-kv-${suffix}', 24)
@@ -81,6 +84,16 @@ resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-05-01'
   parent: storage
   name: 'default'
   properties: {
+    // Fichier ou conteneur supprimé : récupérable 14 jours (ADR 0013). Les fichiers ne sont jamais réécrits,
+    // la suppression réversible suffit : pas de versions de blobs.
+    deleteRetentionPolicy: {
+      enabled: true
+      days: 14
+    }
+    containerDeleteRetentionPolicy: {
+      enabled: true
+      days: 14
+    }
     // Le navigateur envoie (PUT) et lit (GET) directement, depuis le site seulement
     cors: {
       corsRules: [
@@ -139,6 +152,34 @@ resource database 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
   }
   properties: {
     requestedBackupStorageRedundancy: 'Local'
+  }
+}
+
+// Restauration à un instant donné sur 7 jours, le maximum du niveau Basic (ADR 0013)
+resource databaseBackups 'Microsoft.Sql/servers/databases/backupShortTermRetentionPolicies@2023-08-01-preview' = {
+  parent: database
+  name: 'default'
+  properties: {
+    retentionDays: 7
+  }
+}
+
+// ---------- Verrous : une suppression par erreur de la base ou du stockage échoue (ADR 0013) ----------
+resource databaseLock 'Microsoft.Authorization/locks@2020-05-01' = if (enableDeleteLocks) {
+  name: 'songvault-ne-pas-supprimer'
+  scope: database
+  properties: {
+    level: 'CanNotDelete'
+    notes: 'Données de SongVault. Retirer le verrou avant une suppression voulue : docs/runbook-sauvegardes.md.'
+  }
+}
+
+resource storageLock 'Microsoft.Authorization/locks@2020-05-01' = if (enableDeleteLocks) {
+  name: 'songvault-ne-pas-supprimer'
+  scope: storage
+  properties: {
+    level: 'CanNotDelete'
+    notes: 'Fichiers de SongVault. Retirer le verrou avant une suppression voulue : docs/runbook-sauvegardes.md.'
   }
 }
 
