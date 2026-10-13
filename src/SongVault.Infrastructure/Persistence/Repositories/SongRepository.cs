@@ -1,11 +1,11 @@
 ﻿using Microsoft.EntityFrameworkCore;
-
 using SongVault.Application.Abstractions;
 using SongVault.Application.Common;
 using SongVault.Application.Files;
 using SongVault.Application.Songs;
 using SongVault.Application.Versions;
 using SongVault.Domain.Songs;
+using SongVault.Domain.Files;
 
 namespace SongVault.Infrastructure.Persistence.Repositories;
 
@@ -86,6 +86,15 @@ internal sealed class SongRepository(SongVaultDbContext db, IBandContext bandCon
             .SelectMany(v => v.Files)
             .Where(f => f.Id == fileId)
             .Select(f => new StoredFileInfo(f.StorageKey, f.ContentType, f.OriginalFileName))
+            .FirstOrDefaultAsync(ct);
+
+
+    public Task<SongFileType?> GetFileTypeAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct)
+        => BandVersions.AsNoTracking()
+            .Where(v => v.SongId == songId && v.Id == versionId)
+            .SelectMany(v => v.Files)
+            .Where(f => f.Id == fileId)
+            .Select(f => (SongFileType?)f.FileType)
             .FirstOrDefaultAsync(ct);
 
     public async Task<IReadOnlyList<string>> ListStorageKeysAsync(Guid songId, CancellationToken ct)

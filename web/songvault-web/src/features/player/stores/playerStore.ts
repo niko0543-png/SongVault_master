@@ -98,6 +98,14 @@ export const usePlayerStore = defineStore('player', () => {
     currentTime.value = seconds
   }
 
+  /** Lit la piste à partir de cette position, en la chargeant si besoin (horodatage d'un commentaire, #8). */
+  async function playAt(next: Track, seconds: number) {
+    if (track.value?.src === next.src) seek(seconds)
+    else load(next, seconds)
+    await resume()
+  }
+
+
   /** Change de piste en CONSERVANT la position (comparaison A/B). */
   async function switchTo(next: Track) {
     const position = audio?.currentTime ?? 0
@@ -115,5 +123,5 @@ function stop() {
   error.value = null
 }
 
-  return { track, isPlaying, currentTime, duration, error, attach, detach, play, pause, toggle, seek, switchTo, stop }
+    return { track, isPlaying, currentTime, duration, error, attach, detach, play, playAt, pause, toggle, seek, switchTo, stop }
 })

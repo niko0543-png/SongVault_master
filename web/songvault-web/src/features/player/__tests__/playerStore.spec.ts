@@ -59,6 +59,29 @@ describe('playerStore', () => {
     expect(player.error).toContain('bloqué')
   })
 
+    it('playAt sur la piste en cours : se place à la position et lit', async () => {
+    await player.play(trackA)
+
+    await player.playAt(trackA, 102)
+
+    expect(audio.src).toBe('/api/a')
+    expect(audio.currentTime).toBe(102)
+    expect(audio.play).toHaveBeenCalledTimes(2)
+  })
+
+  it('playAt sur une autre piste : la charge puis se place une fois la durée connue', async () => {
+    await player.play(trackA)
+
+    await player.playAt(trackB, 102)
+    audio.currentTime = 0                                 // nouvelle source → retour à 0
+    audio.dispatchEvent(new Event('loadedmetadata'))
+
+    expect(audio.src).toBe('/api/b')
+    expect(audio.currentTime).toBe(102)
+    expect(player.track?.id).toBe('b')
+  })
+
+  
   it('detach retire les écouteurs', async () => {
     player.detach()
     audio.dispatchEvent(new Event('play'))

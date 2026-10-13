@@ -37,6 +37,7 @@ public static class DependencyInjection
         services.AddScoped<IInvitationRepository, InvitationRepository>();
         services.AddScoped<IAccountRepository, AccountRepository>();
         services.AddScoped<IFileUploadRepository, FileUploadRepository>();
+        services.AddScoped<ICommentRepository, CommentRepository>();
 
         services.AddOptions<FileStorageOptions>()
          .Bind(configuration.GetSection(FileStorageOptions.SectionName))

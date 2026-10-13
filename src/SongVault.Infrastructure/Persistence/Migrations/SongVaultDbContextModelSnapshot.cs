@@ -319,6 +319,56 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                     b.ToTable("BandMemberships", (string)null);
                 });
 
+            modelBuilder.Entity("SongVault.Domain.Comments.Comment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AuthorId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<Guid>("BandId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("EditedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("ParentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("PositionMs")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset?>("ResolvedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("ResolvedById")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<Guid>("SongFileId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AuthorId");
+
+                    b.HasIndex("ParentId");
+
+                    b.HasIndex("SongFileId", "CreatedAt");
+
+                    b.ToTable("Comments", (string)null);
+                });
+
             modelBuilder.Entity("SongVault.Domain.Files.FileUpload", b =>
                 {
                     b.Property<Guid>("Id")
@@ -676,6 +726,20 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SongVault.Domain.Comments.Comment", b =>
+                {
+                    b.HasOne("SongVault.Domain.Comments.Comment", null)
+                        .WithMany()
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SongVault.Domain.Files.SongFile", null)
+                        .WithMany()
+                        .HasForeignKey("SongFileId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

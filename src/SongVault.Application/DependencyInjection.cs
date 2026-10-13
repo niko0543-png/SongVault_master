@@ -10,6 +10,7 @@ using SongVault.Application.Songs.UpdateSong;
 using SongVault.Application.Versions;
 using SongVault.Application.Abstractions;
 using SongVault.Application.Accounts;
+using SongVault.Application.Comments;
 
 namespace SongVault.Application;
 
@@ -57,6 +58,13 @@ public static class DependencyInjection
         services.AddScoped<ReceiveFileUploadHandler>();
         services.AddScoped<CompleteFileUploadHandler>();
         services.AddScoped<IBackgroundJobHandler, ExpireFileUploadJob>();
+        // #8 : commentaires horodatés (ADR 0014)
+        services.AddScoped<ListCommentsHandler>();
+        services.AddScoped<CreateCommentHandler>();
+        services.AddScoped<ReplyToCommentHandler>();
+        services.AddScoped<EditCommentHandler>();
+        services.AddScoped<DeleteCommentHandler>();
+        services.AddScoped<ResolveCommentHandler>();
 
         return services;
     }

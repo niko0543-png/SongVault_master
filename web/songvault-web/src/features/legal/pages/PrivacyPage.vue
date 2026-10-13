@@ -34,6 +34,12 @@ import { publisher } from '../publisher'
           <td>Tant que le groupe existe ; un groupe dont vous êtes le seul membre est effacé avec votre compte</td>
         </tr>
         <tr>
+          <td>Commentaires sur les fichiers audio : texte, position dans l'enregistrement, auteur</td>
+          <td>Échanger avec les membres du groupe</td>
+          <td>Contrat</td>
+          <td>Tant que le fichier existe ; après la suppression de votre compte, ceux des groupes partagés restent sans votre nom</td>
+        </tr>
+        <tr>
           <td>Invitations : adresse invitée, rôle proposé</td>
           <td>Ajouter une personne à un groupe</td>
           <td>Intérêt légitime du groupe</td>
@@ -78,7 +84,8 @@ import { publisher } from '../publisher'
       Vous pouvez aussi saisir la CNIL (<a href="https://www.cnil.fr/fr/plaintes" rel="noopener">cnil.fr</a>).
     </p>
     <p>
-      Après une suppression, vos données restent dans les sauvegardes jusqu'à leur rotation ([durée à fixer]).
+            Après une suppression, vos données restent dans les sauvegardes jusqu'à leur rotation : 7 jours pour
+      la base de données, 14 jours pour les fichiers.
       Les invitations que vous avez envoyées dans des groupes partagés restent dans ces groupes.
     </p>
   </article>
