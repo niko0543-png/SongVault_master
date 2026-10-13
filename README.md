@@ -87,6 +87,9 @@ docker compose down -v       # supprime aussi la base et les fichiers
 - **Lecteur audio global** qui reste actif d'une page à l'autre, avec déplacement dans le
   morceau (requêtes HTTP `Range`) et raccourci clavier lecture/pause.
 - **Comparaison A/B** de deux versions d'un même morceau, avec une URL partageable.
+- **Commentaires horodatés** sur les fichiers audio (« à 1:42, la basse décale ») : un clic
+  sur l'horodatage lance la lecture à cet instant ; réponses, résolution des fils. Les invités
+  peuvent commenter.
 - **Recherche et filtres** synchronisés avec l'URL.
 - **Comptes utilisateurs et groupes** : chaque morceau appartient à un groupe, un utilisateur peut être membre de plusieurs groupes et ne voit que les leurs. 
   Trois rôles par groupe : propriétaire (gère les membres), membre (crée et modifie), invité (lit et écoute).
@@ -243,6 +246,10 @@ Le contrat OpenAPI est généré depuis le code et ses commentaires XML. En dév
 | `POST` | `…/versions/{versionId}/files` | Envoyer un fichier de 50 Mo au plus à travers l'API (scripts) |
 | `GET` | `…/files/{fileId}/content` | Lire ou télécharger un fichier (`Range` accepté ; redirection vers une URL signée avec Azure Blob) |
 | `DELETE` | `…/files/{fileId}` | Supprimer un fichier |
+| `GET` `POST` | `…/files/{fileId}/comments` | Fils de commentaires d'un fichier audio, commenter (Guest compris) |
+| `POST` | `…/comments/{commentId}/replies` | Répondre à un fil (Guest compris) |
+| `PUT` `DELETE` | `…/comments/{commentId}` | Modifier (auteur), supprimer (auteur ou Owner) un commentaire |
+| `POST` `DELETE` | `…/comments/{commentId}/resolve` | Résoudre, rouvrir un fil (auteur du fil, Member ou Owner) |
 | `GET` | `/api/files/policy` | Extensions acceptées et taille maximale |
 
 Sous /api/bands/{bandId}, les lectures sont ouvertes à tout membre du groupe et les écritures demandent au moins le rôle Member, 
