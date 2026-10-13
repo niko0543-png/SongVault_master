@@ -35,6 +35,18 @@ internal sealed class LocalFileStorageService : IFileStorageService
         return Task.CompletedTask;
     }
 
+
+    public Task<long?> GetLengthAsync(string storageKey, CancellationToken ct)
+    {
+        var file = new FileInfo(ResolvePath(storageKey));
+        return Task.FromResult(file.Exists ? file.Length : (long?)null);
+    }
+
+    // Pas d'URL directe : l'envoi passe par PUT …/uploads/{id}/content, la lecture par GET …/content
+    public DirectUpload? CreateUploadUrl(string storageKey, DateTimeOffset expiresAt) => null;
+
+    public Uri? CreateDownloadUrl(string storageKey, string contentType, string? attachmentName) => null;
+
     // Défense en profondeur : même si une clé était corrompue ("../../web.config"), on ne sort pas de la racine
     private string ResolvePath(string storageKey)
     {

@@ -130,13 +130,28 @@ internal sealed class FakeFileStorageService : IFileStorageService
     }
 
     public Task<Stream> OpenReadAsync(string storageKey, CancellationToken ct)
-        => Task.FromResult<Stream>(new MemoryStream(Files[storageKey]));
+        => Files.TryGetValue(storageKey, out var bytes)
+            ? Task.FromResult<Stream>(new MemoryStream(bytes))
+            : throw new FileNotFoundException("Fichier absent du stockage.", storageKey);
 
     public Task DeleteAsync(string storageKey, CancellationToken ct)
     {
         Files.Remove(storageKey);
         return Task.CompletedTask;
     }
+
+
+    public Task<long?> GetLengthAsync(string storageKey, CancellationToken ct)
+        => Task.FromResult(Files.TryGetValue(storageKey, out var bytes) ? bytes.Length : (long?)null);
+
+    /// <summary>Si renseigné, le faux stockage se comporte comme Azure Blob : il produit des URL.</summary>
+    public Uri? BaseUrl { get; set; }
+
+    public DirectUpload? CreateUploadUrl(string storageKey, DateTimeOffset expiresAt)
+        => BaseUrl is null ? null : new DirectUpload(new Uri(BaseUrl, storageKey), new Dictionary<string, string>());
+
+    public Uri? CreateDownloadUrl(string storageKey, string contentType, string? attachmentName)
+        => BaseUrl is null ? null : new Uri(BaseUrl, storageKey);
 }
 
 internal sealed class FakeCurrentUser(string userId = "owner-1", string? email = "owner-1@test.local") : ICurrentUser
