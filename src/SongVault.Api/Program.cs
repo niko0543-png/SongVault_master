@@ -36,7 +36,9 @@ builder.Services.AddHealthChecks()
 // --- Derrière nginx (J31) ---
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
-    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    // #6 : X-Forwarded-Host, car nginx envoie l'hôte de l'API dans Host (aiguillage de Container Apps)
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+                               | ForwardedHeaders.XForwardedHost;
     options.KnownIPNetworks.Clear();              // ancien SDK : KnownNetworks
     options.KnownProxies.Clear();
 });

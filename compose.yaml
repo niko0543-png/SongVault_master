@@ -38,6 +38,11 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       ConnectionStrings__SongVault: *conn
       FileStorage__RootPath: /var/songvault/files
+      # Local (défaut) ou AzureBlob, avec Azurite ou un vrai compte (ADR 0012, .env.example)
+      FileStorage__Provider: ${FILE_STORAGE_PROVIDER:-Local}
+      FileStorage__AzureBlob__ConnectionString: ${AZURE_STORAGE_CONNECTION_STRING:-}
+      FileStorage__AzureBlob__PublicEndpoint: ${AZURE_STORAGE_PUBLIC_ENDPOINT:-}
+      FileStorage__AzureBlob__CorsOrigin: ${AZURE_STORAGE_CORS_ORIGIN:-}
       Email__Provider: ${EMAIL_PROVIDER:-Log}
       Email__FromAddress: ${EMAIL_FROM:-no-reply@songvault.local}
       Email__Brevo__ApiKey: ${BREVO_API_KEY:-}
@@ -51,11 +56,24 @@ services:
 
   web:
     build: ./web/songvault-web
+    environment:
+    STORAGE_ORIGIN: ${STORAGE_ORIGIN:-}
     ports:
       - "8080:8080"
     depends_on:
       - api
     restart: unless-stopped
+
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:3.35.0
+    command: azurite-blob --blobHost 0.0.0.0 --location /data --skipApiVersionCheck
+    ports:
+      - "10000:10000"      # le navigateur y envoie et y lit les fichiers, comme il le ferait avec Azure
+    volumes:
+      - azurite-data:/data
+    profiles: [azurite]
+    restart: unless-stopped
+
 
 volumes:
   sqlserver-data:
