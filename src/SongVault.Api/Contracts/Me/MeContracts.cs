@@ -1,5 +1,6 @@
 ﻿using SongVault.Application.Accounts;
 using SongVault.Domain.Accounts;
+using System.ComponentModel.DataAnnotations;
 
 namespace SongVault.Api.Contracts.Me;
 
@@ -9,4 +10,6 @@ public sealed record DataExportResponse(
 {
     public static DataExportResponse From(DataExportDto dto)
         => new(dto.Id, dto.Status, dto.RequestedAt, dto.CompletedAt, dto.ExpiresAt, dto.SizeBytes);
+
+    public sealed record DeleteAccountRequest([Required] string? Password);
 }

@@ -50,6 +50,8 @@ public static class DependencyInjection
         services.AddScoped<DownloadDataExportHandler>();
         services.AddScoped<IBackgroundJobHandler, ExportAccountJob>();
         services.AddScoped<IBackgroundJobHandler, ExpireExportJob>();
+        services.AddScoped<DeleteAccountHandler>();
+        services.AddScoped<IBackgroundJobHandler, PurgeAccountJob>();
 
         return services;
     }

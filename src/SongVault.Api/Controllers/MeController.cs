@@ -1,11 +1,16 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 using SongVault.Api.Contracts.Me;
+using SongVault.Api.Security;
 using SongVault.Application.Accounts;
+
+using static SongVault.Api.Contracts.Me.DataExportResponse;
 
 namespace SongVault.Api.Controllers;
 
-/// <summary>Le compte connecté : export de ses données (ADR 0011).</summary>
+/// <summary>Le compte connecté : export de ses données et suppression (ADR 0011).</summary>
 [ApiController]
 [Route("api/me")]
 [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -39,5 +44,29 @@ public sealed class MeController : ControllerBase
     {
         var file = await handler.HandleAsync(ct);
         return File(file.Content, file.ContentType, file.FileName);
+    }
+
+
+    /// <summary>Supprime votre compte : désactivé tout de suite, effacé définitivement 30 jours plus tard.</summary>
+    /// <remarks>
+    /// Vous quittez vos groupes partagés ; ceux dont vous êtes le seul membre seront effacés avec le compte.
+    /// Le mot de passe est redemandé. Même limite par IP que la connexion.
+    /// </remarks>
+    /// <response code="204">Compte désactivé ; cette session est fermée, les autres le seront dans la minute.</response>
+    /// <response code="409">Vous êtes le dernier Owner d'un groupe qui a d'autres membres.</response>
+    /// <response code="422">Mot de passe incorrect.</response>
+    [HttpPost("delete")]
+    [EnableRateLimiting(RateLimiting.Auth)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
+    public async Task<IActionResult> DeleteAccount(
+        DeleteAccountRequest request, [FromServices] DeleteAccountHandler handler,
+        [FromServices] SignInManager<IdentityUser> signInManager, CancellationToken ct)
+    {
+        await handler.HandleAsync(new DeleteAccountCommand(request.Password!), ct);
+        await signInManager.SignOutAsync();
+        return NoContent();
     }
 }
