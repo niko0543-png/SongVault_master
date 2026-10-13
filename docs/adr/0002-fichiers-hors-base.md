@@ -39,3 +39,6 @@ le morceau), les supprimer, et sauvegarder l'ensemble.
   possible).
 - Passer à Azure Blob Storage revient à écrire une seconde implémentation de
   `IFileStorageService`, sans toucher au domaine ni aux handlers.
+
+> Complété par l'[ADR 0012](0012-stockage-objet-et-hebergement.md) : seconde implémentation
+> Azure Blob Storage, envoi direct par URL signée.
