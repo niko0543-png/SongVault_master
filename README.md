@@ -82,8 +82,8 @@ docker compose down -v       # supprime aussi la base et les fichiers
   Finale), BPM, tonalité, notes et
   paroles.
 - **Fichiers** : maquettes audio (MP3, WAV, FLAC), tablatures (PDF, Guitar Pro), images.
-  Extension, taille (50 Mo max) et **signature binaire** vérifiées ; contenu stocké hors
-  base.
+  Jusqu'à 2 Go, **envoyés directement au stockage** (Azure Blob) par une URL signée, avec la
+  progression ; extension, taille et **signature binaire** vérifiées à la confirmation.
 - **Lecteur audio global** qui reste actif d'une page à l'autre, avec déplacement dans le
   morceau (requêtes HTTP `Range`) et raccourci clavier lecture/pause.
 - **Comparaison A/B** de deux versions d'un même morceau, avec une URL partageable.
@@ -154,7 +154,9 @@ flowchart LR
 - **Une seule origine** : nginx sert le front et relaie `/api` vers l'API. Pas de CORS, et
   un cookie d'authentification `SameSite=Strict` suffit.
 - **Fichiers hors base** : SQL Server garde les métadonnées, le contenu est sur un volume
-  derrière `IFileStorageService`.
+  ou dans Azure Blob Storage, derrière `IFileStorageService` (`FileStorage:Provider`). Le
+  navigateur envoie et lit les fichiers directement, par des URL signées de courte durée
+  ([ADR 0012](docs/adr/0012-stockage-objet-et-hebergement.md)).
 - **Concurrence optimiste** : `rowversion`, index unique et nouvelles tentatives pour la
   numérotation des versions.
 - **Migrations** appliquées par un conteneur ponctuel (`migrator`) avant le démarrage de
@@ -235,8 +237,11 @@ Le contrat OpenAPI est généré depuis le code et ses commentaires XML. En dév
 | `GET` `PUT` `DELETE` | `/api/bands/{bandId}/songs/{id}` | Lire, modifier, supprimer un morceau |
 | `GET` `POST` | `/api/bands/{bandId}/songs/{songId}/versions` | Lister, créer des versions |
 | `GET` `PUT` | `…/versions/{versionId}` | Lire, modifier une version |
-| `POST` | `…/versions/{versionId}/files` | Envoyer un fichier |
-| `GET` | `…/files/{fileId}/content` | Lire ou télécharger un fichier (`Range` accepté) |
+| `POST` | `…/versions/{versionId}/files/uploads` | Annoncer un envoi direct (jusqu'à 2 Go) : renvoie l'adresse du `PUT` |
+| `PUT` | `…/files/uploads/{uploadId}/content` | Stockage local seulement : recevoir le fichier annoncé |
+| `POST` | `…/files/uploads/{uploadId}/complete` | Confirmer l'envoi : taille et signature vérifiées, fichier rattaché |
+| `POST` | `…/versions/{versionId}/files` | Envoyer un fichier de 50 Mo au plus à travers l'API (scripts) |
+| `GET` | `…/files/{fileId}/content` | Lire ou télécharger un fichier (`Range` accepté ; redirection vers une URL signée avec Azure Blob) |
 | `DELETE` | `…/files/{fileId}` | Supprimer un fichier |
 | `GET` | `/api/files/policy` | Extensions acceptées et taille maximale |
 
@@ -295,6 +300,8 @@ npx playwright test                           # E2E (application lancée sur :80
   suffit pas reçoit 403 (OWASP API5 — *Broken Function Level Authorization*).
 - **Fichiers** : liste blanche d'extensions, taille maximale, contrôle de la **signature
   binaire** (un `.exe` renommé en `.mp3` est refusé), nom de stockage généré par le serveur.
+  Conteneur privé ; URL signées limitées à un fichier, pour créer (1 h) ou lire (30 min).
+- **Clés Data Protection** chiffrées par une clé Key Vault sur Azure.
 - **Limitation de débit** sur l'authentification et l'envoi de fichiers (429).
 - **En-têtes de sécurité** : `Content-Security-Policy`, `X-Content-Type-Options`,
   `Referrer-Policy: no-referrer`, `X-Frame-Options: DENY`.
@@ -349,6 +356,11 @@ images Docker et actions GitHub, regroupées pour limiter le bruit.
 ## Exploitation
 
 - **Configuration** : variables d'environnement définies dans `.env` (voir `.env.example`).
+- **Stockage des fichiers** : `Local` (volume `songvault-files`, défaut) ou `AzureBlob`.
+  `docker compose --profile azurite up` lance l'émulateur Azurite pour essayer le second
+  sur le PC (lignes à décommenter dans `.env.example`).
+- **Hébergement** : Azure France Central, déployé par `scripts/deploy-azure.ps1` à partir
+  d'un tag ; voir le [runbook Azure](docs/runbook-azure.md).
 - **E-mails** : `EMAIL_PROVIDER=Log` (défaut) écrit les e-mails dans les journaux de l'API ;
   `EMAIL_PROVIDER=Brevo` les envoie, avec `BREVO_API_KEY` et `EMAIL_FROM` (adresse validée
   chez Brevo). `PUBLIC_URL` est l'adresse du site utilisée dans les liens
@@ -369,6 +381,7 @@ trois essais, puis `Failed` avec le message d'erreur. Tâches en échec et réac
 - [Décisions d'architecture (ADR)](docs/adr/README.md)
 - [Registre des traitements (RGPD)](docs/rgpd/registre.md) — données, durées de conservation, sous-traitants
 - [Exploitation Docker](docs/runbook-docker.md) — démarrage, sauvegarde, restauration, dépannage
+- [Exploitation sur Azure](docs/runbook-azure.md) — déploiement, retour arrière, journaux, coût
 - [Couverture des tests](docs/test-coverage.md)
 - [Usage de l'IA](docs/ai-usage.md) — comment l'IA a été utilisée et ce qui a été vérifié
 - [CHANGELOG](CHANGELOG.md)
@@ -379,8 +392,10 @@ trois essais, puis `Failed` avec le message d'erreur. Tâches en échec et réac
 
 Choix assumés pour la v1 :
 
-- Un seul serveur : le stockage des fichiers est local. Une implémentation Azure Blob
-  Storage est possible derrière la même interface.
+- Envoi d'un fichier en une seule requête : une coupure oblige à recommencer l'envoi
+  (l'envoi par blocs, avec reprise, est écarté dans l'ADR 0012).
+- URL signées avec la clé du compte de stockage, pas encore par délégation d'identité
+  managée (ADR 0012).
 - E-mails du compte dans une file en mémoire : un e-mail pas encore parti est perdu si l'API
   s'arrête (il se redemande depuis l'écran). Les passer par les tâches de fond ralentirait
   « mot de passe oublié » pour les seuls comptes connus (ADR 0011). Les invitations partent

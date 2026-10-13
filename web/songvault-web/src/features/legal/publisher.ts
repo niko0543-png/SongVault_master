@@ -8,6 +8,8 @@ export const publisher = {
   email: 'contact@exemple.fr',
   registration: '[SIREN et RCS, ou « particulier »]',
   director: '[Nom du directeur de la publication]',
-  host: '[Hébergeur : raison sociale, adresse, téléphone (choisi en #6)]',
+  host:
+    'Microsoft Ireland Operations Limited, One Microsoft Place, South County Business Park, ' +
+    'Leopardstown, Dublin 18, D18 P521, Irlande — Microsoft Azure, région France Central. [Téléphone à vérifier]',
   updatedAt: '[date de mise en ligne]',
 } as const

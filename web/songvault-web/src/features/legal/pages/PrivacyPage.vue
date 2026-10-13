@@ -49,7 +49,7 @@ import { publisher } from '../publisher'
           <td>Journaux techniques (date, requête, erreurs)</td>
           <td>Sécurité et diagnostic</td>
           <td>Intérêt légitime</td>
-          <td>[6 mois, à confirmer]</td>
+          <td>30 jours</td>
         </tr>
       </tbody>
     </table>
@@ -57,7 +57,7 @@ import { publisher } from '../publisher'
     <h2>Qui y a accès</h2>
     <p>
       Les membres de vos groupes, selon leur rôle. Nos sous-traitants, tous dans l'Union européenne :
-      l'hébergeur ([à compléter]) et Brevo, qui envoie les e-mails. Aucune donnée n'est vendue
+      l'hébergeur (Microsoft Azure, en France) et Brevo, qui envoie les e-mails. Aucune donnée n'est vendue
       ni utilisée à des fins publicitaires.
     </p>
 
