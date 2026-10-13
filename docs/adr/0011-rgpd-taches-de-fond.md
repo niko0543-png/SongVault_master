@@ -62,8 +62,8 @@ sortie (#24).
   (runbook) ; les adhésions aux groupes partagés sont perdues.
 - Les invitations envoyées par le compte dans des groupes partagés restent (elles
   appartiennent au groupe) avec un identifiant d'auteur orphelin.
-- Les sauvegardes contiennent encore les données jusqu'à leur rotation (durée fixée en #7,
-  à indiquer dans la politique de confidentialité).
+- Les sauvegardes contiennent encore les données jusqu'à leur rotation : 7 jours pour la
+  base, 14 jours pour les fichiers ([ADR 0013](0013-sauvegardes-et-reprise.md)).
 - Si l'API s'arrête entre la purge en base et l'effacement des fichiers, des fichiers
   restent orphelins ; `scripts/purge-orphan-files.ps1` les retrouve (il connaît aussi les
   archives d'export).

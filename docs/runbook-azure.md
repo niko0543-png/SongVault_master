@@ -7,8 +7,8 @@ SongVault tourne sur Azure, région France Central ([ADR 0012](adr/0012-stockage
 | Container App | `songvault-web` | nginx et le front ; seule adresse publique |
 | Container App | `songvault-api` | l'API, au moins une instance (tâches de fond) |
 | Job Container Apps | `songvault-migrator` | migrations, lancées par le script de déploiement |
-| Azure SQL Database | `SongVault` (Basic) | la base |
-| Compte de stockage | `songvault…` | les fichiers, conteneur privé `songvault-files` |
+| Azure SQL Database | `SongVault` (Basic) | la base ; restauration à un instant donné sur 7 jours, verrouillée |
+| Compte de stockage | `songvault…` | les fichiers, conteneur privé `songvault-files` ; suppression réversible 14 jours, verrouillé |
 | Key Vault | `songvault-kv-…` | la clé qui chiffre les clés Data Protection |
 | Log Analytics | `songvault-logs` | journaux, 30 jours |
 
@@ -39,7 +39,7 @@ Pour envoyer de vrais e-mails, ajouter `-EmailProvider Brevo -EmailFrom no-reply
 
 ## Revenir à la version précédente
 
-Redéployer le tag précédent : `.\scripts\deploy-azure.ps1 -ImageTag v1.0.0`. Les migrations ne sont pas annulées. Une version qui en ajoute une ne se défait donc pas ainsi : restaurer la base (#7).
+Redéployer le tag précédent : `.\scripts\deploy-azure.ps1 -ImageTag v1.0.0`. Les migrations ne sont pas annulées. Une version qui en ajoute une ne se défait donc pas ainsi : restaurer la base ([runbook des sauvegardes](runbook-sauvegardes.md#restaurer-la-base-à-un-instant-donné)).
 
 ## Vérifier l'état
 
@@ -91,9 +91,11 @@ Le déploiement relit la clé et met à jour le secret de l'API.
 
 Pour un usage faible, compter de l'ordre de 10 à 20 € par mois. L'essentiel vient de l'API toujours active et de la base Basic ; le stockage et Key Vault coûtent quelques centimes. Vérifier avec la [calculatrice de prix Azure](https://azure.microsoft.com/fr-fr/pricing/calculator/) et poser une alerte de budget dans « Gestion des coûts ».
 
-Tout supprimer, données comprises (sans retour possible) :
+Tout supprimer, données comprises (sans retour possible). Les verrous de la base et du stockage bloquent la suppression : les retirer d'abord.
 
 ```powershell
+az lock list -g songvault-prod -o table
+az lock delete --ids (az lock list -g songvault-prod --query "[].id" -o tsv)
 az group delete --name songvault-prod
 ```
 
