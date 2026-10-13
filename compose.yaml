@@ -57,7 +57,7 @@ services:
   web:
     build: ./web/songvault-web
     environment:
-    STORAGE_ORIGIN: ${STORAGE_ORIGIN:-}
+      STORAGE_ORIGIN: ${STORAGE_ORIGIN:-}
     ports:
       - "8080:8080"
     depends_on:
@@ -78,3 +78,4 @@ services:
 volumes:
   sqlserver-data:
   songvault-files:
+  azurite-data:
