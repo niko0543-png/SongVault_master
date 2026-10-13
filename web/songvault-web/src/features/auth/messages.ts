@@ -35,7 +35,7 @@ export function loginError(error: unknown): string {
     return 'Adresse pas encore confirmée : cliquez sur le lien reçu par e-mail, ou demandez-en un nouveau.'
   if (error instanceof ApiError && error.status === 401)
     return error.problem.detail?.toLowerCase() === 'lockedout'
-      ? 'Compte verrouillé après plusieurs échecs. Réessayez dans quelques minutes.'
+        ? 'Compte verrouillé : trop de tentatives (réessayez dans quelques minutes), ou suppression du compte demandée.'
       : 'E-mail ou mot de passe incorrect.'
   if (error instanceof ApiError && error.status === 429) return 'Trop de tentatives. Réessayez dans une minute.'
   return getErrorMessage(error)
