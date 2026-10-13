@@ -2,7 +2,7 @@
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-
+using SongVault.Infrastructure.Jobs;
 using SongVault.Application.Abstractions;
 using SongVault.Infrastructure.Email;
 using SongVault.Infrastructure.Persistence;
@@ -59,6 +59,17 @@ public static class DependencyInjection
         services.AddSingleton<EmailQueue>();
         services.AddSingleton<IEmailQueue>(sp => sp.GetRequiredService<EmailQueue>());
         services.AddHostedService<EmailQueueWorker>();
+
+        // #5 : tâches de fond en base (ADR 0011)
+        services.AddOptions<BackgroundJobOptions>()
+            .Bind(configuration.GetSection(BackgroundJobOptions.SectionName))
+            .Validate(o => o.MaxAttempts >= 1, "BackgroundJobs:MaxAttempts doit valoir au moins 1.")
+            .Validate(o => o.PollInterval > TimeSpan.Zero, "BackgroundJobs:PollInterval doit être positif.")
+            .ValidateOnStart();
+        services.AddScoped<IBackgroundJobs, BackgroundJobScheduler>();
+        services.AddSingleton<BackgroundJobRunner>();
+        services.AddHostedService<BackgroundJobWorker>();
+
         return services;
     }
 }

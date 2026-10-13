@@ -9,6 +9,8 @@ using SongVault.Application.Abstractions;
 using SongVault.Infrastructure.Persistence;
 using Testcontainers.MsSql;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using SongVault.Infrastructure.Jobs;
 
 namespace SongVault.Api.Tests;
 
@@ -34,6 +36,8 @@ public sealed class SongVaultApiFactory : WebApplicationFactory<Program>, IAsync
         builder.UseSetting("RateLimiting:UploadsPerMinute", "1000");
         builder.UseSetting("RateLimiting:AuthPerMinute", "1000");
         builder.UseSetting("App:PublicUrl", "http://localhost:8080");
+        // #5 : pas de service d'arrière-plan ; les tests lancent les tâches avec RunDueJobsAsync
+        builder.UseSetting("BackgroundJobs:Enabled", "false");
         builder.ConfigureTestServices(services => services.AddSingleton<IEmailSender>(Emails));
         // Masque, dans les tests uniquement, les erreurs SQL attendues du test de concurrence
         builder.UseSetting("Logging:LogLevel:Microsoft.EntityFrameworkCore.Update", "None");
@@ -92,6 +96,22 @@ public sealed class SongVaultApiFactory : WebApplicationFactory<Program>, IAsync
         if (!result.Succeeded)
             throw new InvalidOperationException(string.Join(", ", result.Errors.Select(e => e.Code)));
     }
+
+    /// <summary>Exécute toutes les tâches dues à l'heure de l'hôte, une par une, jusqu'à ce qu'il n'en reste plus.</summary>
+    public static async Task RunDueJobsAsync(IServiceProvider services)
+    {
+        var runner = services.GetRequiredService<BackgroundJobRunner>();
+        while (await runner.RunNextAsync(CancellationToken.None)) { }
+    }
+
+    /// <summary>Hôte dérivé avec cette horloge (et d'éventuels services en plus). À libérer avec await using.</summary>
+    public WebApplicationFactory<Program> WithClock(TimeProvider clock, Action<IServiceCollection>? services = null)
+        => WithWebHostBuilder(b => b.ConfigureTestServices(s =>
+        {
+            s.RemoveAll<TimeProvider>();
+            s.AddSingleton(clock);
+            services?.Invoke(s);
+        }));
 
     // ---- xUnit v2 ----
     public Task InitializeAsync() => StartAsync();
