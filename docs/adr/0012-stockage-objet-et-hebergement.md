@@ -59,7 +59,7 @@ et des envois de grande taille.
 
 ## Conséquences
 - Précise, pour le cloud, la conséquence de l'ADR 0002 « deux éléments à sauvegarder
-  ensemble » : la base et le compte de stockage (#7).
+  ensemble » : la base et le compte de stockage ([ADR 0013](0013-sauvegardes-et-reprise.md)).
 - Une URL signée peut être transmise à un tiers pendant sa durée de validité : 30 minutes
   pour lire, 1 heure pour créer un seul fichier. Les révoquer avant leur expiration demande
   de changer la clé du compte de stockage.
