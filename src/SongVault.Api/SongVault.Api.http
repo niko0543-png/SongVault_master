@@ -184,3 +184,23 @@ Authorization: {{auth}}
 Content-Type: application/json
 
 { "oldPassword": "Mon-Mot-De-Passe1!", "newPassword": "Nouveau-Mot-De-Passe2!" }
+
+
+### Demander l'archive de ses données (202 ; 409 si une archive est déjà en préparation)
+POST {{host}}/api/me/export
+Authorization: {{auth}}
+
+### État de la dernière archive (204 s'il n'y en a pas)
+GET {{host}}/api/me/export
+Authorization: {{auth}}
+
+### Télécharger l'archive prête
+GET {{host}}/api/me/export/download
+Authorization: {{auth}}
+
+### Supprimer son compte (désactivé tout de suite, effacé à J+30) : avec un compte de test
+POST {{host}}/api/me/delete
+Authorization: {{auth}}
+Content-Type: application/json
+
+{ "password": "Mon-Mot-De-Passe1!" }

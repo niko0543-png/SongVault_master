@@ -93,6 +93,8 @@ docker compose down -v       # supprime aussi la base et les fichiers
 - **Invitations par e-mail** : le propriétaire invite une adresse comme membre ou invité ; le lien, valable 7 jours et utilisable une seule fois, 
   mène à l'inscription ou à la connexion puis au groupe.
 - **Compte complet** : adresse e-mail confirmée avant la première connexion, mot de passe oublié (lien valable 2 heures), changement de mot de passe depuis « Mon compte ».
+- **Vos données** : export de tout ce que le compte peut consulter (archive ZIP avec `data.json` et les fichiers, préparée en arrière-plan, disponible 7 jours) ; 
+  suppression du compte, effacé définitivement 30 jours plus tard ; mentions légales et politique de confidentialité.
 - **Accessibilité** : navigation complète au clavier, lien d'évitement, focus géré à
   chaque changement de page, boîtes de confirmation accessibles.
 
@@ -214,6 +216,10 @@ Le contrat OpenAPI est généré depuis le code et ses commentaires XML. En dév
 | `POST` | `/api/auth/forgotPassword` | Recevoir un lien de réinitialisation (même réponse, compte connu ou non) |
 | `POST` | `/api/auth/resetPassword` | Choisir un nouveau mot de passe avec le code reçu |
 | `POST` | `/api/auth/manage/info` | Changer de mot de passe (l'ancien est demandé) |
+| `POST` | `/api/me/export` | Demander l'archive de ses données (202 ; 409 si une archive est déjà en préparation) |
+| `GET` | `/api/me/export` | État de la dernière archive (204 s'il n'y en a pas) |
+| `GET` | `/api/me/export/download` | Télécharger l'archive prête (ZIP) |
+| `POST` | `/api/me/delete` | Supprimer son compte (mot de passe demandé ; effacé à J+30) |
 | `GET` `POST` | `/api/bands` | Mes groupes (avec mon rôle), créer un groupe |
 | `GET` `PUT` | `/api/bands/{bandId}` | Lire, renommer un groupe (renommer : Owner) |
 | `GET` | `/api/bands/{bandId}/members` | Membres du groupe et leurs rôles |
@@ -282,6 +288,8 @@ npx playwright test                           # E2E (application lancée sur :80
   oublié » répond pareil, et aussi vite, que le compte existe ou non (e-mails envoyés en
   arrière-plan) ; liens valables 24 h (confirmation) et 2 h (réinitialisation) ; un mot de
   passe changé coupe les autres sessions en une minute ([ADR 0010](docs/adr/0010-compte-complet.md)).
+  **Données personnelles** : l'archive ne se télécharge que connecté (l'e-mail ne contient aucun lien secret) ; le mot de passe est redemandé avant la suppression du compte ; 
+  registre des traitements dans [docs/rgpd/registre.md](docs/rgpd/registre.md) ([ADR 0011](docs/adr/0011-rgpd-taches-de-fond.md)).
 - **Isolation des données** : chaque requête est limitée au groupe de l'URL ; un non-membre
   reçoit 404 (OWASP API1 — *Broken Object Level Authorization*), un membre dont le rôle ne
   suffit pas reçoit 403 (OWASP API5 — *Broken Function Level Authorization*).
@@ -348,6 +356,8 @@ images Docker et actions GitHub, regroupées pour limiter le bruit.
 - **Santé** : `GET /health/live` (processus vivant) et `GET /health/ready` (base joignable)
   sur l'API, utilisés par les healthchecks Compose.
 - **Journaux** : JSON structurés hors développement (`docker compose logs api`).
+- **Tâches de fond** : table `BackgroundJobs`, consultée toutes les 5 secondes par l'API (export, expiration des archives, purge des comptes) ; 
+trois essais, puis `Failed` avec le message d'erreur. Tâches en échec et réactivation d'un compte supprimé : [runbook](docs/runbook-docker.md#comptes-supprimés-et-tâches-de-fond).
 - **Sauvegarde** de la base et du volume de fichiers : `scripts/` et
   [docs/runbook-docker.md](docs/runbook-docker.md).
 
@@ -357,6 +367,7 @@ images Docker et actions GitHub, regroupées pour limiter le bruit.
 
 - [Architecture](docs/architecture.md) — composants, flux, modèle de données
 - [Décisions d'architecture (ADR)](docs/adr/README.md)
+- [Registre des traitements (RGPD)](docs/rgpd/registre.md) — données, durées de conservation, sous-traitants
 - [Exploitation Docker](docs/runbook-docker.md) — démarrage, sauvegarde, restauration, dépannage
 - [Couverture des tests](docs/test-coverage.md)
 - [Usage de l'IA](docs/ai-usage.md) — comment l'IA a été utilisée et ce qui a été vérifié
@@ -370,8 +381,10 @@ Choix assumés pour la v1 :
 
 - Un seul serveur : le stockage des fichiers est local. Une implémentation Azure Blob
   Storage est possible derrière la même interface.
-- E-mails du compte dans une file en mémoire : un e-mail pas encore parti est perdu si l'API s'arrête (il se redemande depuis l'écran); 
-file persistante prévue avec les tâches de fond (#5). Les invitations partent encore pendant la requête.
+- E-mails du compte dans une file en mémoire : un e-mail pas encore parti est perdu si l'API
+  s'arrête (il se redemande depuis l'écran). Les passer par les tâches de fond ralentirait
+  « mot de passe oublié » pour les seuls comptes connus (ADR 0011). Les invitations partent
+  encore pendant la requête.
 - Pas de traitement audio côté serveur (forme d'onde, transcodage).
 
 Pistes suivies dans les [issues](https://github.com/<owner>/<repo>/issues).

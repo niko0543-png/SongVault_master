@@ -29,7 +29,7 @@ flowchart TB
     Application --> Domain
 ```
 
-Domain ne dépend de rien ; les abstractions (`ISongRepository`, `IBandRepository`, `IInvitationRepository`, `IFileStorageService`, `IEmailSender`, `IEmailQueue`, `ICurrentUser`, `IBandContext`) sont dans Application, leurs implémentations dans Infrastructure et Api.
+Domain ne dépend de rien ; les abstractions (`ISongRepository`, `IBandRepository`, `IInvitationRepository`, `IAccountRepository`, `IFileStorageService`, `IEmailSender`, `IEmailQueue`, `IBackgroundJobs`, `ICurrentUser`, `IBandContext`) sont dans Application, leurs implémentations dans Infrastructure et Api.
 
 ## Modèle métier
 
@@ -150,4 +150,33 @@ sequenceDiagram
         H->>S: DeleteAsync(clé) : compensation
     end
     H-->>C: 201 Created
+```
+
+
+## Tâches de fond (export d'un compte)
+
+Une tâche est une ligne de `BackgroundJobs`, enregistrée dans la même transaction que la donnée qui la motive ([ADR 0011](adr/0011-rgpd-taches-de-fond.md)). `BackgroundJobWorker` prend les tâches dues une à une ; la prise (`UPDLOCK, READPAST`) garantit qu'une tâche n'est exécutée que par une instance.
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant H as RequestDataExportHandler
+    participant DB as SQL Server
+    participant W as BackgroundJobWorker
+    participant J as ExportAccountJob
+    participant S as IFileStorageService
+    C->>H: POST /api/me/export
+    H->>DB: INSERT DataExport (Pending) + INSERT BackgroundJob, une transaction
+    H-->>C: 202 Accepted
+    loop toutes les 5 s
+        W->>DB: UPDATE TOP (1) … OUTPUT (prise atomique)
+    end
+    W->>J: RunAsync
+    J->>DB: lecture du compte, des groupes, des morceaux
+    J->>S: SaveAsync(export-{id}.zip)
+    J->>DB: DataExport Ready + tâche d'expiration à J+7
+    J-->>C: e-mail « vos données sont prêtes »
+    alt exception
+        W->>DB: nouvel essai dans 1 puis 5 min, puis Failed
+    end
 ```
