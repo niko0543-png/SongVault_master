@@ -9,6 +9,7 @@ using SongVault.Domain.Bands;
 using SongVault.Domain.Songs;
 using SongVault.Domain.Invitations;
 using SongVault.Infrastructure.Jobs;
+using SongVault.Domain.Accounts;
 
 namespace SongVault.Infrastructure.Persistence;
 
@@ -25,6 +26,7 @@ public sealed class SongVaultDbContext(
     public DbSet<Invitation> Invitations => Set<Invitation>();
     /// <summary>Tâches de fond (ADR 0011).</summary>
     public DbSet<BackgroundJob> BackgroundJobs => Set<BackgroundJob>();
+    public DbSet<DataExport> DataExports => Set<DataExport>();
     /// <summary>Clés qui signent cookies et liens (ADR 0010) : en base pour survivre à une reconstruction de l'API.</summary>
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
