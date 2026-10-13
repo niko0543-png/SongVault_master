@@ -1,0 +1,122 @@
+﻿using SongVault.Application.Abstractions;
+using SongVault.Application.Common.Exceptions;
+using SongVault.Domain.Bands;
+using SongVault.Domain.Comments;
+using SongVault.Domain.Common;
+using SongVault.Domain.Files;
+
+namespace SongVault.Application.Comments;
+
+// Tout membre, Guest compris, lit, écrit et répond (ADR 0014). Le reste se décide ici, commentaire par commentaire :
+// modifier = l'auteur ; supprimer = l'auteur ou un Owner ; résoudre et rouvrir = l'auteur du fil ou un Member.
+
+public sealed class ListCommentsHandler(ISongRepository songs, ICommentRepository comments)
+{
+    /// <summary>
+    /// Fils du fichier : les commentaires généraux d'abord, puis ceux qui ont une position, dans l'ordre de l'écoute.
+    /// </summary>
+    public async Task<IReadOnlyList<CommentThreadDto>> HandleAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct)
+    {
+        await songs.RequireAudioFileAsync(songId, versionId, fileId, ct);
+        var all = await comments.ListAsync(fileId, ct);                 // déjà du plus ancien au plus récent
+
+        var replies = all.Where(c => c.ParentId is not null).ToLookup(c => c.ParentId!.Value);
+        return [.. all.Where(c => c.ParentId is null)
+            .OrderBy(c => c.PositionMs.HasValue).ThenBy(c => c.PositionMs).ThenBy(c => c.CreatedAt)
+            .Select(c => new CommentThreadDto(c, [.. replies[c.Id]]))];
+    }
+}
+
+public sealed class CreateCommentHandler(
+    ISongRepository songs, ICommentRepository comments, IUnitOfWork unitOfWork,
+    IBandContext band, ICurrentUser user, TimeProvider clock)
+{
+    public async Task<CommentDto> HandleAsync(CreateCommentCommand command, CancellationToken ct)
+    {
+        await songs.RequireAudioFileAsync(command.SongId, command.VersionId, command.FileId, ct);
+
+        var comment = Comment.Start(band.RequiredBandId, command.FileId, user.UserId,
+            command.PositionMs, command.Body, clock.GetUtcNow());
+        comments.Add(comment);
+        await unitOfWork.SaveChangesAsync(ct);
+        return CommentDto.From(comment, user.Email);
+    }
+}
+
+public sealed class ReplyToCommentHandler(
+    ICommentRepository comments, IUnitOfWork unitOfWork, ICurrentUser user, TimeProvider clock)
+{
+    public async Task<CommentDto> HandleAsync(Guid fileId, Guid commentId, string body, CancellationToken ct)
+    {
+        var parent = await comments.GetRequiredAsync(fileId, commentId, ct);
+        var reply = parent.Reply(user.UserId, body, clock.GetUtcNow());     // réponse à une réponse : 422
+        comments.Add(reply);
+        await unitOfWork.SaveChangesAsync(ct);
+        return CommentDto.From(reply, user.Email);
+    }
+}
+
+public sealed class EditCommentHandler(
+    ICommentRepository comments, IUnitOfWork unitOfWork, ICurrentUser user, TimeProvider clock)
+{
+    public async Task HandleAsync(Guid fileId, Guid commentId, string body, CancellationToken ct)
+    {
+        var comment = await comments.GetRequiredAsync(fileId, commentId, ct);
+        if (!comment.IsWrittenBy(user.UserId))
+            throw new ForbiddenException("Seul l'auteur d'un commentaire peut le modifier.");
+
+        comment.Edit(body, clock.GetUtcNow());
+        await unitOfWork.SaveChangesAsync(ct);
+    }
+}
+
+public sealed class DeleteCommentHandler(
+    ICommentRepository comments, IUnitOfWork unitOfWork, IBandContext band, ICurrentUser user)
+{
+    /// <summary>Supprime un commentaire ; celui d'origine part avec toutes ses réponses.</summary>
+    public async Task HandleAsync(Guid fileId, Guid commentId, CancellationToken ct)
+    {
+        var comment = await comments.GetRequiredAsync(fileId, commentId, ct);
+        if (!comment.IsWrittenBy(user.UserId) && band.Role != BandRole.Owner)
+            throw new ForbiddenException("Seuls l'auteur et les Owner du groupe peuvent supprimer un commentaire.");
+
+        if (!comment.IsReply)
+            foreach (var reply in await comments.ListRepliesAsync(comment.Id, ct))
+                comments.Remove(reply);
+        comments.Remove(comment);
+        await unitOfWork.SaveChangesAsync(ct);      // EF efface les réponses avant leur fil
+    }
+}
+
+public sealed class ResolveCommentHandler(
+    ICommentRepository comments, IUnitOfWork unitOfWork, IBandContext band, ICurrentUser user, TimeProvider clock)
+{
+    /// <param name="resolved">true : marquer le fil comme traité ; false : le rouvrir.</param>
+    public async Task HandleAsync(Guid fileId, Guid commentId, bool resolved, CancellationToken ct)
+    {
+        var comment = await comments.GetRequiredAsync(fileId, commentId, ct);
+        if (!comment.IsWrittenBy(user.UserId) && band.Role?.Allows(BandRole.Member) != true)
+            throw new ForbiddenException("Seuls l'auteur du fil et les membres du groupe peuvent le résoudre ou le rouvrir.");
+
+        if (resolved) comment.Resolve(user.UserId, clock.GetUtcNow());
+        else comment.Reopen();
+        await unitOfWork.SaveChangesAsync(ct);
+    }
+}
+
+internal static class CommentLookups
+{
+    /// <summary>404 si le fichier n'est pas dans cette version, ce morceau et le groupe actif ; 422 s'il n'est pas audio.</summary>
+    public static async Task RequireAudioFileAsync(
+        this ISongRepository songs, Guid songId, Guid versionId, Guid fileId, CancellationToken ct)
+    {
+        var type = await songs.GetFileTypeAsync(songId, versionId, fileId, ct)
+                   ?? throw new NotFoundException("SongFile", fileId);
+        if (type != SongFileType.Audio)
+            throw new DomainException("Seuls les fichiers audio se commentent.");
+    }
+
+    public static async Task<Comment> GetRequiredAsync(
+        this ICommentRepository comments, Guid fileId, Guid commentId, CancellationToken ct)
+        => await comments.GetAsync(fileId, commentId, ct) ?? throw new NotFoundException("Comment", commentId);
+}
