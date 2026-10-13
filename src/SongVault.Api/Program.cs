@@ -1,5 +1,5 @@
 using System.Text.Json.Serialization;
-
+using Azure.Identity;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
@@ -36,7 +36,9 @@ builder.Services.AddHealthChecks()
 // --- Derrière nginx (J31) ---
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
-    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    // #6 : X-Forwarded-Host, car nginx envoie l'hôte de l'API dans Host (aiguillage de Container Apps)
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+                               | ForwardedHeaders.XForwardedHost;
     options.KnownIPNetworks.Clear();              // ancien SDK : KnownNetworks
     options.KnownProxies.Clear();
 });
@@ -45,9 +47,13 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 builder.Services.AddSongVaultRateLimiting(builder.Configuration);
 
 // --- Clés Data Protection en base (#4) : cookies et liens restent valables après un redémarrage ---
-builder.Services.AddDataProtection()
+var dataProtection = builder.Services.AddDataProtection()
     .SetApplicationName("SongVault")
     .PersistKeysToDbContext<SongVaultDbContext>();
+// #6 : sur Azure, chiffrées en base par une clé Key Vault, avec l'identité managée de l'API (ADR 0012)
+var keyVaultKeyUri = builder.Configuration["DataProtection:KeyVaultKeyUri"];
+if (!string.IsNullOrWhiteSpace(keyVaultKeyUri))
+    dataProtection.ProtectKeysWithAzureKeyVault(new Uri(keyVaultKeyUri), new DefaultAzureCredential());
 
 // --- Authentification (J32) ---
 builder.Services.AddAuthorization();

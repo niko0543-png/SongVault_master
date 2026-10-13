@@ -121,6 +121,26 @@ Content-Type: application/json
 GET {{host}}/api/files/policy
 Authorization: {{auth}}
 
+
+### Envoi direct, annonce : uploadUrl est la route du PUT en stockage local, une URL signée avec Azure Blob
+# @name upload
+POST {{host}}/api/bands/{{bandId}}/songs/{{song.response.body.$.id}}/versions/{{version.response.body.$.id}}/files/uploads
+Authorization: {{auth}}
+Content-Type: application/json
+
+{ "fileName": "studio.wav", "sizeBytes": 524288000 }
+
+### Envoi direct, confirmation avant le PUT → 409 (le fichier n'est pas encore arrivé)
+POST {{host}}/api/bands/{{bandId}}/songs/{{song.response.body.$.id}}/versions/{{version.response.body.$.id}}/files/uploads/{{upload.response.body.$.uploadId}}/complete
+Authorization: {{auth}}
+
+### Envoi direct, 3 Go → 413
+POST {{host}}/api/bands/{{bandId}}/songs/{{song.response.body.$.id}}/versions/{{version.response.body.$.id}}/files/uploads
+Authorization: {{auth}}
+Content-Type: application/json
+
+{ "fileName": "trop-long.wav", "sizeBytes": 3221225472 }
+
 ### Version avec BPM et tonalité → 201
 POST {{host}}/api/bands/{{bandId}}/songs/{{song.response.body.$.id}}/versions
 Authorization: {{auth}}

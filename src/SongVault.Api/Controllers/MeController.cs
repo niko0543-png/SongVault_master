@@ -38,12 +38,13 @@ public sealed class MeController : ControllerBase
     /// <response code="200">Le fichier ZIP.</response>
     /// <response code="404">Pas d'archive prête.</response>
     [HttpGet("export/download")]
+    [ProducesResponseType(StatusCodes.Status302Found)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DownloadExport([FromServices] DownloadDataExportHandler handler, CancellationToken ct)
     {
         var file = await handler.HandleAsync(ct);
-        return File(file.Content, file.ContentType, file.FileName);
+        return this.ToResult(file, asAttachment: true, enableRangeProcessing: false);
     }
 
 

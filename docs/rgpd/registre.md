@@ -75,14 +75,14 @@ fonctionnalité qui collecte, conserve ou transmet des données personnelles.
 | Destinataires | Exploitant du service |
 | Sous-traitants | Hébergeur ; supervision (#18) |
 | Transferts hors UE | Aucun |
-| Durée | [6 mois, à confirmer avec l'hébergement (#6)] |
+| Durée | 30 jours (rétention de Log Analytics, `infra/main.bicep`) |
 | Sécurité | Aucun mot de passe ni jeton dans les journaux ; accès réservé à l'exploitant |
 
 ## Sous-traitants
 
 | Sous-traitant | Rôle | Localisation | Contrat de traitement (DPA) | État |
 |---|---|---|---|---|
-| [Hébergeur, Azure France Central proposé en #6] | Base, fichiers, API | UE (France) | Conditions de protection des données de Microsoft | à signer avec l'abonnement |
+| Microsoft Ireland Operations Ltd (Azure, région France Central) | Base, fichiers, API, journaux | UE (France) | Addendum de protection des données des produits et services Microsoft (DPA), intégré au contrat d'abonnement | accepté avec l'abonnement Azure |
 | Brevo (Sendinblue SAS) | Envoi des e-mails | UE (France) | DPA intégré aux conditions générales de Brevo | à accepter à l'ouverture du compte |
 | [Stripe] (#16) | Paiement | UE / États-Unis (clauses contractuelles types) | DPA de Stripe | quand #16 sera fait |
 | [Supervision] (#18) | Erreurs et traces | à choisir | à vérifier | quand #18 sera fait |
@@ -107,7 +107,7 @@ fonctionnalité qui collecte, conserve ou transmet des données personnelles.
 ## Avant l'ouverture au public
 
 - [ ] Identité de l'éditeur et contact dans `web/songvault-web/src/features/legal/publisher.ts`
-- [ ] Hébergeur choisi (#6) et ajouté aux mentions légales et à ce registre
+- [x] Hébergeur choisi (#6) et ajouté aux mentions légales et à ce registre
 - [ ] DPA de l'hébergeur et de Brevo acceptés, copies archivées
 - [ ] Durées des journaux et des sauvegardes fixées (#6, #7) et reportées ici et dans la politique
 - [ ] Mentions légales et politique de confidentialité relues par un professionnel

@@ -17,6 +17,10 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) — versions :
 - Tâches de fond en base (`BackgroundJobs`) : trois essais, reprise après un arrêt de l'API, plusieurs instances possibles (ADR 0011).
 - Export des données du compte depuis « Mon compte » : archive ZIP préparée en arrière-plan, e-mail quand elle est prête, disponible 7 jours.
 - Suppression du compte : désactivation immédiate, départ des groupes partagés, purge à 30 jours avec les groupes dont il était le seul membre.
+- Stockage Azure Blob derrière `IFileStorageService`, choisi par `FileStorage:Provider` ; Azurite dans Docker Compose avec le profil `azurite` (ADR 0012).
+- Envoi direct des fichiers au stockage par URL signée, jusqu'à 2 Go, avec la progression ; lecture et téléchargement par URL signée.
+- Hébergement Azure France Central : `infra/main.bicep`, workflow `images` (GitHub Container Registry) et `scripts/deploy-azure.ps1` ; runbook `docs/runbook-azure.md`.
+- Clés Data Protection chiffrées par Key Vault quand `DataProtection:KeyVaultKeyUri` est défini.
 ### Modifié
 - Routes de l'API sous `/api/bands/{bandId}/songs…` et du front sous `/b/{bandId}/songs…`.
 - Renommer un groupe est réservé à ses Owner.
@@ -24,6 +28,8 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) — versions :
 - L'inscription ne connecte plus directement : elle mène à « Vérifiez votre boîte mail ».
 - Le lien de réinitialisation du mot de passe s'ouvre aussi depuis un navigateur déjà connecté.
 - `scripts/purge-orphan-files.ps1` tient compte des archives d'export.
+- Taille maximale d'un fichier envoyé depuis l'application : 2 Go au lieu de 50 Mo. L'envoi multipart `POST …/files` garde sa limite de 50 Mo.
+- nginx est configuré par variables (`API_UPSTREAM`, `STORAGE_ORIGIN`) et transmet `X-Forwarded-Host`.
 ### Supprimé
 - `Song.OwnerId`, remplacé par `Song.BandId`. Les morceaux sans propriétaire valide sont supprimés par la migration `BackfillBands`.
 ### Corrigé

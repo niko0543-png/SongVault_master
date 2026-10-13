@@ -319,6 +319,49 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                     b.ToTable("BandMemberships", (string)null);
                 });
 
+            modelBuilder.Entity("SongVault.Domain.Files.FileUpload", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("SongId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("SongVersionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StorageKey")
+                        .IsUnique();
+
+                    b.ToTable("FileUploads", (string)null);
+                });
+
             modelBuilder.Entity("SongVault.Domain.Files.SongFile", b =>
                 {
                     b.Property<Guid>("Id")

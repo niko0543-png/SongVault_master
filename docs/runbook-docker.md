@@ -216,6 +216,9 @@ docker compose exec db ls -la /var/lib/postgresql/data
 # Linux - ajouter au crontab
 # 0 2 * * * docker compose -f /path/to/docker-compose.yml exec db pg_dump -U postgres -d songvault | gzip > /backups/songvault-$(date +\%Y\%m\%d-\%H\%M\%S).sql.gz
 ```
+> Les scripts de sauvegarde et `scripts/purge-orphan-files.ps1` portent sur le volume
+> `songvault-files` : ils ne concernent que le stockage `Local`. Sur Azure, les sauvegardes
+> sont traitées en #7.
 
 ---
 
@@ -398,4 +401,5 @@ docker compose @sql -Q "UPDATE BackgroundJobs SET RunAfter = SYSDATETIMEOFFSET()
 - [Dockerfile](../src/SongVault.Api/Dockerfile) — Image API
 - [scripts/backup-files.ps1](../scripts/backup-files.ps1) — Sauvegarde automatisée
 - [Documentation Docker Compose](https://docs.docker.com/compose/)
+- [Exploitation sur Azure](runbook-azure.md) — l'hébergement en ligne
 - [Documentation PostgreSQL](https://www.postgresql.org/docs/)

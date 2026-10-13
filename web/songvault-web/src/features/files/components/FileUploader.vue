@@ -15,13 +15,17 @@ const fileInput = useTemplateRef<HTMLInputElement>('file-input')
 const message = ref<string | null>(null)
 const currentName = ref<string | null>(null)
 const isDragging = ref(false)
+const progress = ref<number | null>(null)                    // de 0 à 1 ; null tant que l'envoi n'a pas commencé
 
-const upload = useAsyncAction((file: File) => filesApi.upload(props.songId, props.versionId, file))
+const upload = useAsyncAction((file: File) =>
+  filesApi.upload(props.songId, props.versionId, file, (ratio) => { progress.value = ratio }))
 const accept = computed(() => policy.value?.allowedExtensions.join(',') ?? '')
 
 function serverMessage(error: unknown): string {
   if (error instanceof ApiError && error.status === 413) return 'Fichier trop volumineux pour le serveur.'
   if (error instanceof ApiError && error.status === 400) return error.message   // ex. « Type de fichier non autorisé… »
+  if (error instanceof ApiError && error.status === 403 && error.message === 'Envoi refusé')
+    return "L'envoi a été refusé par le stockage (adresse expirée ?). Recommencez."
   return getErrorMessage(error)
 }
 
@@ -31,8 +35,10 @@ async function handle(file: File | undefined) {
   if (message.value) return
 
   currentName.value = file.name
+  progress.value = null
   const uploaded = await upload.run(file)                    // 2. le serveur décide
   currentName.value = null
+  progress.value = null
   if (uploaded) emit('uploaded', uploaded)
   else message.value = serverMessage(upload.error.value)
 
@@ -67,9 +73,11 @@ function onDrop(event: DragEvent) {
       <p v-if="policy" class="muted"><small>{{ policy.allowedExtensions.join(', ') }}</small></p>
     </template>
 
-    <div v-if="upload.isLoading.value" role="status">
-      <progress aria-label="Envoi en cours" />  <!-- sans attribut value : barre indéterminée -->
+       <div v-if="upload.isLoading.value" role="status">
+      <!-- value absent (null) : barre indéterminée, le temps de l'annonce et de la confirmation -->
+      <progress aria-label="Envoi en cours" max="1" :value="progress ?? undefined" />
       Envoi de {{ currentName }}…
+      <span v-if="progress !== null" data-testid="upload-progress">{{ Math.round(progress * 100) }} %</span>
     </div>
     <p v-if="message" class="field-error" role="alert" data-testid="upload-error">{{ message }}</p>
   </div>

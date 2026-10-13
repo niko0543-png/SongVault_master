@@ -52,6 +52,11 @@ public static class DependencyInjection
         services.AddScoped<IBackgroundJobHandler, ExpireExportJob>();
         services.AddScoped<DeleteAccountHandler>();
         services.AddScoped<IBackgroundJobHandler, PurgeAccountJob>();
+        // #6 : envoi direct vers le stockage (ADR 0012)
+        services.AddScoped<StartFileUploadHandler>();
+        services.AddScoped<ReceiveFileUploadHandler>();
+        services.AddScoped<CompleteFileUploadHandler>();
+        services.AddScoped<IBackgroundJobHandler, ExpireFileUploadJob>();
 
         return services;
     }

@@ -1,15 +1,17 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
+
 using SongVault.Application.Abstractions;
 using SongVault.Application.Common.Exceptions;
-using SongVault.Domain.Bands;
-using SongVault.Domain.Songs;
-using SongVault.Domain.Invitations;
-using SongVault.Infrastructure.Jobs;
 using SongVault.Domain.Accounts;
+using SongVault.Domain.Bands;
+using SongVault.Domain.Files;
+using SongVault.Domain.Invitations;
+using SongVault.Domain.Songs;
+using SongVault.Infrastructure.Jobs;
 
 namespace SongVault.Infrastructure.Persistence;
 
@@ -27,6 +29,8 @@ public sealed class SongVaultDbContext(
     /// <summary>Tâches de fond (ADR 0011).</summary>
     public DbSet<BackgroundJob> BackgroundJobs => Set<BackgroundJob>();
     public DbSet<DataExport> DataExports => Set<DataExport>();
+    /// <summary>Envois directs annoncés, pas encore confirmés (ADR 0012).</summary>
+    public DbSet<FileUpload> FileUploads => Set<FileUpload>();
     /// <summary>Clés qui signent cookies et liens (ADR 0010) : en base pour survivre à une reconstruction de l'API.</summary>
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 

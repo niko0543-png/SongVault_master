@@ -18,6 +18,20 @@ flowchart LR
     Migrator --> Db
 ```
 
+Sur Azure ([ADR 0012](adr/0012-stockage-objet-et-hebergement.md)), le front et l'API sont des Container Apps, la base est Azure SQL et les fichiers sont dans Azure Blob Storage. 
+Le navigateur parle directement au stockage pour envoyer et lire les fichiers :
+
+```mermaid
+flowchart LR
+    Browser[Navigateur] -->|"HTTPS"| Web[songvault-web : nginx]
+    Web -->|"/api/* (interne)"| Api[songvault-api]
+    Browser -->|"PUT / GET par URL signée"| Blob[(Azure Blob<br/>conteneur privé)]
+    Api --> Sql[(Azure SQL)]
+    Api -->|"signe les URL, contrôle"| Blob
+    Api -->|"chiffre les clés Data Protection"| Kv[Key Vault]
+    Migrator[songvault-migrator : job] --> Sql
+```
+
 ## Dépendances entre projets
 
 ```mermaid
@@ -29,7 +43,7 @@ flowchart TB
     Application --> Domain
 ```
 
-Domain ne dépend de rien ; les abstractions (`ISongRepository`, `IBandRepository`, `IInvitationRepository`, `IAccountRepository`, `IFileStorageService`, `IEmailSender`, `IEmailQueue`, `IBackgroundJobs`, `ICurrentUser`, `IBandContext`) sont dans Application, leurs implémentations dans Infrastructure et Api.
+Domain ne dépend de rien ; les abstractions (`ISongRepository`, `IBandRepository`, `IInvitationRepository`, `IAccountRepository`, `IFileUploadRepository`, `IFileStorageService`, `IEmailSender`, `IEmailQueue`, `IBackgroundJobs`, `ICurrentUser`, `IBandContext`) sont dans Application, leurs implémentations dans Infrastructure et Api.
 
 ## Modèle métier
 
@@ -132,25 +146,33 @@ sequenceDiagram
     H-->>C: 201 Created (ou 409 après 3 conflits)
 ```
 
-## Upload d'un fichier
+## Envoi d'un fichier
 
 ```mermaid
 sequenceDiagram
-    participant C as Client
-    participant N as nginx
-    participant H as UploadSongFileHandler
-    participant S as IFileStorageService
+    participant C as Navigateur
+    participant A as API
+    participant S as Stockage (Azure Blob, ou l'API en local)
     participant DB as SQL Server
-    C->>N: POST …/files (multipart, ≤ 50 Mo)
-    N->>H: relais (rate limiting par utilisateur)
-    H->>H: extension, taille, signature (32 premiers octets)
-    H->>S: SaveAsync(clé générée, flux)
-    H->>DB: INSERT SongFile
-    alt échec de la base
-        H->>S: DeleteAsync(clé) : compensation
+    C->>A: POST …/files/uploads (nom, taille)
+    A->>A: extension, taille (≤ 2 Go), rôle
+    A->>DB: INSERT FileUpload + tâche d'expiration à 1 h
+    A-->>C: adresse du PUT (URL signée sp=c) + en-têtes
+    C->>S: PUT du fichier (progression)
+    C->>A: POST …/uploads/{id}/complete
+    A->>S: taille réelle, 32 premiers octets
+    alt taille ou signature différente
+        A->>S: effacement du fichier
+        A-->>C: 400
+    else conforme
+        A->>DB: INSERT SongFile + DELETE FileUpload, une transaction
+        A-->>C: 201 Created
     end
-    H-->>C: 201 Created
 ```
+
+Un envoi jamais confirmé est effacé, ligne et fichier, par la tâche `file-upload.expire` (ADR 0011). L'envoi multipart `POST …/files` (50 Mo, à travers l'API) reste pour les scripts.
+
+Un envoi jamais confirmé est effacé, ligne et fichier, par la tâche `file-upload.expire` (ADR 0011). L'envoi multipart `POST …/files` (50 Mo, à travers l'API) reste pour les scripts.
 
 
 ## Tâches de fond (export d'un compte)
