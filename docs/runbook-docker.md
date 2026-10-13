@@ -10,6 +10,7 @@ Cette documentation décrit comment gérer, dépanner et maintenir l'application
 5. [Repartir de zéro](#repartir-de-zéro)
 6. [Incidents fréquents](#incidents-fréquents)
 7. [Commandes utiles](#commandes-utiles)
+8. [Comptes supprimés et tâches de fond](#comptes-supprimés-et-tâches-de-fond)
 
 ---
 
@@ -333,6 +334,54 @@ docker load -i songvault-api.tar
 ```
 
 ---
+## Comptes supprimés et tâches de fond
+
+Les commandes se lancent dans PowerShell, à la racine du dépôt. Elles lisent le mot de passe SA dans `.env` :
+
+```powershell
+. .\scripts\_common.ps1
+$pw = Get-SaPassword
+$sql = @('exec', '-T', 'db', '/opt/mssql-tools18/bin/sqlcmd', '-S', 'localhost', '-U', 'sa', '-P', $pw, '-C', '-I', '-d', 'SongVault', '-W')
+```
+
+### Tâches en échec
+
+Une tâche passe en `Failed` après trois essais ; `Error` donne le type et le message de l'exception, le détail est dans `docker compose logs api`.
+
+```powershell
+docker compose @sql -Q "SELECT Id, Type, Payload, Attempts, CompletedAt, Error FROM BackgroundJobs WHERE Status = 'Failed' ORDER BY CompletedAt DESC"
+```
+
+Après correction de la cause, relancer une tâche (remplacer l'identifiant) :
+
+```powershell
+docker compose @sql -Q "UPDATE BackgroundJobs SET Status = 'Pending', Attempts = 0, RunAfter = SYSDATETIMEOFFSET(), Error = NULL WHERE Id = '00000000-0000-0000-0000-000000000000'"
+```
+
+### Réactiver un compte supprimé (avant J+30)
+
+À faire seulement à la demande écrite du titulaire de l'adresse. Le compte retrouve son mot de passe, ses groupes dont il était le seul membre et ses morceaux ; ses adhésions aux groupes partagés sont perdues, il faut l'y réinviter.
+
+```powershell
+$email = 'ana@exemple.fr'
+docker compose @sql -Q "DECLARE @id nvarchar(450) = (SELECT Id FROM AspNetUsers WHERE NormalizedEmail = UPPER('$email'));
+DELETE FROM BackgroundJobs WHERE Type = 'account.purge' AND Payload = @id AND Status = 'Pending';
+UPDATE AspNetUsers SET LockoutEnd = NULL, AccessFailedCount = 0 WHERE Id = @id;"
+```
+
+Même sans supprimer la tâche, la purge ne s'applique pas à un compte dont `LockoutEnd` a changé.
+
+### Effacer un compte supprimé sans attendre J+30
+
+À la demande du titulaire : avancer la tâche de purge, qui part dans les secondes qui suivent.
+
+```powershell
+$email = 'ana@exemple.fr'
+docker compose @sql -Q "UPDATE BackgroundJobs SET RunAfter = SYSDATETIMEOFFSET() WHERE Type = 'account.purge' AND Status = 'Pending' AND Payload = (SELECT Id FROM AspNetUsers WHERE NormalizedEmail = UPPER('$email'))"
+```
+
+---
+
 
 ## Contacts et escalade
 

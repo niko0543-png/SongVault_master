@@ -13,13 +13,21 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) — versions :
 - Envoi d'e-mails derrière `IEmailSender` : journaux en développement, Brevo en production.
 - Compte complet : confirmation de l'adresse à l'inscription, mot de passe oublié et réinitialisation (lien valable 2 h), changement de mot de passe depuis « Mon compte » (ADR 0010).
 - File d'envoi des e-mails en arrière-plan ; clés Data Protection conservées en base.
+- Pages Mentions légales et Politique de confidentialité, liées depuis un pied de page et l'inscription ; registre des traitements dans `docs/rgpd/registre.md`.
+- Tâches de fond en base (`BackgroundJobs`) : trois essais, reprise après un arrêt de l'API, plusieurs instances possibles (ADR 0011).
+- Export des données du compte depuis « Mon compte » : archive ZIP préparée en arrière-plan, e-mail quand elle est prête, disponible 7 jours.
+- Suppression du compte : désactivation immédiate, départ des groupes partagés, purge à 30 jours avec les groupes dont il était le seul membre.
 ### Modifié
 - Routes de l'API sous `/api/bands/{bandId}/songs…` et du front sous `/b/{bandId}/songs…`.
 - Renommer un groupe est réservé à ses Owner.
 - La connexion exige une adresse confirmée ; les comptes existants sont marqués confirmés par la migration `ConfirmExistingEmails`.
 - L'inscription ne connecte plus directement : elle mène à « Vérifiez votre boîte mail ».
+- Le lien de réinitialisation du mot de passe s'ouvre aussi depuis un navigateur déjà connecté.
+- `scripts/purge-orphan-files.ps1` tient compte des archives d'export.
 ### Supprimé
 - `Song.OwnerId`, remplacé par `Song.BandId`. Les morceaux sans propriétaire valide sont supprimés par la migration `BackfillBands`.
+### Corrigé
+- Un délai dépassé chez le fournisseur d'e-mails n'arrête plus l'API.
 
 ## [0.6.0] - 2026-10-23
 ### Ajouté

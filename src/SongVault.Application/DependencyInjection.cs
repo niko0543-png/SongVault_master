@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-
 using SongVault.Application.Bands;
 using SongVault.Application.Files;
 using SongVault.Application.Invitations;
@@ -9,6 +8,8 @@ using SongVault.Application.Songs.GetSong;
 using SongVault.Application.Songs.ListSongs;
 using SongVault.Application.Songs.UpdateSong;
 using SongVault.Application.Versions;
+using SongVault.Application.Abstractions;
+using SongVault.Application.Accounts;
 
 namespace SongVault.Application;
 
@@ -43,6 +44,14 @@ public static class DependencyInjection
         services.AddScoped<ChangeMemberRoleHandler>();
         services.AddScoped<RemoveMemberHandler>();
         services.AddScoped<LeaveBandHandler>();
+        // #5 : export des données du compte (ADR 0011)
+        services.AddScoped<RequestDataExportHandler>();
+        services.AddScoped<GetLatestDataExportHandler>();
+        services.AddScoped<DownloadDataExportHandler>();
+        services.AddScoped<IBackgroundJobHandler, ExportAccountJob>();
+        services.AddScoped<IBackgroundJobHandler, ExpireExportJob>();
+        services.AddScoped<DeleteAccountHandler>();
+        services.AddScoped<IBackgroundJobHandler, PurgeAccountJob>();
 
         return services;
     }

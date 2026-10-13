@@ -22,6 +22,7 @@ internal sealed class GlobalExceptionHandler(
             ForbiddenException => (StatusCodes.Status403Forbidden, "Action non autorisée"),
             ConcurrencyConflictException => (StatusCodes.Status409Conflict, "Conflit de modification"),
             LastOwnerException => (StatusCodes.Status409Conflict, "Dernier propriétaire du groupe"),
+            ConflictException => (StatusCodes.Status409Conflict, "Conflit"),
             InvitationUnavailableException => (StatusCodes.Status410Gone, "Invitation indisponible"),
             BadHttpRequestException bad => (bad.StatusCode, "Requête invalide"),
             UnsupportedFileException => (StatusCodes.Status400BadRequest, "Fichier refusé"),

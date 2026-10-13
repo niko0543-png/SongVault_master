@@ -20,4 +20,17 @@ public sealed class AccountEmailsTests
     public void Reinitialisation_indique_la_duree_de_2_heures()
         => Assert.Contains("2 heures",
             AccountEmails.ResetPassword("a@b.c", "http://localhost:8080/reset-password?email=a&code=c", TimeSpan.FromHours(2)).TextBody);
+
+
+    [Fact]
+    public void Archive_prete_donne_la_date_d_expiration_sans_lien_de_telechargement()
+    {
+        var message = AccountEmails.ExportReady(
+            "a@b.c", "http://localhost:8080/account", new DateTimeOffset(2026, 10, 19, 9, 0, 0, TimeSpan.Zero));
+
+        Assert.Equal("Vos données SongVault sont prêtes", message.Subject);
+        Assert.Contains("http://localhost:8080/account", message.TextBody);
+        Assert.Contains("19 octobre 2026", message.TextBody);
+        Assert.DoesNotContain("/api/", message.TextBody);
+    }
 }

@@ -16,3 +16,4 @@ l'ancien, qui passe au statut « remplacé par ADR NNNN ».
 | [0008](0008-roles-dans-le-groupe.md) | Rôles dans le groupe, vérifiés par le filtre [BandScoped] | accepté |
 | [0009](0009-invitations-et-e-mails.md) | Invitations par lien à usage unique et envoi d'e-mails | accepté |
 | [0010](0010-compte-complet.md) | Confirmation d'adresse et mot de passe oublié avec les endpoints d'Identity | accepté |
+| [0011](0011-rgpd-taches-de-fond.md) | RGPD : tâches de fond en base, export asynchrone et suppression différée | accepté |

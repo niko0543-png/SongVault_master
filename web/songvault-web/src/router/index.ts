@@ -45,11 +45,12 @@ const router = createRouter({
       component: () => import('@/features/auth/pages/ForgotPasswordPage.vue'),
       meta: { public: true, guestOnly: true, title: 'Mot de passe oublié' },
     },
-    {
+   {
+      // Lien de l'e-mail : ouvert connecté aussi, sinon le code serait perdu dans la redirection
       path: '/reset-password',
       name: 'reset-password',
       component: () => import('@/features/auth/pages/ResetPasswordPage.vue'),
-      meta: { public: true, guestOnly: true, title: 'Nouveau mot de passe' },
+      meta: { public: true, title: 'Nouveau mot de passe' },
     },
     {
       // Lien reçu par e-mail : ouvert à tous, connecté ou non (#3)
@@ -58,6 +59,19 @@ const router = createRouter({
       component: () => import('@/features/invitations/pages/InvitePage.vue'),
       props: true,
       meta: { public: true, title: 'Invitation' },
+    },
+    {
+      // Pages légales : lisibles par tous, connecté ou non (#5)
+      path: '/mentions-legales',
+      name: 'legal-notice',
+      component: () => import('@/features/legal/pages/LegalNoticePage.vue'),
+      meta: { public: true, title: 'Mentions légales' },
+    },
+    {
+      path: '/confidentialite',
+      name: 'privacy',
+      component: () => import('@/features/legal/pages/PrivacyPage.vue'),
+      meta: { public: true, title: 'Politique de confidentialité' },
     },
         // ---- Connexion exigée, hors groupe ----
     {

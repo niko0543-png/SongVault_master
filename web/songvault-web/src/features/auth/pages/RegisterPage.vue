@@ -56,6 +56,10 @@ async function onSubmit() {
       </ul>
       <button type="submit" :disabled="isLoading">{{ isLoading ? 'Création…' : 'Créer mon compte' }}</button>
     </form>
+        <p class="muted">
+      Vos données sont traitées comme décrit dans la
+      <RouterLink :to="{ name: 'privacy' }">politique de confidentialité</RouterLink>.
+    </p>
     <p class="muted">Déjà un compte ? <RouterLink :to="{ name: 'login', query: route.query }">Se connecter</RouterLink></p>
   </section>
 </template>
