@@ -6,6 +6,7 @@ using SongVault.Application.Tests.Fakes;
 using SongVault.Domain.Common;
 using SongVault.Domain.Songs;
 using SongVault.Domain.Releases;
+using SongVault.Application.Activity;
 
 namespace SongVault.Application.Tests.Songs;
 
@@ -16,6 +17,9 @@ public sealed class SongCrudHandlersTests
     private readonly FakeUnitOfWork _uow = new();
     private readonly FixedTimeProvider _clock = new(Now.AddHours(1));
     private readonly FakeFileStorageService _storage = new();
+    private readonly FakeActivityRepository _activity = new();
+
+    private ActivityLog Log() => new(_activity, new FakeCurrentUser());
     private readonly FakeReleaseRepository _releases = new();
 
     private Song ExistingSong()
@@ -30,7 +34,7 @@ public sealed class SongCrudHandlersTests
     {
         var song = ExistingSong();
 
-        await new UpdateSongHandler(_songs, _uow, _clock)
+        await new UpdateSongHandler(_songs, _uow, _clock, Log())
             .HandleAsync(new UpdateSongCommand(song.Id, "Nocturne (v2)", "Band", null), CancellationToken.None);
 
         Assert.Equal("Nocturne (v2)", song.Title);
@@ -41,7 +45,7 @@ public sealed class SongCrudHandlersTests
     [Fact]
     public async Task Update_morceau_absent_leve_NotFound_sans_enregistrer()
     {
-        await Assert.ThrowsAsync<NotFoundException>(() => new UpdateSongHandler(_songs, _uow, _clock)
+        await Assert.ThrowsAsync<NotFoundException>(() => new UpdateSongHandler(_songs, _uow, _clock, Log())
             .HandleAsync(new UpdateSongCommand(Guid.NewGuid(), "X", null, null), CancellationToken.None));
 
         Assert.Equal(0, _uow.SaveCount);
@@ -52,7 +56,7 @@ public sealed class SongCrudHandlersTests
     {
         var song = ExistingSong();
 
-        await Assert.ThrowsAsync<DomainException>(() => new UpdateSongHandler(_songs, _uow, _clock)
+        await Assert.ThrowsAsync<DomainException>(() => new UpdateSongHandler(_songs, _uow, _clock, Log())
             .HandleAsync(new UpdateSongCommand(song.Id, "  ", null, null), CancellationToken.None));
 
         Assert.Equal(0, _uow.SaveCount);
@@ -63,7 +67,7 @@ public sealed class SongCrudHandlersTests
     {
         var song = ExistingSong();
 
-        await new DeleteSongHandler(_songs, _releases, _uow, _storage).HandleAsync(song.Id, CancellationToken.None);
+        await new DeleteSongHandler(_songs, _releases, _uow, _storage, _clock, Log()).HandleAsync(song.Id, CancellationToken.None);
 
         Assert.Empty(_songs.Songs);
         Assert.Equal(1, _uow.SaveCount);
@@ -79,7 +83,7 @@ public sealed class SongCrudHandlersTests
         _releases.Releases.Add(release);
 
         var error = await Assert.ThrowsAsync<ConflictException>(
-            () => new DeleteSongHandler(_songs, _releases, _uow, _storage).HandleAsync(song.Id, CancellationToken.None));
+            () => new DeleteSongHandler(_songs, _releases, _uow, _storage, _clock, Log()).HandleAsync(song.Id, CancellationToken.None));
 
         Assert.Contains("« Nuits blanches »", error.Message);
         Assert.Single(_songs.Songs);
@@ -91,7 +95,7 @@ public sealed class SongCrudHandlersTests
     public async Task Delete_morceau_absent_leve_NotFound()
     {
         await Assert.ThrowsAsync<NotFoundException>(
-            () => new DeleteSongHandler(_songs, _releases, _uow, _storage).HandleAsync(Guid.NewGuid(), CancellationToken.None));
+            () => new DeleteSongHandler(_songs, _releases, _uow, _storage, _clock, Log()).HandleAsync(Guid.NewGuid(), CancellationToken.None));
     }
 
     [Theory]

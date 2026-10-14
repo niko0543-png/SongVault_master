@@ -1,10 +1,13 @@
 ﻿using SongVault.Application.Abstractions;
+using SongVault.Application.Activity;
 using SongVault.Application.Common.Exceptions;
+using SongVault.Domain.Activity;
 using SongVault.Domain.Songs;
 
 namespace SongVault.Application.Versions;
 
-public sealed class CreateSongVersionHandler(ISongRepository songs, IUnitOfWork unitOfWork, TimeProvider clock)
+public sealed class CreateSongVersionHandler(
+    ISongRepository songs, IUnitOfWork unitOfWork, TimeProvider clock, ActivityLog activity)
 {
     private const int MaxAttempts = 3;
 
@@ -18,8 +21,10 @@ public sealed class CreateSongVersionHandler(ISongRepository songs, IUnitOfWork 
             var song = await songs.GetByIdAsync(command.SongId, ct)
                        ?? throw new NotFoundException("Song", command.SongId);
 
+            var now = clock.GetUtcNow();
             var version = song.AddVersion(command.Title, command.Status, command.Notes, command.Lyrics,
-                clock.GetUtcNow(), command.Bpm, key);
+                now, command.Bpm, key);
+            activity.VersionChanged(ActivityType.VersionAdded, song, version, now);   // oublié aussi par DiscardChanges
             try
             {
                 await unitOfWork.SaveChangesAsync(ct);
@@ -50,7 +55,8 @@ public sealed class GetSongVersionHandler(ISongRepository songs)
            ?? throw new NotFoundException("SongVersion", versionId);
 }
 
-public sealed class UpdateSongVersionHandler(ISongRepository songs, IUnitOfWork unitOfWork, TimeProvider clock)
+public sealed class UpdateSongVersionHandler(
+    ISongRepository songs, IUnitOfWork unitOfWork, TimeProvider clock, ActivityLog activity)
 {
     public async Task HandleAsync(UpdateSongVersionCommand command, CancellationToken ct)
     {
@@ -61,8 +67,9 @@ public sealed class UpdateSongVersionHandler(ISongRepository songs, IUnitOfWork 
         var version = song.FindVersion(command.VersionId)
                       ?? throw new NotFoundException("SongVersion", command.VersionId);
 
-        version.Update(command.Title, command.Status, command.Notes, command.Lyrics,
-            clock.GetUtcNow(), command.Bpm, key);
+        var now = clock.GetUtcNow();
+        version.Update(command.Title, command.Status, command.Notes, command.Lyrics, now, command.Bpm, key);
+        activity.VersionChanged(ActivityType.VersionUpdated, song, version, now);
         await unitOfWork.SaveChangesAsync(ct);
     }
 }

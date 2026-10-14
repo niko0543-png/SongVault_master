@@ -22,4 +22,8 @@
     <ProjectReference Include="..\..\src\SongVault.Application\SongVault.Application.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Activity\" />
+  </ItemGroup>
+
 </Project>

@@ -1,14 +1,16 @@
 ﻿using SongVault.Application.Abstractions;
+using SongVault.Application.Activity;
 using SongVault.Application.Common;
 using SongVault.Application.Common.Exceptions;
 using SongVault.Application.Files;
+using SongVault.Application.Releases;
 using SongVault.Application.Songs;
 using SongVault.Application.Versions;
 using SongVault.Domain.Bands;
-using SongVault.Domain.Songs;
 using SongVault.Domain.Files;
-using SongVault.Application.Releases;
 using SongVault.Domain.Releases;
+using SongVault.Domain.Songs;
+using SongVault.Domain.Activity;
 
 namespace SongVault.Application.Tests.Fakes;
 
@@ -86,10 +88,14 @@ internal sealed class FakeSongRepository : ISongRepository
         return Task.FromResult(file is null ? null : new StoredFileInfo(file.StorageKey, file.ContentType, file.OriginalFileName));
     }
 
-    public Task<SongFileType?> GetFileTypeAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct)
-        => Task.FromResult(Songs.SingleOrDefault(s => s.Id == songId)?
-            .FindVersion(versionId)?
-            .Files.SingleOrDefault(f => f.Id == fileId)?.FileType);
+    public Task<SongFileLabel?> GetFileLabelAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct)
+    {
+        var song = Songs.SingleOrDefault(s => s.Id == songId);
+        var version = song?.FindVersion(versionId);
+        var file = version?.Files.SingleOrDefault(f => f.Id == fileId);
+        return Task.FromResult(file is null ? null : new SongFileLabel(
+            song!.Id, song.Title, version!.Id, version.Number, version.Title, file.Id, file.OriginalFileName, file.FileType));
+    }
 
     public Task<IReadOnlyList<string>> ListStorageKeysAsync(Guid songId, CancellationToken ct)
     {
@@ -151,6 +157,36 @@ internal sealed class FakeReleaseRepository(FakeSongRepository? songs = null) : 
         IReadOnlyList<string> titles = [.. Releases.Where(r => r.Tracks.Any(t => t.SongId == songId))
             .Select(r => r.Title).Order()];
         return Task.FromResult(titles);
+    }
+}
+
+/// <summary>Fil d'activité en mémoire : Events reçoit les écritures, Items sert les lectures.</summary>
+internal sealed class FakeActivityRepository : IActivityRepository
+{
+    public List<ActivityEvent> Events { get; } = [];
+    public List<ActivityItemDto> Items { get; } = [];
+
+    public void Add(ActivityEvent activityEvent) => Events.Add(activityEvent);
+
+    public Task<IReadOnlyList<ActivityItemDto>> ListAsync(ActivityCursor? after, int take, CancellationToken ct)
+    {
+        IReadOnlyList<ActivityItemDto> page = [.. Items
+            .Where(i => after is not { } c || i.CreatedAt < c.CreatedAt || (i.CreatedAt == c.CreatedAt && i.Id < c.Id))
+            .OrderByDescending(i => i.CreatedAt).ThenByDescending(i => i.Id)
+            .Take(take)];
+        return Task.FromResult(page);
+    }
+}
+
+/// <summary>Ouvertures des morceaux en mémoire.</summary>
+internal sealed class FakeSongViewRepository : ISongViewRepository
+{
+    public Dictionary<(Guid SongId, string UserId), DateTimeOffset> SeenAt { get; } = [];
+
+    public Task MarkSeenAsync(Guid songId, string userId, DateTimeOffset now, CancellationToken ct)
+    {
+        SeenAt[(songId, userId)] = now;
+        return Task.CompletedTask;
     }
 }
 

@@ -109,12 +109,12 @@ internal sealed class SongRepository(SongVaultDbContext db, IBandContext bandCon
             .FirstOrDefaultAsync(ct);
 
 
-    public Task<SongFileType?> GetFileTypeAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct)
-        => BandVersions.AsNoTracking()
-            .Where(v => v.SongId == songId && v.Id == versionId)
-            .SelectMany(v => v.Files)
-            .Where(f => f.Id == fileId)
-            .Select(f => (SongFileType?)f.FileType)
+    public Task<SongFileLabel?> GetFileLabelAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct)
+        => (from s in BandSongs.AsNoTracking()
+            from v in s.Versions
+            from f in v.Files
+            where s.Id == songId && v.Id == versionId && f.Id == fileId
+            select new SongFileLabel(s.Id, s.Title, v.Id, v.Number, v.Title, f.Id, f.OriginalFileName, f.FileType))
             .FirstOrDefaultAsync(ct);
 
     public async Task<IReadOnlyList<string>> ListStorageKeysAsync(Guid songId, CancellationToken ct)
