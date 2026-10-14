@@ -136,8 +136,8 @@ describe('ReleaseDetailPage', () => {
   it('ajoute un morceau en fin de liste, dans sa dernière version', async () => {
     vi.mocked(songsApi.list).mockResolvedValue({
       items: [
-        { id: 'a', title: 'Aube', artist: null, description: null, createdAt: '', updatedAt: '' },
-        { id: 'd', title: 'Dérive', artist: null, description: null, createdAt: '', updatedAt: '' },
+        { id: 'a', title: 'Aube', artist: null, description: null, createdAt: '', updatedAt: '', badge: 'None' },
+        { id: 'd', title: 'Dérive', artist: null, description: null, createdAt: '', updatedAt: '', badge: 'None' },
       ],
       page: 1, pageSize: 10, totalCount: 2, totalPages: 1,
     })

@@ -76,6 +76,11 @@ export const useSongsStore = defineStore('songs', () => {
     items.value = items.value.filter((s) => s.id !== id)
   }
 
+  /** Morceau ouvert : plus de badge dans la liste en cache, sans la recharger (#11). */
+  function markSeen(id: string) {
+    items.value = items.value.map((s) => (s.id === id && s.badge !== 'None' ? { ...s, badge: 'None' } : s))
+  }
+
   /** Force un rechargement à la prochaine visite de la liste. */
   function invalidate() {
     isLoaded.value = false
@@ -91,5 +96,5 @@ function reset() {
   error.value = null
 }
   
-  return { items, isLoading, isLoaded, error, filters, count, fetchList, setFilters, upsert, remove, invalidate, reset }
+    return { items, isLoading, isLoaded, error, filters, count, fetchList, setFilters, upsert, remove, markSeen, invalidate, reset }
 })
