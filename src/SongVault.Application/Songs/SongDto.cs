@@ -11,9 +11,10 @@ namespace SongVault.Application.Songs;
 /// <param name="Description">Description ou notes sur la chanson (optionnel)</param>
 /// <param name="CreatedAt">Date et heure de création de la chanson</param>
 /// <param name="UpdatedAt">Date et heure de la dernière mise à jour</param>
+/// <param name="Badge">Pastille pour l'utilisateur qui lit la liste (#11) ; None hors de la liste</param>
 public sealed record SongDto(
     Guid Id, string Title, string? Artist, string? Description,
-    DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt)
+     DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, SongBadge Badge = SongBadge.None)
 {
     public static SongDto From(Song song) =>
         new(song.Id, song.Title, song.Artist, song.Description, song.CreatedAt, song.UpdatedAt);
