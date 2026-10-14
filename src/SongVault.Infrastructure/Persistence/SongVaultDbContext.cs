@@ -14,6 +14,7 @@ using SongVault.Infrastructure.Jobs;
 using SongVault.Domain.Comments;
 using SongVault.Domain.Releases;
 using SongVault.Domain.Activity;
+using SongVault.Domain.Notifications;
 
 namespace SongVault.Infrastructure.Persistence;
 
@@ -38,6 +39,9 @@ public sealed class SongVaultDbContext(
     /// <summary>Fil d'activité et badges (ADR 0017).</summary>
     public DbSet<ActivityEvent> ActivityEvents => Set<ActivityEvent>();
     public DbSet<SongView> SongViews => Set<SongView>();
+    /// <summary>Notifications par e-mail (ADR 0018).</summary>
+    public DbSet<NotificationPreference> NotificationPreferences => Set<NotificationPreference>();
+    public DbSet<NotificationDigestItem> NotificationDigestItems => Set<NotificationDigestItem>();
     /// <summary>Sorties (single, EP, album) et leurs pistes (ADR 0016).</summary>
     public DbSet<Release> Releases => Set<Release>();
     /// <summary>Clés qui signent cookies et liens (ADR 0010) : en base pour survivre à une reconstruction de l'API.</summary>

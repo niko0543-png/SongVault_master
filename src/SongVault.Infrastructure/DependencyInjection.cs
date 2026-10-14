@@ -40,6 +40,7 @@ public static class DependencyInjection
         services.AddScoped<ICommentRepository, CommentRepository>();
         services.AddScoped<IActivityRepository, ActivityRepository>();
         services.AddScoped<ISongViewRepository, SongViewRepository>();
+        services.AddScoped<INotificationRepository, NotificationRepository>();
         services.AddScoped<IReleaseRepository, ReleaseRepository>();
 
         services.AddOptions<FileStorageOptions>()
