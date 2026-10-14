@@ -38,6 +38,8 @@ public static class DependencyInjection
         services.AddScoped<IAccountRepository, AccountRepository>();
         services.AddScoped<IFileUploadRepository, FileUploadRepository>();
         services.AddScoped<ICommentRepository, CommentRepository>();
+        services.AddScoped<IActivityRepository, ActivityRepository>();
+        services.AddScoped<ISongViewRepository, SongViewRepository>();
         services.AddScoped<IReleaseRepository, ReleaseRepository>();
 
         services.AddOptions<FileStorageOptions>()

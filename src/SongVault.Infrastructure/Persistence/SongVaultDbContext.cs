@@ -13,6 +13,7 @@ using SongVault.Domain.Songs;
 using SongVault.Infrastructure.Jobs;
 using SongVault.Domain.Comments;
 using SongVault.Domain.Releases;
+using SongVault.Domain.Activity;
 
 namespace SongVault.Infrastructure.Persistence;
 
@@ -34,6 +35,9 @@ public sealed class SongVaultDbContext(
     public DbSet<FileUpload> FileUploads => Set<FileUpload>();
     /// <summary>Commentaires horodatés sur les fichiers audio (ADR 0014).</summary>
     public DbSet<Comment> Comments => Set<Comment>();
+    /// <summary>Fil d'activité et badges (ADR 0017).</summary>
+    public DbSet<ActivityEvent> ActivityEvents => Set<ActivityEvent>();
+    public DbSet<SongView> SongViews => Set<SongView>();
     /// <summary>Sorties (single, EP, album) et leurs pistes (ADR 0016).</summary>
     public DbSet<Release> Releases => Set<Release>();
     /// <summary>Clés qui signent cookies et liens (ADR 0010) : en base pour survivre à une reconstruction de l'API.</summary>

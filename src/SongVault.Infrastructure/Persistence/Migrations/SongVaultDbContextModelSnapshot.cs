@@ -277,6 +277,68 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                     b.ToTable("DataExports", (string)null);
                 });
 
+            modelBuilder.Entity("SongVault.Domain.Activity.ActivityEvent", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("ActorId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<Guid>("BandId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("EntityId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("SongId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<Guid?>("VersionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActorId");
+
+                    b.HasIndex("SongId", "CreatedAt");
+
+                    b.HasIndex("BandId", "CreatedAt", "Id");
+
+                    b.ToTable("ActivityEvents", (string)null);
+                });
+
+            modelBuilder.Entity("SongVault.Domain.Activity.SongView", b =>
+                {
+                    b.Property<string>("UserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<Guid>("SongId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("SeenAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("UserId", "SongId");
+
+                    b.HasIndex("SongId");
+
+                    b.ToTable("SongViews", (string)null);
+                });
+
             modelBuilder.Entity("SongVault.Domain.Bands.Band", b =>
                 {
                     b.Property<Guid>("Id")
@@ -784,6 +846,52 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SongVault.Domain.Activity.ActivityEvent", b =>
+                {
+                    b.HasOne("SongVault.Domain.Bands.Band", null)
+                        .WithMany()
+                        .HasForeignKey("BandId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.OwnsOne("SongVault.Domain.Activity.ActivityDetails", "Details", b1 =>
+                        {
+                            b1.Property<long>("ActivityEventId");
+
+                            b1.Property<string>("FileName");
+
+                            b1.Property<string>("SongTitle")
+                                .IsRequired();
+
+                            b1.Property<int?>("VersionNumber");
+
+                            b1.Property<string>("VersionTitle");
+
+                            b1.HasKey("ActivityEventId");
+
+                            b1.ToTable("ActivityEvents");
+
+                            b1
+                                .ToJson("Details")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ActivityEventId");
+                        });
+
+                    b.Navigation("Details")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SongVault.Domain.Activity.SongView", b =>
+                {
+                    b.HasOne("SongVault.Domain.Songs.Song", null)
+                        .WithMany()
+                        .HasForeignKey("SongId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

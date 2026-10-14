@@ -147,6 +147,11 @@ internal sealed class AccountRepository(SongVaultDbContext db, UserManager<Ident
         // Ceux des groupes effacés juste au-dessus sont partis avec leurs fichiers.
         await db.Comments.Where(c => c.AuthorId == userId)
             .ExecuteUpdateAsync(s => s.SetProperty(c => c.AuthorId, (string?)null), ct);
+        // Fil d'activité des groupes partagés : gardé, sans auteur (« Compte supprimé »), comme les commentaires.
+        // Les événements des groupes effacés plus haut sont partis avec eux (cascade sur BandId).
+        await db.ActivityEvents.Where(e => e.ActorId == userId)
+            .ExecuteUpdateAsync(s => s.SetProperty(e => e.ActorId, (string?)null), ct);
+        await db.SongViews.Where(v => v.UserId == userId).ExecuteDeleteAsync(ct);
         await db.Comments.Where(c => c.ResolvedById == userId)
             .ExecuteUpdateAsync(s => s.SetProperty(c => c.ResolvedById, (string?)null), ct);
         await db.Users.Where(u => u.Id == userId).ExecuteDeleteAsync(ct);
