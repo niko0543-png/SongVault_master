@@ -26,6 +26,7 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) — versions :
 - Commentaires horodatés sur les fichiers audio : réponses, résolution, lecture à la position d'un clic ; ouverts aux invités (ADR 0014).
 - Différences entre deux versions dans l'écran de comparaison : paroles et notes ligne à ligne, champs et fichiers modifiés, navigation au clavier (ADR 0015).
 - Sorties (single, EP, album) avec pochette et pistes ordonnées, chaque piste dans la version choisie ; un morceau sur plusieurs sorties (ADR 0016).
+- Badges « Nouveau » et « Modifié » dans la liste des morceaux, retirés à l'ouverture, et page « Activité » du groupe avec « Voir plus » (ADR 0017).
 ### Modifié
 - Routes de l'API sous `/api/bands/{bandId}/songs…` et du front sous `/b/{bandId}/songs…`.
 - Renommer un groupe est réservé à ses Owner.
@@ -34,7 +35,8 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) — versions :
 - Le lien de réinitialisation du mot de passe s'ouvre aussi depuis un navigateur déjà connecté.
 - `scripts/purge-orphan-files.ps1` tient compte des archives d'export, puis des pochettes des sorties.
 - Un morceau présent sur une sortie ne se supprime plus : l'API répond 409 avec le nom des sorties.
-- Taille maximale d'un fichier envoyé depuis l'application : 2 Go au lieu de 50 Mo. L'envoi multipart `POST …/files` garde sa limite de 50 Mo.
+- Répondre à un commentaire vérifie aussi le morceau et la version de la route : 404 s'ils ne correspondent pas au fichier.
+- Taille maximale d'un fichier envoyé depuis l'application : 2 Go au lieu de 50 Mo.
 - nginx est configuré par variables (`API_UPSTREAM`, `STORAGE_ORIGIN`) et transmet `X-Forwarded-Host`.
 ### Supprimé
 - `Song.OwnerId`, remplacé par `Song.BandId`. Les morceaux sans propriétaire valide sont supprimés par la migration `BackfillBands`.
