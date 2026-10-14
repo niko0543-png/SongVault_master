@@ -6,7 +6,8 @@ namespace SongVault.Domain.Activity;
 
 /// <summary>
 /// Une modification faite par un membre, gardée pour le fil d'activité et les badges (ADR 0017).
-/// Écrit dans la même transaction que la modification, jamais modifié ensuite.
+/// Écrit dans la même transaction que la modification, jamais modifié ensuite,
+/// sauf NotifiedAt, que pose l'envoi des notifications (#12, ADR 0018).
 /// </summary>
 public sealed class ActivityEvent
 {
@@ -25,6 +26,8 @@ public sealed class ActivityEvent
     public Guid? EntityId { get; private set; }
     public ActivityDetails Details { get; private set; } = default!;
     public DateTimeOffset CreatedAt { get; private set; }
+    /// <summary>Quand les notifications de l'événement ont été préparées (#12) ; null tant qu'elles ne l'ont pas été.</summary>
+    public DateTimeOffset? NotifiedAt { get; private set; }
 
     public static ActivityEvent Record(Guid bandId, string actorId, ActivityType type, Guid songId,
         ActivityDetails details, DateTimeOffset now, Guid? versionId = null, Guid? entityId = null)

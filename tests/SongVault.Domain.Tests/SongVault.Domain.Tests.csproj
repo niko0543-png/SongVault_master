@@ -22,4 +22,8 @@
     <ProjectReference Include="..\..\src\SongVault.Domain\SongVault.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Notifications\" />
+  </ItemGroup>
+
 </Project>
