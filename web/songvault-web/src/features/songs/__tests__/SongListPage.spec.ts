@@ -13,7 +13,7 @@ vi.mock('../api/songsApi')
 
 const song: Song = {
   id: '1', title: 'Nocturne', artist: 'Band', description: null,
-  createdAt: '2026-10-12T09:00:00Z', updatedAt: '2026-10-12T09:00:00Z',
+   createdAt: '2026-10-12T09:00:00Z', updatedAt: '2026-10-12T09:00:00Z', badge: 'None',
 }
 
 function mountPage(role?: BandRole) {
@@ -47,6 +47,18 @@ describe('SongListPage', () => {
     expect(wrapper.text()).toContain('Nocturne')
   })
 
+   it('affiche le badge « Nouveau » ou « Modifié », rien sinon', async () => {
+    vi.mocked(songsApi.list).mockResolvedValue({
+      items: [{ ...song, id: '1', badge: 'New' }, { ...song, id: '2', title: 'Aube', badge: 'Updated' }, { ...song, id: '3', title: 'Brume' }],
+      page: 1, pageSize: 50, totalCount: 3, totalPages: 1,
+    })
+
+    const wrapper = mountPage()
+    await flushPromises()
+
+    expect(wrapper.findAll('[data-testid="song-badge"]').map((b) => b.text())).toEqual(['Nouveau', 'Modifié'])
+  })
+  
   it("affiche l'état vide", async () => {
     vi.mocked(songsApi.list).mockResolvedValue({ items: [], page: 1, pageSize: 50, totalCount: 0, totalPages: 0 })
 
