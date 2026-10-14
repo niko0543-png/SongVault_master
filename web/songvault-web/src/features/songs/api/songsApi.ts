@@ -17,4 +17,6 @@ export const songsApi = {
   create: (input: SongInput) => request<Song>(bandPath('/songs'), { method: 'POST', body: input }),
   update: (id: string, input: SongInput) => request<void>(bandPath(`/songs/${id}`), { method: 'PUT', body: input }),
   remove: (id: string) => request<void>(bandPath(`/songs/${id}`), { method: 'DELETE' }),
+   /** Le morceau vient d'être ouvert : son badge disparaît (#11). */
+  markSeen: (id: string) => request<void>(bandPath(`/songs/${id}/seen`), { method: 'POST' }),
 }

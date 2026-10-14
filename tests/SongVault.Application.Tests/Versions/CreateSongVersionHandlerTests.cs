@@ -2,6 +2,7 @@
 using SongVault.Application.Tests.Fakes;
 using SongVault.Application.Versions;
 using SongVault.Domain.Songs;
+using SongVault.Application.Activity;
 
 namespace SongVault.Application.Tests.Versions;
 
@@ -11,7 +12,8 @@ public sealed class CreateSongVersionHandlerTests
     private readonly FakeSongRepository _songs = new();
     private readonly FakeUnitOfWork _uow = new();
 
-    private CreateSongVersionHandler Sut() => new(_songs, _uow, new FixedTimeProvider(Now));
+    private CreateSongVersionHandler Sut() => new(_songs, _uow, new FixedTimeProvider(Now),
+       new ActivityLog(new FakeActivityRepository(), new FakeCurrentUser()));
 
     private CreateSongVersionCommand CommandForNewSong()
     {

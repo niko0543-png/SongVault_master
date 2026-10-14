@@ -94,6 +94,9 @@ docker compose down -v       # supprime aussi la base et les fichiers
 - **Sorties** : singles, EP et albums avec leur pochette et leurs pistes dans l'ordre, chaque
   piste dans la version choisie. Un morceau peut figurer sur plusieurs sorties ; les pistes se
   réordonnent à la souris ou au clavier.
+- **Badges et fil d'activité** : une pastille « Nouveau » ou « Modifié » signale les morceaux
+  changés par un autre membre depuis votre dernière visite ; la page « Activité » raconte qui a
+  fait quoi (« ana a ajouté la v4 de Nocturne »).
 - **Recherche et filtres** synchronisés avec l'URL.
 - **Comptes utilisateurs et groupes** : chaque morceau appartient à un groupe, un utilisateur peut être membre de plusieurs groupes et ne voit que les leurs. 
   Trois rôles par groupe : propriétaire (gère les membres), membre (crée et modifie), invité (lit et écoute).
@@ -242,6 +245,8 @@ Le contrat OpenAPI est généré depuis le code et ses commentaires XML. En dév
 | `GET` | `/api/bands/{bandId}/songs` | Liste paginée, recherche |
 | `POST` | `/api/bands/{bandId}/songs` | Créer un morceau |
 | `GET` `PUT` `DELETE` | `/api/bands/{bandId}/songs/{id}` | Lire, modifier, supprimer un morceau |
+| `POST` | `/api/bands/{bandId}/songs/{id}/seen` | Noter l'ouverture du morceau : son badge disparaît (Guest compris) |
+| `GET` | `/api/bands/{bandId}/activity` | Fil d'activité, du plus récent au plus ancien (`cursor`, `pageSize`) |
 | `GET` `POST` | `/api/bands/{bandId}/songs/{songId}/versions` | Lister, créer des versions |
 | `GET` `PUT` | `…/versions/{versionId}` | Lire, modifier une version |
 | `POST` | `…/versions/{versionId}/files/uploads` | Annoncer un envoi direct (jusqu'à 2 Go) : renvoie l'adresse du `PUT` |
@@ -254,10 +259,10 @@ Le contrat OpenAPI est généré depuis le code et ses commentaires XML. En dév
 | `POST` | `…/comments/{commentId}/replies` | Répondre à un fil (Guest compris) |
 | `PUT` `DELETE` | `…/comments/{commentId}` | Modifier (auteur), supprimer (auteur ou Owner) un commentaire |
 | `POST` `DELETE` | `…/comments/{commentId}/resolve` | Résoudre, rouvrir un fil (auteur du fil, Member ou Owner) |
-| `GET `POST` | /api/bands/{bandId}/releases | Sorties du groupe, créer une sortie |
-| `GET` PUT` `DELETE` | /api/bands/{bandId}/releases/{id} | Lire (avec les pistes), modifier, supprimer une sortie |
-| `PUT` | …/releases/{id}/tracks | Remplacer toutes les pistes, dans l'ordre envoyé |
-| `GET` `PUT` `DELETE` | …/releases/{id}/cover | Lire, envoyer (JPEG, PNG, WebP, 5 Mo), retirer la pochette |
+| `GET` `POST` | `/api/bands/{bandId}/releases` | Sorties du groupe, créer une sortie |
+| `GET` `PUT` `DELETE` | `/api/bands/{bandId}/releases/{id}` | Lire (avec les pistes), modifier, supprimer une sortie |
+| `PUT` | `…/releases/{id}/tracks` | Remplacer toutes les pistes, dans l'ordre envoyé |
+| `GET` `PUT` `DELETE` | `…/releases/{id}/cover` | Lire, envoyer (JPEG, PNG, WebP, 5 Mo), retirer la pochette |
 | `GET` | `/api/files/policy` | Extensions acceptées et taille maximale |
 
 Sous /api/bands/{bandId}, les lectures sont ouvertes à tout membre du groupe et les écritures demandent au moins le rôle Member, 

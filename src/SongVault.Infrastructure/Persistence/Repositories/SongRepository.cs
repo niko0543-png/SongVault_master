@@ -13,7 +13,8 @@ namespace SongVault.Infrastructure.Persistence.Repositories;
 /// TOUTES les lectures partent de BandSongs : un utilisateur ne voit que les morceaux du groupe actif,
 /// dont son adhésion a été vérifiée par [BandScoped]. Une ressource d'un autre groupe est « introuvable » (404).
 /// </summary>
-internal sealed class SongRepository(SongVaultDbContext db, IBandContext bandContext) : ISongRepository
+internal sealed class SongRepository(SongVaultDbContext db, IBandContext bandContext, ICurrentUser currentUser)
+    : ISongRepository
 {
     private IQueryable<Song> BandSongs => db.Songs.Where(s => s.BandId == bandContext.RequiredBandId);
     private IQueryable<SongVersion> BandVersions => BandSongs.SelectMany(s => s.Versions);
@@ -44,10 +45,29 @@ internal sealed class SongRepository(SongVaultDbContext db, IBandContext bandCon
                 .FirstOrDefault() == status);
 
         var total = await query.CountAsync(ct);
+        // Badges (#11) : modifications des AUTRES membres, depuis ma dernière ouverture du morceau,
+        // ou depuis mon arrivée dans le groupe si je ne l'ai jamais ouvert.
+        var me = currentUser.UserId;
+        var joinedAt = await db.BandMemberships
+            .Where(m => m.BandId == bandContext.RequiredBandId && m.UserId == me)
+            .Select(m => m.JoinedAt)
+            .FirstOrDefaultAsync(ct);
         var items = await query
             .OrderBy(s => s.Title).ThenBy(s => s.Id)
             .Skip((page - 1) * pageSize).Take(pageSize)
-            .Select(s => new SongDto(s.Id, s.Title, s.Artist, s.Description, s.CreatedAt, s.UpdatedAt))
+             .Select(s => new
+             {
+                 Song = s,
+                 SeenAt = db.SongViews.Where(v => v.SongId == s.Id && v.UserId == me)
+                    .Select(v => (DateTimeOffset?)v.SeenAt).FirstOrDefault(),
+             })
+            .Select(x => new SongDto(
+                x.Song.Id, x.Song.Title, x.Song.Artist, x.Song.Description, x.Song.CreatedAt, x.Song.UpdatedAt,
+                // ActorId != me garde aussi les événements d'un compte supprimé (ActorId null)
+                !db.ActivityEvents.Any(e => e.SongId == x.Song.Id && e.ActorId != me
+                                            && e.CreatedAt > (x.SeenAt ?? joinedAt))
+                    ? SongBadge.None
+                    : x.SeenAt == null ? SongBadge.New : SongBadge.Updated))
             .ToListAsync(ct);
 
         return new PagedResult<SongDto>(items, page, pageSize, total);
@@ -89,12 +109,12 @@ internal sealed class SongRepository(SongVaultDbContext db, IBandContext bandCon
             .FirstOrDefaultAsync(ct);
 
 
-    public Task<SongFileType?> GetFileTypeAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct)
-        => BandVersions.AsNoTracking()
-            .Where(v => v.SongId == songId && v.Id == versionId)
-            .SelectMany(v => v.Files)
-            .Where(f => f.Id == fileId)
-            .Select(f => (SongFileType?)f.FileType)
+    public Task<SongFileLabel?> GetFileLabelAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct)
+        => (from s in BandSongs.AsNoTracking()
+            from v in s.Versions
+            from f in v.Files
+            where s.Id == songId && v.Id == versionId && f.Id == fileId
+            select new SongFileLabel(s.Id, s.Title, v.Id, v.Number, v.Title, f.Id, f.OriginalFileName, f.FileType))
             .FirstOrDefaultAsync(ct);
 
     public async Task<IReadOnlyList<string>> ListStorageKeysAsync(Guid songId, CancellationToken ct)

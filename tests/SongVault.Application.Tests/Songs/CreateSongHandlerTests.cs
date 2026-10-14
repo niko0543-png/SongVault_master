@@ -1,6 +1,7 @@
 ﻿using SongVault.Application.Songs.CreateSong;
 using SongVault.Application.Tests.Fakes;
 using SongVault.Domain.Common;
+using SongVault.Application.Activity;
 
 namespace SongVault.Application.Tests.Songs;
 
@@ -11,7 +12,10 @@ public sealed class CreateSongHandlerTests
     private readonly FakeSongRepository _songs = new();
     private readonly FakeUnitOfWork _uow = new();
 
-    private CreateSongHandler CreateSut() => new(_songs, _uow, new FakeBandContext(BandId), new FixedTimeProvider(Now));
+    private readonly FakeActivityRepository _activity = new();
+
+    private CreateSongHandler CreateSut() => new(_songs, _uow, new FakeBandContext(BandId), new FixedTimeProvider(Now),
+        new ActivityLog(_activity, new FakeCurrentUser()));
 
     [Fact]
     public async Task Ajoute_le_morceau_au_groupe_actif_et_enregistre_une_seule_fois()
@@ -33,6 +37,7 @@ public sealed class CreateSongHandlerTests
             new CreateSongCommand("   ", null, null), CancellationToken.None));
 
         Assert.Empty(_songs.Songs);
+        Assert.Empty(_activity.Events);
         Assert.Equal(0, _uow.SaveCount);
     }
 }

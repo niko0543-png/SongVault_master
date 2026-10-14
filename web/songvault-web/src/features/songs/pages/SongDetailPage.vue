@@ -37,6 +37,7 @@ async function load(id: string) {
   error.value = null
   try {
     ;[song.value, versions.value] = await Promise.all([songsApi.get(id), versionsApi.list(id)])
+      void markSeen(id)
   } catch (e) {
     error.value = e
   } finally {
@@ -44,6 +45,15 @@ async function load(id: string) {
   }
 }
 watch(() => props.songId, load, { immediate: true })
+/** Badge retiré de la liste (#11). Un échec n'empêche pas de lire le morceau : le badge reviendra, c'est tout. */
+async function markSeen(id: string) {
+  try {
+    await songsApi.markSeen(id)
+    store.markSeen(id)
+  } catch {
+    /* sans conséquence */
+  }
+}
 
 // ---- Création d'une version ----
 const creation = useAsyncAction((input: SongVersionInput) => versionsApi.create(props.songId, input))

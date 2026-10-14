@@ -1,5 +1,7 @@
 ﻿using SongVault.Application.Abstractions;
+using SongVault.Application.Activity;
 using SongVault.Application.Common.Exceptions;
+using SongVault.Domain.Activity;
 using SongVault.Domain.Files;
 
 namespace SongVault.Application.Files;
@@ -56,7 +58,7 @@ public sealed class ReceiveFileUploadHandler(
 /// <summary>3. Confirmation : taille et signature contrôlées, puis fichier rattaché à la version.</summary>
 public sealed class CompleteFileUploadHandler(
     ISongRepository songs, IFileUploadRepository uploads, IFileStorageService storage, IUnitOfWork unitOfWork,
-    ICurrentUser currentUser, TimeProvider clock)
+    ICurrentUser currentUser, TimeProvider clock, ActivityLog activity)
 {
     public async Task<SongFileDto> HandleAsync(Guid songId, Guid versionId, Guid uploadId, CancellationToken ct)
     {
@@ -88,6 +90,7 @@ public sealed class CompleteFileUploadHandler(
 
         var file = version.AddFile(upload.FileName, upload.StorageKey, rule.ContentType, length, rule.FileType, now);
         uploads.Remove(upload);
+        activity.FileChanged(ActivityType.FileAdded, song, version, file, now);
         // Le fichier rattaché et l'envoi effacé, ensemble. Si la tâche d'expiration vient d'effacer la ligne,
         // l'effacement ne touche aucune ligne : EF lève un conflit (409) et rien n'est rattaché.
         await unitOfWork.SaveChangesAsync(ct);

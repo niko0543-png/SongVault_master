@@ -53,10 +53,10 @@ public sealed class CommentsController : ControllerBase
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
     public async Task<ActionResult<CommentResponse>> Reply(
-        Guid fileId, Guid commentId, CommentBodyRequest request,
+        Guid songId, Guid versionId, Guid fileId, Guid commentId, CommentBodyRequest request,
         [FromServices] ReplyToCommentHandler handler, CancellationToken ct)
     {
-        var reply = await handler.HandleAsync(fileId, commentId, request.Body, ct);
+        var reply = await handler.HandleAsync(songId, versionId, fileId, commentId, request.Body, ct);
         return StatusCode(StatusCodes.Status201Created, CommentResponse.From(reply));
     }
 

@@ -135,6 +135,12 @@ const router = createRouter({
       props: true,
       meta: { title: 'Sortie' },
     },
+       {
+      path: '/b/:bandId/activity',
+      name: 'activity',
+      component: () => import('@/features/activity/pages/ActivityFeedPage.vue'),
+      meta: { title: 'Activité' },
+    },
     {
       path: '/b/:bandId/members',
       name: 'band-members',
