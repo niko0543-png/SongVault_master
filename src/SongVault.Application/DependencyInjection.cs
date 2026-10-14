@@ -1,17 +1,19 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+
+using SongVault.Application.Abstractions;
+using SongVault.Application.Accounts;
+using SongVault.Application.Activity;
 using SongVault.Application.Bands;
+using SongVault.Application.Comments;
 using SongVault.Application.Files;
 using SongVault.Application.Invitations;
+using SongVault.Application.Releases;
 using SongVault.Application.Songs.CreateSong;
 using SongVault.Application.Songs.DeleteSong;
 using SongVault.Application.Songs.GetSong;
 using SongVault.Application.Songs.ListSongs;
 using SongVault.Application.Songs.UpdateSong;
 using SongVault.Application.Versions;
-using SongVault.Application.Abstractions;
-using SongVault.Application.Accounts;
-using SongVault.Application.Comments;
-using SongVault.Application.Releases;
 
 namespace SongVault.Application;
 
@@ -76,6 +78,10 @@ public static class DependencyInjection
         services.AddScoped<UploadReleaseCoverHandler>();
         services.AddScoped<DownloadReleaseCoverHandler>();
         services.AddScoped<DeleteReleaseCoverHandler>();
+        // #11 : fil d'activité et badges (ADR 0017)
+        services.AddScoped<ActivityLog>();
+        services.AddScoped<ListActivityHandler>();
+        services.AddScoped<MarkSongSeenHandler>();
 
         return services;
     }

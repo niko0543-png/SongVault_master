@@ -2,6 +2,7 @@
 using SongVault.Application.Files;
 using SongVault.Application.Tests.Fakes;
 using SongVault.Domain.Songs;
+using SongVault.Application.Activity;
 
 namespace SongVault.Application.Tests.Files;
 
@@ -13,7 +14,8 @@ public sealed class UploadSongFileHandlerTests
     private readonly FakeUnitOfWork _uow = new();
     private readonly FakeFileStorageService _storage = new();
 
-    private UploadSongFileHandler Sut() => new(_songs, _uow, _storage, new FixedTimeProvider(Now));
+    private UploadSongFileHandler Sut() => new(_songs, _uow, _storage, new FixedTimeProvider(Now),
+           new ActivityLog(new FakeActivityRepository(), new FakeCurrentUser()));
 
     private UploadSongFileCommand Command(long length, byte[] content, string fileName = "maquette.mp3")
     {

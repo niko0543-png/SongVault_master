@@ -1,10 +1,13 @@
 ﻿using SongVault.Application.Abstractions;
+using SongVault.Application.Activity;
 using SongVault.Application.Common.Exceptions;
+using SongVault.Domain.Activity;
 
 namespace SongVault.Application.Songs.DeleteSong;
 
 public sealed class DeleteSongHandler(
-    ISongRepository songs, IReleaseRepository releases, IUnitOfWork unitOfWork, IFileStorageService storage)
+    ISongRepository songs, IReleaseRepository releases, IUnitOfWork unitOfWork, IFileStorageService storage,
+    TimeProvider clock, ActivityLog activity)
 {
     public async Task HandleAsync(Guid id, CancellationToken ct)
     {
@@ -19,6 +22,7 @@ public sealed class DeleteSongHandler(
         var keys = await songs.ListStorageKeysAsync(id, ct);    // AVANT la suppression en cascade
 
         songs.Remove(song);
+        activity.SongChanged(ActivityType.SongDeleted, song, clock.GetUtcNow());    // le titre reste dans le fil
         await unitOfWork.SaveChangesAsync(ct);                  // la base supprime versions et fichiers en cascade
 
         foreach (var key in keys)

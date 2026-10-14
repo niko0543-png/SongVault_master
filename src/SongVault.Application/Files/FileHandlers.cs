@@ -1,10 +1,13 @@
 ﻿using SongVault.Application.Abstractions;
+using SongVault.Application.Activity;
 using SongVault.Application.Common.Exceptions;
+using SongVault.Domain.Activity;
 
 namespace SongVault.Application.Files;
 
 public sealed class UploadSongFileHandler(
-    ISongRepository songs, IUnitOfWork unitOfWork, IFileStorageService storage, TimeProvider clock)
+    ISongRepository songs, IUnitOfWork unitOfWork, IFileStorageService storage, TimeProvider clock,
+    ActivityLog activity)
 {
     public async Task<SongFileDto> HandleAsync(UploadSongFileCommand command, CancellationToken ct)
     {
@@ -32,8 +35,10 @@ public sealed class UploadSongFileHandler(
         await storage.SaveAsync(storageKey, command.Content, ct);         // 1. fichier
         try
         {
+            var now = clock.GetUtcNow();
             var file = version.AddFile(FileNameSanitizer.Sanitize(command.FileName), storageKey,
-                rule.ContentType, command.Length, rule.FileType, clock.GetUtcNow());
+                rule.ContentType, command.Length, rule.FileType, now);
+            activity.FileChanged(ActivityType.FileAdded, song, version, file, now);
             await unitOfWork.SaveChangesAsync(ct);                        // 2. base
             return SongFileDto.From(file);
         }
@@ -62,13 +67,16 @@ public sealed class DownloadSongFileHandler(ISongRepository songs, IFileStorageS
     }
 }
 
-public sealed class DeleteSongFileHandler(ISongRepository songs, IUnitOfWork unitOfWork, IFileStorageService storage)
+public sealed class DeleteSongFileHandler(
+    ISongRepository songs, IUnitOfWork unitOfWork, IFileStorageService storage, TimeProvider clock,
+    ActivityLog activity)
 {
     public async Task HandleAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct)
     {
         var song = await songs.GetWithVersionAsync(songId, versionId, ct) ?? throw new NotFoundException("Song", songId);
         var version = song.FindVersion(versionId) ?? throw new NotFoundException("SongVersion", versionId);
         var file = version.RemoveFile(fileId) ?? throw new NotFoundException("SongFile", fileId);
+        activity.FileChanged(ActivityType.FileRemoved, song, version, file, clock.GetUtcNow());
 
         await unitOfWork.SaveChangesAsync(ct);                       // 1. base
         await storage.DeleteAsync(file.StorageKey, CancellationToken.None);  // 2. fichier

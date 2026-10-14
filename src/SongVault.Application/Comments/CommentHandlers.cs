@@ -4,6 +4,8 @@ using SongVault.Domain.Bands;
 using SongVault.Domain.Comments;
 using SongVault.Domain.Common;
 using SongVault.Domain.Files;
+using SongVault.Application.Activity;
+using SongVault.Application.Files;
 
 namespace SongVault.Application.Comments;
 
@@ -29,28 +31,35 @@ public sealed class ListCommentsHandler(ISongRepository songs, ICommentRepositor
 
 public sealed class CreateCommentHandler(
     ISongRepository songs, ICommentRepository comments, IUnitOfWork unitOfWork,
-    IBandContext band, ICurrentUser user, TimeProvider clock)
+    IBandContext band, ICurrentUser user, TimeProvider clock, ActivityLog activity)
 {
     public async Task<CommentDto> HandleAsync(CreateCommentCommand command, CancellationToken ct)
     {
-        await songs.RequireAudioFileAsync(command.SongId, command.VersionId, command.FileId, ct);
+        var file = await songs.RequireAudioFileAsync(command.SongId, command.VersionId, command.FileId, ct);
 
+        var now = clock.GetUtcNow();
         var comment = Comment.Start(band.RequiredBandId, command.FileId, user.UserId,
-            command.PositionMs, command.Body, clock.GetUtcNow());
+            command.PositionMs, command.Body, now);
         comments.Add(comment);
+        activity.Commented(file, comment, now);
         await unitOfWork.SaveChangesAsync(ct);
         return CommentDto.From(comment, user.Email);
     }
 }
 
 public sealed class ReplyToCommentHandler(
-    ICommentRepository comments, IUnitOfWork unitOfWork, ICurrentUser user, TimeProvider clock)
+    ISongRepository songs, ICommentRepository comments, IUnitOfWork unitOfWork, ICurrentUser user,
+    TimeProvider clock, ActivityLog activity)
 {
-    public async Task<CommentDto> HandleAsync(Guid fileId, Guid commentId, string body, CancellationToken ct)
+    public async Task<CommentDto> HandleAsync(
+        Guid songId, Guid versionId, Guid fileId, Guid commentId, string body, CancellationToken ct)
     {
+        var file = await songs.RequireAudioFileAsync(songId, versionId, fileId, ct);
         var parent = await comments.GetRequiredAsync(fileId, commentId, ct);
-        var reply = parent.Reply(user.UserId, body, clock.GetUtcNow());     // réponse à une réponse : 422
+        var now = clock.GetUtcNow();
+        var reply = parent.Reply(user.UserId, body, now);                   // réponse à une réponse : 422
         comments.Add(reply);
+        activity.Commented(file, reply, now);
         await unitOfWork.SaveChangesAsync(ct);
         return CommentDto.From(reply, user.Email);
     }
@@ -107,13 +116,14 @@ public sealed class ResolveCommentHandler(
 internal static class CommentLookups
 {
     /// <summary>404 si le fichier n'est pas dans cette version, ce morceau et le groupe actif ; 422 s'il n'est pas audio.</summary>
-    public static async Task RequireAudioFileAsync(
-        this ISongRepository songs, Guid songId, Guid versionId, Guid fileId, CancellationToken ct)
+    public static async Task<SongFileLabel> RequireAudioFileAsync(
+         this ISongRepository songs, Guid songId, Guid versionId, Guid fileId, CancellationToken ct)
     {
-        var type = await songs.GetFileTypeAsync(songId, versionId, fileId, ct)
+        var file = await songs.GetFileLabelAsync(songId, versionId, fileId, ct)
                    ?? throw new NotFoundException("SongFile", fileId);
-        if (type != SongFileType.Audio)
+        if (file.FileType != SongFileType.Audio)
             throw new DomainException("Seuls les fichiers audio se commentent.");
+        return file;
     }
 
     public static async Task<Comment> GetRequiredAsync(

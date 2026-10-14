@@ -18,8 +18,8 @@ public interface ISongRepository
     Task<IReadOnlyList<SongVersionSummaryDto>> ListVersionsAsync(Guid songId, CancellationToken ct);
     Task<SongVersionDto?> GetVersionAsync(Guid songId, Guid versionId, CancellationToken ct);
     Task<StoredFileInfo?> GetFileAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct);
-    /// <summary>Type du fichier s'il est dans cette version de ce morceau du groupe actif ; sinon null (#8).</summary>
-    Task<SongFileType?> GetFileTypeAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct);
+    /// <summary>Le fichier, son morceau et sa version, s'il est dans cette version de ce morceau du groupe actif ; sinon null (#8, #11).</summary>
+    Task<SongFileLabel?> GetFileLabelAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct);
     Task<IReadOnlyList<string>> ListStorageKeysAsync(Guid songId, CancellationToken ct);
     /// <summary>Pour chaque version trouvée dans le groupe actif, l'identifiant de son morceau (#10). Les autres sont absentes.</summary>
     Task<IReadOnlyDictionary<Guid, Guid>> GetVersionSongIdsAsync(IReadOnlyCollection<Guid> versionIds, CancellationToken ct);
