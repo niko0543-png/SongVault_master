@@ -20,3 +20,4 @@ l'ancien, qui passe au statut « remplacé par ADR NNNN ».
 | [0012](0012-stockage-objet-et-hebergement.md) | Stockage objet Azure Blob, envoi direct par URL signée, hébergement Azure en France | accepté |
 | [0013](0013-sauvegardes-et-reprise.md) | Sauvegardes et reprise : services natifs d'Azure, verrous et exercice trimestriel | accepté |
 | [0014](0014-commentaires-horodates.md) | Commentaires horodatés : agrégat à part, ouverts aux Guests, gardés sans auteur | accepté |
+| [0015](0015-differences-entre-versions.md) | Différences entre versions calculées dans le navigateur, sans dépendance | accepté |
