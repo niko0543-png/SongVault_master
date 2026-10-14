@@ -5,6 +5,7 @@ import { versionsApi } from '../api/versionsApi'
 import type { SongVersion, SongVersionSummary } from '../types'
 import { defaultPair, firstAudio, parseVersionNumber } from '../compare'
 import StatusBadge from '../components/StatusBadge.vue'
+import VersionDiff from '../components/VersionDiff.vue'
 import { songsApi } from '@/features/songs/api/songsApi'
 import { usePlayerStore } from '@/features/player/stores/playerStore'
 import { toTrack, type Track } from '@/features/player/track'
@@ -127,24 +128,15 @@ async function listen(side: Side) {
           </select>
 
           <template v-if="sides[side]">
-            <p><StatusBadge :status="sides[side]!.status" /></p>
-            <p>
-              <strong>BPM :</strong> {{ sides[side]!.bpm ?? '—' }}
-              · <strong>Tonalité :</strong> {{ sides[side]!.key ?? '—' }}
-            </p>
+                        <p><StatusBadge :status="sides[side]!.status" /></p>
             <p class="muted"><small>Créée le {{ formatDate(sides[side]!.createdAt) }}</small></p>
-            <h3>Notes</h3>
-            <p class="pre">{{ sides[side]!.notes ?? '—' }}</p>
-            <h3>Paroles</h3>
-            <p class="pre">{{ sides[side]!.lyrics ?? '—' }}</p>   <!-- interpolation + pre-wrap, jamais v-html -->
-            <h3>Fichiers</h3>
-            <ul>
-              <li v-for="f in sides[side]!.files" :key="f.id">{{ f.originalFileName }}</li>
-            </ul>
             <p v-if="!firstAudio(sides[side]!.files)" class="muted">Aucun fichier audio.</p>
           </template>
         </article>
       </div>
+
+      <!-- Notes, paroles et fichiers ne sont plus affichés deux fois : seulement leurs différences (#9) -->
+      <VersionDiff v-if="sides.a && sides.b" :a="sides.a" :b="sides.b" class="card diff-card" />
     </template>
   </section>
 </template>
@@ -154,4 +146,5 @@ async function listen(side: Side) {
 .columns { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 .column { display: grid; gap: .5rem; align-content: start; }
 @media (max-width: 700px) { .columns { grid-template-columns: 1fr; } }
+.diff-card { margin-top: 1rem; }
 </style>
