@@ -28,6 +28,10 @@ mono_crash.*
 [Dd]ebugPublic/
 [Rr]elease/
 [Rr]eleases/
+# … sauf les dossiers de code des sorties (#10) : ce ne sont pas des sorties de build
+!src/**/[Rr]eleases/
+!tests/**/[Rr]eleases/
+!web/songvault-web/src/features/releases/
 x64/
 x86/
 [Ww][Ii][Nn]32/
