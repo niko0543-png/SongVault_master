@@ -91,6 +91,9 @@ docker compose down -v       # supprime aussi la base et les fichiers
 - **Commentaires horodatés** sur les fichiers audio (« à 1:42, la basse décale ») : un clic
   sur l'horodatage lance la lecture à cet instant ; réponses, résolution des fils. Les invités
   peuvent commenter.
+- **Sorties** : singles, EP et albums avec leur pochette et leurs pistes dans l'ordre, chaque
+  piste dans la version choisie. Un morceau peut figurer sur plusieurs sorties ; les pistes se
+  réordonnent à la souris ou au clavier.
 - **Recherche et filtres** synchronisés avec l'URL.
 - **Comptes utilisateurs et groupes** : chaque morceau appartient à un groupe, un utilisateur peut être membre de plusieurs groupes et ne voit que les leurs. 
   Trois rôles par groupe : propriétaire (gère les membres), membre (crée et modifie), invité (lit et écoute).
@@ -251,6 +254,10 @@ Le contrat OpenAPI est généré depuis le code et ses commentaires XML. En dév
 | `POST` | `…/comments/{commentId}/replies` | Répondre à un fil (Guest compris) |
 | `PUT` `DELETE` | `…/comments/{commentId}` | Modifier (auteur), supprimer (auteur ou Owner) un commentaire |
 | `POST` `DELETE` | `…/comments/{commentId}/resolve` | Résoudre, rouvrir un fil (auteur du fil, Member ou Owner) |
+| `GET `POST` | /api/bands/{bandId}/releases | Sorties du groupe, créer une sortie |
+| `GET` PUT` `DELETE` | /api/bands/{bandId}/releases/{id} | Lire (avec les pistes), modifier, supprimer une sortie |
+| `PUT` | …/releases/{id}/tracks | Remplacer toutes les pistes, dans l'ordre envoyé |
+| `GET` `PUT` `DELETE` | …/releases/{id}/cover | Lire, envoyer (JPEG, PNG, WebP, 5 Mo), retirer la pochette |
 | `GET` | `/api/files/policy` | Extensions acceptées et taille maximale |
 
 Sous /api/bands/{bandId}, les lectures sont ouvertes à tout membre du groupe et les écritures demandent au moins le rôle Member, 
@@ -258,7 +265,7 @@ sauf mention contraire ([ADR 0008](docs/adr/0008-roles-dans-le-groupe.md)).
 Les erreurs suivent la RFC 9457 (application/problem+json) : 400 validation, 401 non
 connecté, 403 rôle insuffisant dans le groupe (ou invitation destinée à une autre adresse),
 404 introuvable (ou groupe dont on n'est pas membre), 409 conflit de concurrence ou dernier
-propriétaire du groupe, 410 invitation déjà utilisée, annulée ou expirée, 413 fichier trop
+propriétaire du groupe ou morceau présent sur une sortie, 410 invitation déjà utilisée, annulée ou expirée, 413 fichier trop
 volumineux, 422 règle métier, 429 trop de requêtes.
 ---
 

@@ -5,6 +5,7 @@ using SongVault.Application.Songs.UpdateSong;
 using SongVault.Application.Tests.Fakes;
 using SongVault.Domain.Common;
 using SongVault.Domain.Songs;
+using SongVault.Domain.Releases;
 
 namespace SongVault.Application.Tests.Songs;
 
@@ -15,6 +16,7 @@ public sealed class SongCrudHandlersTests
     private readonly FakeUnitOfWork _uow = new();
     private readonly FixedTimeProvider _clock = new(Now.AddHours(1));
     private readonly FakeFileStorageService _storage = new();
+    private readonly FakeReleaseRepository _releases = new();
 
     private Song ExistingSong()
     {
@@ -61,17 +63,35 @@ public sealed class SongCrudHandlersTests
     {
         var song = ExistingSong();
 
-        await new DeleteSongHandler(_songs, _uow, _storage).HandleAsync(song.Id, CancellationToken.None);
+        await new DeleteSongHandler(_songs, _releases, _uow, _storage).HandleAsync(song.Id, CancellationToken.None);
 
         Assert.Empty(_songs.Songs);
         Assert.Equal(1, _uow.SaveCount);
     }
 
     [Fact]
+    public async Task Delete_refuse_un_morceau_present_sur_une_sortie()
+    {
+        var song = ExistingSong();
+        var version = song.AddVersion("v1", SongVersionStatus.Final, null, null, Now);
+        var release = Release.Create(song.BandId, "Nuits blanches", ReleaseType.EP, null, Now);
+        release.SetTracks([new(song.Id, version.Id)], Now);
+        _releases.Releases.Add(release);
+
+        var error = await Assert.ThrowsAsync<ConflictException>(
+            () => new DeleteSongHandler(_songs, _releases, _uow, _storage).HandleAsync(song.Id, CancellationToken.None));
+
+        Assert.Contains("« Nuits blanches »", error.Message);
+        Assert.Single(_songs.Songs);
+        Assert.Equal(0, _uow.SaveCount);
+    }
+
+
+    [Fact]
     public async Task Delete_morceau_absent_leve_NotFound()
     {
         await Assert.ThrowsAsync<NotFoundException>(
-            () => new DeleteSongHandler(_songs, _uow, _storage).HandleAsync(Guid.NewGuid(), CancellationToken.None));
+            () => new DeleteSongHandler(_songs, _releases, _uow, _storage).HandleAsync(Guid.NewGuid(), CancellationToken.None));
     }
 
     [Theory]

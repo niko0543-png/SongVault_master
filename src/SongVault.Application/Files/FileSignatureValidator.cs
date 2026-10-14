@@ -16,6 +16,10 @@ public static class FileSignatureValidator
         ".gpx" => header.StartsWith("BCFZ"u8) || header.StartsWith("BCFS"u8),
         ".gp5" => header.Length > 1 && header[1..].StartsWith("FICHIER GUITAR PRO"u8),
         ".txt" => header.Length > 0 && !header.Contains((byte)0),
+        // Pochettes des sorties (#10)
+        ".jpg" or ".jpeg" => header.StartsWith((ReadOnlySpan<byte>)[0xFF, 0xD8, 0xFF]),
+        ".png" => header.StartsWith((ReadOnlySpan<byte>)[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]),
+        ".webp" => header.Length >= 12 && header.StartsWith("RIFF"u8) && header.Slice(8, 4).SequenceEqual("WEBP"u8),
         _ => false,                                   // extension inconnue : refus par défaut
     };
 

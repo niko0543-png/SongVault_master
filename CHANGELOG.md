@@ -25,13 +25,15 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) — versions :
 - `scripts/undelete-files-azure.ps1` et `scripts/restore-drill-azure.ps1` (exercice de restauration chronométré) ; rappel trimestriel par le workflow `restore-drill` ; runbook `docs/runbook-sauvegardes.md`.
 - Commentaires horodatés sur les fichiers audio : réponses, résolution, lecture à la position d'un clic ; ouverts aux invités (ADR 0014).
 - Différences entre deux versions dans l'écran de comparaison : paroles et notes ligne à ligne, champs et fichiers modifiés, navigation au clavier (ADR 0015).
+- Sorties (single, EP, album) avec pochette et pistes ordonnées, chaque piste dans la version choisie ; un morceau sur plusieurs sorties (ADR 0016).
 ### Modifié
 - Routes de l'API sous `/api/bands/{bandId}/songs…` et du front sous `/b/{bandId}/songs…`.
 - Renommer un groupe est réservé à ses Owner.
 - La connexion exige une adresse confirmée ; les comptes existants sont marqués confirmés par la migration `ConfirmExistingEmails`.
 - L'inscription ne connecte plus directement : elle mène à « Vérifiez votre boîte mail ».
 - Le lien de réinitialisation du mot de passe s'ouvre aussi depuis un navigateur déjà connecté.
-- `scripts/purge-orphan-files.ps1` tient compte des archives d'export.
+- `scripts/purge-orphan-files.ps1` tient compte des archives d'export, puis des pochettes des sorties.
+- Un morceau présent sur une sortie ne se supprime plus : l'API répond 409 avec le nom des sorties.
 - Taille maximale d'un fichier envoyé depuis l'application : 2 Go au lieu de 50 Mo. L'envoi multipart `POST …/files` garde sa limite de 50 Mo.
 - nginx est configuré par variables (`API_UPSTREAM`, `STORAGE_ORIGIN`) et transmet `X-Forwarded-Host`.
 ### Supprimé

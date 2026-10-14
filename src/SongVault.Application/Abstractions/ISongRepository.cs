@@ -21,4 +21,6 @@ public interface ISongRepository
     /// <summary>Type du fichier s'il est dans cette version de ce morceau du groupe actif ; sinon null (#8).</summary>
     Task<SongFileType?> GetFileTypeAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct);
     Task<IReadOnlyList<string>> ListStorageKeysAsync(Guid songId, CancellationToken ct);
+    /// <summary>Pour chaque version trouvée dans le groupe actif, l'identifiant de son morceau (#10). Les autres sont absentes.</summary>
+    Task<IReadOnlyDictionary<Guid, Guid>> GetVersionSongIdsAsync(IReadOnlyCollection<Guid> versionIds, CancellationToken ct);
 }

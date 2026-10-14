@@ -123,6 +123,19 @@ const router = createRouter({
       meta: { title: 'Détail du morceau' },
     },
     {
+      path: '/b/:bandId/releases',
+      name: 'releases',
+      component: () => import('@/features/releases/pages/ReleaseListPage.vue'),
+      meta: { title: 'Sorties' },
+    },
+    {
+      path: '/b/:bandId/releases/:releaseId',
+      name: 'release-detail',
+      component: () => import('@/features/releases/pages/ReleaseDetailPage.vue'),
+      props: true,
+      meta: { title: 'Sortie' },
+    },
+    {
       path: '/b/:bandId/members',
       name: 'band-members',
       component: () => import('@/features/bands/pages/MembersPage.vue'),

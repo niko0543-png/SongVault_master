@@ -21,6 +21,10 @@ public sealed class FileSignatureValidatorTests
     { ".gp5",  Bytes("\u0018FICHIER GUITAR PRO v5.00") },
     { ".txt",  Bytes("Couplet 1\nRefrain") },
     { ".MP3",  Bytes("ID3\u0003") },
+    { ".jpg",  [0xFF, 0xD8, 0xFF, 0xE0] },                          // pochettes (#10)
+    { ".jpeg", [0xFF, 0xD8, 0xFF, 0xE1] },
+    { ".png",  [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A] },
+    { ".webp", Bytes("RIFF$\u0008\u0000\u0000WEBPVP8 ") },
 };
 
     public static TheoryData<string, byte[]> Invalides => new()
@@ -32,6 +36,8 @@ public sealed class FileSignatureValidatorTests
     { ".txt",  [0x4D, 0x5A, 0x00, 0x00] },                          // octets nuls : binaire
     { ".mp3",  [] },
     { ".exe",  Bytes("MZ") },
+    { ".png",  [0xFF, 0xD8, 0xFF, 0xE0] },                          // vrai JPEG, mauvaise extension
+    { ".webp", Bytes("RIFF$\u0008\u0000\u0000WAVEfmt ") },  // RIFF mais pas WEBP
 };
 
     [Theory, MemberData(nameof(Valides))]

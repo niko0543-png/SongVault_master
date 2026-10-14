@@ -38,6 +38,7 @@ public static class DependencyInjection
         services.AddScoped<IAccountRepository, AccountRepository>();
         services.AddScoped<IFileUploadRepository, FileUploadRepository>();
         services.AddScoped<ICommentRepository, CommentRepository>();
+        services.AddScoped<IReleaseRepository, ReleaseRepository>();
 
         services.AddOptions<FileStorageOptions>()
          .Bind(configuration.GetSection(FileStorageOptions.SectionName))

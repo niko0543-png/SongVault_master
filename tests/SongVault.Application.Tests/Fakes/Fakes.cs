@@ -7,6 +7,8 @@ using SongVault.Application.Versions;
 using SongVault.Domain.Bands;
 using SongVault.Domain.Songs;
 using SongVault.Domain.Files;
+using SongVault.Application.Releases;
+using SongVault.Domain.Releases;
 
 namespace SongVault.Application.Tests.Fakes;
 
@@ -98,6 +100,58 @@ internal sealed class FakeSongRepository : ISongRepository
             .Select(f => f.StorageKey)];
         return Task.FromResult(keys);
     }
+
+    public Task<IReadOnlyDictionary<Guid, Guid>> GetVersionSongIdsAsync(IReadOnlyCollection<Guid> versionIds, CancellationToken ct)
+    {
+        IReadOnlyDictionary<Guid, Guid> result = Songs.SelectMany(s => s.Versions)
+            .Where(v => versionIds.Contains(v.Id))
+            .ToDictionary(v => v.Id, v => v.SongId);
+        return Task.FromResult(result);
+    }
+}
+
+/// <summary>Sorties en mémoire ; les titres et versions des pistes viennent du FakeSongRepository donné.</summary>
+internal sealed class FakeReleaseRepository(FakeSongRepository? songs = null) : IReleaseRepository
+{
+    public List<Release> Releases { get; } = [];
+
+    public void Add(Release release) => Releases.Add(release);
+
+    public void Remove(Release release) => Releases.Remove(release);
+
+    public Task<Release?> GetAsync(Guid releaseId, CancellationToken ct)
+        => Task.FromResult(Releases.SingleOrDefault(r => r.Id == releaseId));
+
+    public Task<IReadOnlyList<ReleaseSummaryDto>> ListAsync(CancellationToken ct)
+    {
+        IReadOnlyList<ReleaseSummaryDto> result = [.. Releases
+            .OrderBy(r => r.ReleaseDate is null ? 0 : 1).ThenByDescending(r => r.ReleaseDate).ThenByDescending(r => r.CreatedAt)
+            .Select(r => new ReleaseSummaryDto(r.Id, r.Title, r.Type, r.ReleaseDate, r.CoverStorageKey is not null, r.Tracks.Count))];
+        return Task.FromResult(result);
+    }
+
+    public Task<ReleaseDto?> GetDetailAsync(Guid releaseId, CancellationToken ct)
+    {
+        var r = Releases.SingleOrDefault(x => x.Id == releaseId);
+        if (r is null) return Task.FromResult<ReleaseDto?>(null);
+
+        var tracks = r.Tracks.Select(t =>
+        {
+            var song = songs?.Songs.SingleOrDefault(s => s.Id == t.SongId);
+            return new ReleaseTrackDto(t.TrackNumber, t.SongId, song?.Title ?? "", t.VersionId,
+                [.. (song?.Versions ?? []).OrderBy(v => v.Number)
+                    .Select(v => new ReleaseVersionOptionDto(v.Id, v.Number, v.Title, v.Status))]);
+        });
+        return Task.FromResult<ReleaseDto?>(new ReleaseDto(r.Id, r.Title, r.Type, r.ReleaseDate,
+            r.CoverStorageKey is not null, r.CreatedAt, r.UpdatedAt, [.. tracks]));
+    }
+
+    public Task<IReadOnlyList<string>> ListTitlesWithSongAsync(Guid songId, CancellationToken ct)
+    {
+        IReadOnlyList<string> titles = [.. Releases.Where(r => r.Tracks.Any(t => t.SongId == songId))
+            .Select(r => r.Title).Order()];
+        return Task.FromResult(titles);
+    }
 }
 
 /// <summary>Unité de travail factice : compte les enregistrements et peut simuler des conflits.</summary>
@@ -106,6 +160,15 @@ internal sealed class FakeUnitOfWork : IUnitOfWork
     public int SaveCount { get; private set; }
     public int DiscardCount { get; private set; }
     public int FailuresToSimulate { get; set; }
+
+    public int TransactionCount { get; private set; }
+
+    /// <summary>Pas de vraie transaction en mémoire : compte l'appel et exécute work.</summary>
+    public Task ExecuteInTransactionAsync(Func<CancellationToken, Task> work, CancellationToken ct)
+    {
+        TransactionCount++;
+        return work(ct);
+    }
 
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
