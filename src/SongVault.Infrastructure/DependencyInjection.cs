@@ -9,6 +9,8 @@ using SongVault.Infrastructure.Persistence;
 using SongVault.Infrastructure.Persistence.Repositories;
 using SongVault.Infrastructure.Storage;
 using Microsoft.Extensions.Options;
+using SongVault.Application.Notifications;
+using SongVault.Infrastructure.Notifications;
 
 namespace SongVault.Infrastructure;
 
@@ -91,6 +93,18 @@ public static class DependencyInjection
         services.AddScoped<IBackgroundJobs, BackgroundJobScheduler>();
         services.AddSingleton<BackgroundJobRunner>();
         services.AddHostedService<BackgroundJobWorker>();
+
+        // #12 : notifications par e-mail, préparées en arrière-plan (ADR 0018)
+        services.AddOptions<NotificationOptions>()
+            .Bind(configuration.GetSection(NotificationOptions.SectionName))
+            .Validate(o => o.DispatchInterval > TimeSpan.Zero, "Notifications:DispatchInterval doit être positif.")
+            .Validate(o => o.BatchSize >= 1, "Notifications:BatchSize doit valoir au moins 1.")
+            .Validate(o => o.DigestHour is >= 0 and <= 23, "Notifications:DigestHour va de 0 à 23.")
+            .Validate(o => TimeZoneInfo.TryFindSystemTimeZoneById(o.DigestTimeZone, out _),
+                "Notifications:DigestTimeZone doit être un fuseau connu (ex. Europe/Paris).")
+            .ValidateOnStart();
+        services.AddSingleton<IUnsubscribeTokens, UnsubscribeTokens>();
+        services.AddHostedService<NotificationWorker>();
 
         return services;
     }
