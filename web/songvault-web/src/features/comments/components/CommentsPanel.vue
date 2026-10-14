@@ -138,8 +138,11 @@ async function onDelete(comment: Comment) {
 <template>
   <form class="new-comment" novalidate @submit.prevent="onCreate">
     <label for="comment-body">Nouveau commentaire</label>
-    <textarea id="comment-body" ref="body-input" v-model="draft.body" rows="2" :maxlength="COMMENT_BODY_MAX"
-              placeholder="ex. la basse décale au refrain" />
+     <textarea id="comment-body" ref="body-input" v-model="draft.body" rows="2" :maxlength="COMMENT_BODY_MAX"
+              placeholder="ex. la basse décale au refrain" aria-describedby="comment-mention-help" />
+    <small id="comment-mention-help" class="muted">
+      Pour prévenir un membre par e-mail, écrivez @ suivi de son adresse (ex. @ana@exemple.fr).
+    </small>
     <div class="new-comment-bar">
       <button v-if="draft.position === null" type="button" class="secondary" :disabled="!isPlayingThisFile"
               data-testid="capture-position" @click="capturePosition">
