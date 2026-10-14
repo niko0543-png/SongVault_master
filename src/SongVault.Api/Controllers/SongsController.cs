@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-
+using SongVault.Application.Activity;
 using SongVault.Api.Auth;
 using SongVault.Api.Contracts.Common;
 using SongVault.Api.Contracts.Songs;
@@ -9,6 +9,7 @@ using SongVault.Application.Songs.DeleteSong;
 using SongVault.Application.Songs.GetSong;
 using SongVault.Application.Songs.ListSongs;
 using SongVault.Application.Songs.UpdateSong;
+using SongVault.Domain.Bands;
 
 namespace SongVault.Api.Controllers;
 
@@ -46,6 +47,21 @@ public sealed class SongsController : ControllerBase
     public async Task<ActionResult<SongResponse>> GetById(
         Guid id, [FromServices] GetSongHandler handler, CancellationToken ct)
         => Ok(SongResponse.From(await handler.HandleAsync(id, ct)));
+
+    /// <summary>Note que vous venez d'ouvrir le morceau : son badge disparaît de votre liste (#11).</summary>
+    /// <param name="id">Identifiant du morceau.</param>
+    /// <response code="204">Ouverture notée.</response>
+    /// <response code="404">Morceau introuvable.</response>
+    [HttpPost("{id:guid}/seen")]
+    [MinimumBandRole(BandRole.Guest)]                   // un Guest a aussi ses badges
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> MarkSeen(Guid id, [FromServices] MarkSongSeenHandler handler, CancellationToken ct)
+    {
+        await handler.HandleAsync(id, ct);
+        return NoContent();
+    }
+
 
     /// <summary>Crée un morceau dans le groupe actif.</summary>
     /// <response code="201">Morceau créé ; l'en-tête Location pointe vers sa ressource.</response>
