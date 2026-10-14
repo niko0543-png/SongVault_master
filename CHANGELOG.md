@@ -24,6 +24,7 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) — versions :
 - Sauvegardes sur Azure : restauration de la base à un instant donné sur 7 jours, fichiers supprimés récupérables 14 jours, verrous contre la suppression de la base et du stockage (ADR 0013).
 - `scripts/undelete-files-azure.ps1` et `scripts/restore-drill-azure.ps1` (exercice de restauration chronométré) ; rappel trimestriel par le workflow `restore-drill` ; runbook `docs/runbook-sauvegardes.md`.
 - Commentaires horodatés sur les fichiers audio : réponses, résolution, lecture à la position d'un clic ; ouverts aux invités (ADR 0014).
+- Différences entre deux versions dans l'écran de comparaison : paroles et notes ligne à ligne, champs et fichiers modifiés, navigation au clavier (ADR 0015).
 ### Modifié
 - Routes de l'API sous `/api/bands/{bandId}/songs…` et du front sous `/b/{bandId}/songs…`.
 - Renommer un groupe est réservé à ses Owner.
