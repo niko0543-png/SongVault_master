@@ -86,6 +86,9 @@ public static class DependencyInjection
         services.AddScoped<NotificationDispatcher>();
         services.AddScoped<IBackgroundJobHandler, SendNotificationJob>();
         services.AddScoped<IBackgroundJobHandler, NotificationDigestJob>();
+        services.AddScoped<GetNotificationPreferencesHandler>();
+        services.AddScoped<UpdateNotificationPreferencesHandler>();
+        services.AddScoped<UnsubscribeHandler>();
 
         return services;
     }

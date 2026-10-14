@@ -35,9 +35,7 @@ internal sealed class NotificationRepository(SongVaultDbContext db) : INotificat
 
     public async Task<IReadOnlyList<NotificationEvent>> GetEventsAsync(
         IReadOnlyCollection<long> eventIds, CancellationToken ct)
-        => await Events(db.ActivityEvents.Where(e => eventIds.Contains(e.Id)))
-            .OrderBy(e => e.Id)
-            .ToListAsync(ct);
+     => await Events(db.ActivityEvents.Where(e => eventIds.Contains(e.Id))).ToListAsync(ct);
 
     public async Task<IReadOnlyList<NotificationRecipient>> ListMembersAsync(Guid bandId, CancellationToken ct)
         => await (from m in db.BandMemberships.AsNoTracking()
@@ -84,6 +82,7 @@ internal sealed class NotificationRepository(SongVaultDbContext db) : INotificat
     private IQueryable<NotificationEvent> Events(IQueryable<ActivityEvent> events)
         => from e in events.AsNoTracking()
            join b in db.Bands on e.BandId equals b.Id
+           orderby e.Id
            select new NotificationEvent(
                e.Id, e.BandId, b.Name, e.Type, e.ActorId,
                db.Users.Where(u => u.Id == e.ActorId).Select(u => u.Email).FirstOrDefault(),
