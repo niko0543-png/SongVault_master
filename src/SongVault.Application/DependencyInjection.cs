@@ -11,6 +11,7 @@ using SongVault.Application.Versions;
 using SongVault.Application.Abstractions;
 using SongVault.Application.Accounts;
 using SongVault.Application.Comments;
+using SongVault.Application.Releases;
 
 namespace SongVault.Application;
 
@@ -65,6 +66,16 @@ public static class DependencyInjection
         services.AddScoped<EditCommentHandler>();
         services.AddScoped<DeleteCommentHandler>();
         services.AddScoped<ResolveCommentHandler>();
+        // #10 : sorties (ADR 0016)
+        services.AddScoped<ListReleasesHandler>();
+        services.AddScoped<GetReleaseHandler>();
+        services.AddScoped<CreateReleaseHandler>();
+        services.AddScoped<UpdateReleaseHandler>();
+        services.AddScoped<DeleteReleaseHandler>();
+        services.AddScoped<SetReleaseTracksHandler>();
+        services.AddScoped<UploadReleaseCoverHandler>();
+        services.AddScoped<DownloadReleaseCoverHandler>();
+        services.AddScoped<DeleteReleaseCoverHandler>();
 
         return services;
     }
