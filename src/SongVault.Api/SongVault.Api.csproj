@@ -31,4 +31,8 @@
     <ProjectReference Include="..\SongVault.Infrastructure\SongVault.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Contracts\Releases\" />
+  </ItemGroup>
+
 </Project>

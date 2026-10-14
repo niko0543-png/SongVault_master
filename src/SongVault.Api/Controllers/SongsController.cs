@@ -88,9 +88,11 @@ public sealed class SongsController : ControllerBase
     /// <param name="id">Identifiant du morceau.</param>
     /// <response code="204">Morceau supprimé.</response>
     /// <response code="404">Morceau introuvable.</response>
+    /// <response code="409">Le morceau figure sur une sortie ; le retirer de la sortie d'abord.</response>
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Delete(Guid id, [FromServices] DeleteSongHandler handler, CancellationToken ct)
     {
         await handler.HandleAsync(id, ct);
