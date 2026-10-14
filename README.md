@@ -86,7 +86,8 @@ docker compose down -v       # supprime aussi la base et les fichiers
   progression ; extension, taille et **signature binaire** vérifiées à la confirmation.
 - **Lecteur audio global** qui reste actif d'une page à l'autre, avec déplacement dans le
   morceau (requêtes HTTP `Range`) et raccourci clavier lecture/pause.
-- **Comparaison A/B** de deux versions d'un même morceau, avec une URL partageable.
+- **Comparaison A/B** de deux versions d'un même morceau, avec une URL partageable, et leurs
+  différences : lignes ajoutées et supprimées des paroles et des notes, champs et fichiers modifiés.
 - **Commentaires horodatés** sur les fichiers audio (« à 1:42, la basse décale ») : un clic
   sur l'horodatage lance la lecture à cet instant ; réponses, résolution des fils. Les invités
   peuvent commenter.
