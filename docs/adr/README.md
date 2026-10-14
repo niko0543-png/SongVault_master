@@ -23,3 +23,4 @@ l'ancien, qui passe au statut « remplacé par ADR NNNN ».
 | [0015](0015-differences-entre-versions.md) | Différences entre versions calculées dans le navigateur, sans dépendance | accepté |
 | [0016](0016-sorties-et-pistes.md) | Sorties et pistes : agrégat Release, liste complète enregistrée en deux passes | accepté 
 | [0017](0017-fil-d-activite-et-badges.md) | Fil d'activité et badges : un événement par modification, écrit dans la même transaction | accepté |
+| [0018](0018-notifications-par-e-mail.md) | Notifications par e-mail : préparées en arrière-plan à partir du fil d'activité | accepté |

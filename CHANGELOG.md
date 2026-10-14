@@ -27,6 +27,7 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) — versions :
 - Différences entre deux versions dans l'écran de comparaison : paroles et notes ligne à ligne, champs et fichiers modifiés, navigation au clavier (ADR 0015).
 - Sorties (single, EP, album) avec pochette et pistes ordonnées, chaque piste dans la version choisie ; un morceau sur plusieurs sorties (ADR 0016).
 - Badges « Nouveau » et « Modifié » dans la liste des morceaux, retirés à l'ouverture, et page « Activité » du groupe avec « Voir plus » (ADR 0017).
+- Notifications par e-mail (nouvelle version, commentaire, mention) préparées en arrière-plan, tout de suite ou dans un résumé à 7 h, réglables dans « Mon compte » ; lien et en-tête de désinscription dans chaque e-mail (ADR 0018).
 ### Modifié
 - Routes de l'API sous `/api/bands/{bandId}/songs…` et du front sous `/b/{bandId}/songs…`.
 - Renommer un groupe est réservé à ses Owner.

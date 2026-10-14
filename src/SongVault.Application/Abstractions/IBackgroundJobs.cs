@@ -8,6 +8,9 @@ public interface IBackgroundJobs
     /// dans la même transaction que la donnée qui la motive.
     /// </summary>
     void Enqueue(string type, string payload, DateTimeOffset runAfter);
+
+    /// <summary>Une tâche de ce type attend son heure (Pending). Une tâche en cours ne compte pas (#12).</summary>
+    Task<bool> HasPendingAsync(string type, CancellationToken ct);
 }
 
 /// <summary>Ce que reçoit un gestionnaire : la tâche, et s'il s'agit du dernier essai.</summary>

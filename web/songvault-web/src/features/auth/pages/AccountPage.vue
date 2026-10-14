@@ -6,6 +6,7 @@ import { useAuthStore } from '../stores/authStore'
 import { registrationErrors } from '../messages'
 import SectionCard from '@/shared/components/SectionCard.vue'
 import DataExportSection from '@/features/account/components/DataExportSection.vue'
+import NotificationsSection from '@/features/notifications/components/NotificationsSection.vue'
 import DeleteAccountSection from '@/features/account/components/DeleteAccountSection.vue'
 import { useAsyncAction } from '@/shared/composables/useAsyncAction'
 import { useToast } from '@/shared/composables/useToast'
@@ -71,7 +72,8 @@ async function onSubmit() {
         <button type="submit" :disabled="isLoading">{{ isLoading ? 'Enregistrement…' : 'Changer le mot de passe' }}</button>
       </form>
     </SectionCard>
-        <DataExportSection />
+    <NotificationsSection />
+    <DataExportSection />
     <DeleteAccountSection />
   </section>
 </template>

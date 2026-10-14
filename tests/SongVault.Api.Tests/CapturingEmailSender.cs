@@ -35,6 +35,10 @@ public sealed class CapturingEmailSender : IEmailSender
         throw new TimeoutException($"Aucun e-mail reçu pour {email}.");
     }
 
+    /// <summary>E-mails envoyés à cette adresse, du plus ancien au plus récent.</summary>
+    public IReadOnlyList<EmailMessage> AllTo(string email)
+        => [.. _sent.Where(m => string.Equals(m.To, email, StringComparison.OrdinalIgnoreCase))];
+
     /// <summary>Au moins un e-mail envoyé à cette adresse.</summary>
     public bool AnyTo(string email) => _sent.Any(m => string.Equals(m.To, email, StringComparison.OrdinalIgnoreCase));
 }

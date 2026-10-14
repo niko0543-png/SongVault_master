@@ -26,6 +26,8 @@ internal sealed class ActivityEventConfiguration : IEntityTypeConfiguration<Acti
         builder.HasIndex(e => new { e.BandId, e.CreatedAt, e.Id });           // le fil, page par page
         builder.HasIndex(e => new { e.SongId, e.CreatedAt });                 // les badges de la liste
         builder.HasIndex(e => e.ActorId);                                      // purge d'un compte
+        // #12 : les événements pas encore notifiés, sans parcourir tout le fil
+        builder.HasIndex(e => e.Id).HasFilter("[NotifiedAt] IS NULL").HasDatabaseName("IX_ActivityEvents_NotNotified");
     }
 }
 

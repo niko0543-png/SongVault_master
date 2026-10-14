@@ -97,6 +97,9 @@ docker compose down -v       # supprime aussi la base et les fichiers
 - **Badges et fil d'activité** : une pastille « Nouveau » ou « Modifié » signale les morceaux
   changés par un autre membre depuis votre dernière visite ; la page « Activité » raconte qui a
   fait quoi (« ana a ajouté la v4 de Nocturne »).
+- **Notifications par e-mail** : nouvelle version, commentaire, mention (« @ » suivi de
+  l'adresse d'un membre), chacune tout de suite, dans le résumé du matin ou jamais, au choix
+  dans « Mon compte ». Chaque e-mail a son lien de désinscription.
 - **Recherche et filtres** synchronisés avec l'URL.
 - **Comptes utilisateurs et groupes** : chaque morceau appartient à un groupe, un utilisateur peut être membre de plusieurs groupes et ne voit que les leurs. 
   Trois rôles par groupe : propriétaire (gère les membres), membre (crée et modifie), invité (lit et écoute).
@@ -232,6 +235,8 @@ Le contrat OpenAPI est généré depuis le code et ses commentaires XML. En dév
 | `GET` | `/api/me/export` | État de la dernière archive (204 s'il n'y en a pas) |
 | `GET` | `/api/me/export/download` | Télécharger l'archive prête (ZIP) |
 | `POST` | `/api/me/delete` | Supprimer son compte (mot de passe demandé ; effacé à J+30) |
+| `GET` `PUT` | `/api/me/notifications` | Lire, modifier ses préférences de notification (un mode par type) |
+| `POST` | `/api/notifications/unsubscribe?token=` | Lien de désinscription d'un e-mail, sans connexion (400 si le jeton est invalide) |
 | `GET` `POST` | `/api/bands` | Mes groupes (avec mon rôle), créer un groupe |
 | `GET` `PUT` | `/api/bands/{bandId}` | Lire, renommer un groupe (renommer : Owner) |
 | `GET` | `/api/bands/{bandId}/members` | Membres du groupe et leurs rôles |

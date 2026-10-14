@@ -24,6 +24,7 @@ internal sealed class BrevoEmailSender(HttpClient http, IOptions<EmailOptions> o
                 subject = message.Subject,
                 htmlContent = message.HtmlBody,
                 textContent = message.TextBody,
+                headers = message.Headers ?? new Dictionary<string, string>(),     // List-Unsubscribe (#12)
             }),
         };
         request.Headers.Add("api-key", o.Brevo.ApiKey);

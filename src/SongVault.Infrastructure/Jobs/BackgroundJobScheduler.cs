@@ -1,5 +1,6 @@
 ﻿using SongVault.Application.Abstractions;
 using SongVault.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 namespace SongVault.Infrastructure.Jobs;
 
@@ -18,4 +19,7 @@ internal sealed class BackgroundJobScheduler(SongVaultDbContext db, TimeProvider
             RunAfter = runAfter,
         });
     }
+
+    public Task<bool> HasPendingAsync(string type, CancellationToken ct)
+    => db.BackgroundJobs.AnyAsync(j => j.Type == type && j.Status == BackgroundJobStatus.Pending, ct);
 }

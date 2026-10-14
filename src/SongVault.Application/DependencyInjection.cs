@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-
+using SongVault.Application.Notifications;
 using SongVault.Application.Abstractions;
 using SongVault.Application.Accounts;
 using SongVault.Application.Activity;
@@ -82,6 +82,13 @@ public static class DependencyInjection
         services.AddScoped<ActivityLog>();
         services.AddScoped<ListActivityHandler>();
         services.AddScoped<MarkSongSeenHandler>();
+        // #12 : notifications par e-mail (ADR 0018)
+        services.AddScoped<NotificationDispatcher>();
+        services.AddScoped<IBackgroundJobHandler, SendNotificationJob>();
+        services.AddScoped<IBackgroundJobHandler, NotificationDigestJob>();
+        services.AddScoped<GetNotificationPreferencesHandler>();
+        services.AddScoped<UpdateNotificationPreferencesHandler>();
+        services.AddScoped<UnsubscribeHandler>();
 
         return services;
     }

@@ -298,6 +298,9 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("EntityId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<DateTimeOffset?>("NotifiedAt")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<Guid>("SongId")
                         .HasColumnType("uniqueidentifier");
 
@@ -312,6 +315,10 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ActorId");
+
+                    b.HasIndex("Id")
+                        .HasDatabaseName("IX_ActivityEvents_NotNotified")
+                        .HasFilter("[NotifiedAt] IS NULL");
 
                     b.HasIndex("SongId", "CreatedAt");
 
@@ -576,6 +583,59 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                     b.HasIndex("BandId", "Email");
 
                     b.ToTable("Invitations", (string)null);
+                });
+
+            modelBuilder.Entity("SongVault.Domain.Notifications.NotificationDigestItem", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<long>("EventId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EventId");
+
+                    b.HasIndex("UserId", "Id");
+
+                    b.ToTable("NotificationDigestItems", (string)null);
+                });
+
+            modelBuilder.Entity("SongVault.Domain.Notifications.NotificationPreference", b =>
+                {
+                    b.Property<string>("UserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Kind")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Mode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("UserId", "Kind");
+
+                    b.ToTable("NotificationPreferences", (string)null);
                 });
 
             modelBuilder.Entity("SongVault.Domain.Releases.Release", b =>
@@ -939,6 +999,30 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                     b.HasOne("SongVault.Domain.Bands.Band", null)
                         .WithMany()
                         .HasForeignKey("BandId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SongVault.Domain.Notifications.NotificationDigestItem", b =>
+                {
+                    b.HasOne("SongVault.Domain.Activity.ActivityEvent", null)
+                        .WithMany()
+                        .HasForeignKey("EventId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SongVault.Domain.Notifications.NotificationPreference", b =>
+                {
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

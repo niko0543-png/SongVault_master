@@ -73,6 +73,13 @@ const router = createRouter({
       component: () => import('@/features/legal/pages/PrivacyPage.vue'),
       meta: { public: true, title: 'Politique de confidentialité' },
     },
+     {
+      // Lien des e-mails de notification (#12) : sans connexion, le jeton suffit
+      path: '/unsubscribe',
+      name: 'unsubscribe',
+      component: () => import('@/features/notifications/pages/UnsubscribePage.vue'),
+      meta: { public: true, title: 'Se désinscrire' },
+    },
         // ---- Connexion exigée, hors groupe ----
     {
       path: '/account',

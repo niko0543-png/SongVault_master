@@ -11,6 +11,7 @@ using Testcontainers.MsSql;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using SongVault.Infrastructure.Jobs;
+using SongVault.Application.Notifications;
 
 namespace SongVault.Api.Tests;
 
@@ -38,6 +39,8 @@ public sealed class SongVaultApiFactory : WebApplicationFactory<Program>, IAsync
         builder.UseSetting("App:PublicUrl", "http://localhost:8080");
         // #5 : pas de service d'arrière-plan ; les tests lancent les tâches avec RunDueJobsAsync
         builder.UseSetting("BackgroundJobs:Enabled", "false");
+        // #12 : pas de préparation automatique des notifications ; les tests appellent RunNotificationsAsync
+        builder.UseSetting("Notifications:Enabled", "false");
         builder.ConfigureTestServices(services => services.AddSingleton<IEmailSender>(Emails));
         // Masque, dans les tests uniquement, les erreurs SQL attendues du test de concurrence
         builder.UseSetting("Logging:LogLevel:Microsoft.EntityFrameworkCore.Update", "None");
@@ -103,6 +106,21 @@ public sealed class SongVaultApiFactory : WebApplicationFactory<Program>, IAsync
         var runner = services.GetRequiredService<BackgroundJobRunner>();
         while (await runner.RunNextAsync(CancellationToken.None)) { }
     }
+
+    /// <summary>
+    /// Prépare les notifications de tous les nouveaux événements (#12), puis exécute les tâches dues :
+    /// ce que ferait NotificationWorker, suivi de BackgroundJobWorker.
+    /// </summary>
+    public static async Task RunNotificationsAsync(IServiceProvider services)
+    {
+        using (var scope = services.CreateScope())
+        {
+            var dispatcher = scope.ServiceProvider.GetRequiredService<NotificationDispatcher>();
+            while (await dispatcher.RunOnceAsync(CancellationToken.None) > 0) { }
+        }
+        await RunDueJobsAsync(services);
+    }
+
 
     /// <summary>Hôte dérivé avec cette horloge (et d'éventuels services en plus). À libérer avec await using.</summary>
     public WebApplicationFactory<Program> WithClock(TimeProvider clock, Action<IServiceCollection>? services = null)

@@ -92,6 +92,20 @@ fonctionnalité qui collecte, conserve ou transmet des données personnelles.
 | Durée | Tant que le fichier commenté existe ; dans un groupe partagé, gardé sans auteur après la purge du compte |
 | Sécurité | Isolation par groupe ; seul l'auteur modifie, l'auteur ou un Owner supprime |
 
+## 8. Notifications par e-mail
+
+| | |
+|---|---|
+| Finalité | Prévenir un membre de ce qui change dans ses groupes : nouvelle version, commentaire, mention |
+| Base légale | Exécution du contrat (art. 6.1.b) ; chaque type se coupe à tout moment |
+| Personnes | Membres des groupes, Guests compris |
+| Données | Préférences par type ; éléments du résumé en attente (événement, type, date) ; adresse e-mail ; extrait du commentaire dans l'e-mail |
+| Destinataires | Le membre prévenu |
+| Sous-traitants | Brevo (envoi des e-mails) ; hébergeur |
+| Transferts hors UE | Aucun |
+| Durée | Préférences : tant que le compte existe. Éléments du résumé : jusqu'à l'envoi du résumé, au plus un jour |
+| Sécurité | Préparé hors requête ; destinataire et préférence revérifiés avant l'envoi ; lien de désinscription signé |
+
 ## Sous-traitants
 
 | Sous-traitant | Rôle | Localisation | Contrat de traitement (DPA) | État |
