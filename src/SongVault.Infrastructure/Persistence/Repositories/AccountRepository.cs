@@ -126,12 +126,20 @@ internal sealed class AccountRepository(SongVaultDbContext db, UserManager<Ident
         var keys = await songs.SelectMany(s => s.Versions).SelectMany(v => v.Files)
             .Select(f => f.StorageKey)
             .ToListAsync(ct);
+        // Sorties de ces groupes (#10) : leurs pochettes, puis les sorties avant les morceaux que citent leurs pistes
+        var releases = db.Releases.IgnoreQueryFilters([SongVaultDbContext.BandFilter])
+            .Where(r => soloBandIds.Contains(r.BandId));
+        keys.AddRange(await releases
+            .Where(r => r.CoverStorageKey != null)
+            .Select(r => r.CoverStorageKey!)
+            .ToListAsync(ct));
         keys.AddRange(await db.DataExports
             .Where(e => e.UserId == userId && e.StorageKey != null)
             .Select(e => e.StorageKey!)
             .ToListAsync(ct));
 
         var email = (user.Email ?? "").ToLowerInvariant();     // Invitations.Email est en minuscules
+        await releases.ExecuteDeleteAsync(ct);                 // pistes en cascade
         await songs.ExecuteDeleteAsync(ct);
         await db.Bands.Where(b => soloBandIds.Contains(b.Id)).ExecuteDeleteAsync(ct);
         await db.Invitations.Where(i => i.Email == email).ExecuteDeleteAsync(ct);

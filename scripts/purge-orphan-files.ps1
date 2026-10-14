@@ -1,5 +1,5 @@
 <#
-.SYNOPSIS  Supprime du volume songvault-files les fichiers qu'aucune ligne de SongFiles ni de DataExports ne référence.
+.SYNOPSIS  Supprime du volume songvault-files les fichiers qu'aucune ligne de SongFiles ni de DataExports ni de Releases (pochettes) ne référence.
 .EXAMPLE   .\scripts\purge-orphan-files.ps1
 #>
 $ErrorActionPreference = 'Stop'

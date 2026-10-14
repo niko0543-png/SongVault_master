@@ -103,4 +103,10 @@ internal sealed class SongRepository(SongVaultDbContext db, IBandContext bandCon
             .SelectMany(v => v.Files)
             .Select(f => f.StorageKey)
             .ToListAsync(ct);
+
+    public async Task<IReadOnlyDictionary<Guid, Guid>> GetVersionSongIdsAsync(
+    IReadOnlyCollection<Guid> versionIds, CancellationToken ct)
+    => await BandVersions.AsNoTracking()
+        .Where(v => versionIds.Contains(v.Id))
+        .ToDictionaryAsync(v => v.Id, v => v.SongId, ct);
 }

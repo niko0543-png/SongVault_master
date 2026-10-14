@@ -12,6 +12,7 @@ using SongVault.Domain.Invitations;
 using SongVault.Domain.Songs;
 using SongVault.Infrastructure.Jobs;
 using SongVault.Domain.Comments;
+using SongVault.Domain.Releases;
 
 namespace SongVault.Infrastructure.Persistence;
 
@@ -19,7 +20,7 @@ public sealed class SongVaultDbContext(
     DbContextOptions<SongVaultDbContext> options, IBandContext? bandContext = null)
     : IdentityDbContext<IdentityUser>(options), IUnitOfWork, IDataProtectionKeyContext
 {
-    /// <summary>Nom du filtre qui limite Songs au groupe actif (IgnoreQueryFilters([BandFilter]) pour l'ôter).</summary>
+    /// <summary>Nom du filtre qui limite Songs et Releases au groupe actif (IgnoreQueryFilters([BandFilter]) pour l'ôter).</summary>
     public const string BandFilter = "Band";
 
     public DbSet<Song> Songs => Set<Song>();
@@ -33,6 +34,8 @@ public sealed class SongVaultDbContext(
     public DbSet<FileUpload> FileUploads => Set<FileUpload>();
     /// <summary>Commentaires horodatés sur les fichiers audio (ADR 0014).</summary>
     public DbSet<Comment> Comments => Set<Comment>();
+    /// <summary>Sorties (single, EP, album) et leurs pistes (ADR 0016).</summary>
+    public DbSet<Release> Releases => Set<Release>();
     /// <summary>Clés qui signent cookies et liens (ADR 0010) : en base pour survivre à une reconstruction de l'API.</summary>
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
@@ -46,6 +49,7 @@ public sealed class SongVaultDbContext(
 
         // Défense en profondeur : même si une future requête oublie BandSongs, elle ne sort pas du groupe actif.
         modelBuilder.Entity<Song>().HasQueryFilter(BandFilter, s => s.BandId == CurrentBandId);
+        modelBuilder.Entity<Release>().HasQueryFilter(BandFilter, r => r.BandId == CurrentBandId);
     }
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
@@ -65,4 +69,11 @@ public sealed class SongVaultDbContext(
     }
 
     public void DiscardChanges() => ChangeTracker.Clear();
+
+    public async Task ExecuteInTransactionAsync(Func<CancellationToken, Task> work, CancellationToken ct)
+    {
+        await using var transaction = await Database.BeginTransactionAsync(ct);
+        await work(ct);
+        await transaction.CommitAsync(ct);     // exception avant ce point : la transaction est annulée à sa libération
+    }
 }
