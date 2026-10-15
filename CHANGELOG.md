@@ -29,6 +29,8 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) — versions :
 - Badges « Nouveau » et « Modifié » dans la liste des morceaux, retirés à l'ouverture, et page « Activité » du groupe avec « Voir plus » (ADR 0017).
 - Notifications par e-mail (nouvelle version, commentaire, mention) préparées en arrière-plan, tout de suite ou dans un résumé à 7 h, réglables dans « Mon compte » ; lien et en-tête de désinscription dans chaque e-mail (ADR 0018).
 - Liens de partage externes : écoute seule d'une version ou d'une sortie sans compte, page `/s/{jeton}`, expiration de 1 à 90 jours, mot de passe facultatif, révocation, journal des ouvertures et des écoutes visible des membres (ADR 0019).
+- Mobile : menu replié sous 720 px, pages lisibles dès 360 px de large, cibles tactiles de 44 px, lecteur au pouce avec ±10 s et commandes de l'écran verrouillé (Media Session).
+- Application installable sur Android et iOS : manifeste, icônes, service worker et page « Pas de connexion » (ADR 0020).
 ### Modifié
 - Routes de l'API sous `/api/bands/{bandId}/songs…` et du front sous `/b/{bandId}/songs…`.
 - Renommer un groupe est réservé à ses Owner.
