@@ -111,7 +111,6 @@ public static class DependencyInjection
         // #13 : liens de partage externes (ADR 0019)
         services.AddSingleton<ISharePasswordHasher, SharePasswordHasher>();
         services.AddSingleton<IShareUnlockTokens, ShareUnlockTokens>();
-        6.
 
         return services;
     }
