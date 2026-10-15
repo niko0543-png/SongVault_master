@@ -15,6 +15,7 @@ import FileUploader from '@/features/files/components/FileUploader.vue'
 import type { SongFile } from '@/features/files/types'
 import { filesApi } from '@/features/files/api/filesApi'
 import CommentsPanel from '@/features/comments/components/CommentsPanel.vue'
+import ShareLinksPanel from '@/features/sharing/components/ShareLinksPanel.vue'
 import { usePlayerStore } from '@/features/player/stores/playerStore'
 import { toTrack, type Track } from '@/features/player/track'
 import { useBandStore } from '@/features/bands/stores/bandStore'
@@ -271,7 +272,7 @@ const commentedFile = computed(() =>
                   :busy-id="deletingId" @play="onPlay" @delete="onDeleteFile" />
         <FileUploader v-if="canWrite" :song-id="songId" :version-id="version.id" @uploaded="onUploaded" />
       </SectionCard>
-      
+      <ShareLinksPanel v-if="canWrite" :target="{ type: 'Version', id: version.id }" />
       <SectionCard v-if="commentedFile" title="Commentaires">
         <template v-if="audioFiles.length > 1" #actions>
           <select :value="commentedFile.id" aria-label="Fichier commenté" class="commented-file"

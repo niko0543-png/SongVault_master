@@ -80,6 +80,14 @@ const router = createRouter({
       component: () => import('@/features/notifications/pages/UnsubscribePage.vue'),
       meta: { public: true, title: 'Se désinscrire' },
     },
+    {
+      // Lien de partage externe (#13) : écoute seule, sans compte
+      path: '/s/:token',
+      name: 'shared',
+      component: () => import('@/features/sharing/pages/SharedPage.vue'),
+      props: true,
+      meta: { public: true, title: 'Écoute partagée' },
+    },
         // ---- Connexion exigée, hors groupe ----
     {
       path: '/account',
