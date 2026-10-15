@@ -44,6 +44,7 @@ public static class DependencyInjection
         services.AddScoped<ISongViewRepository, SongViewRepository>();
         services.AddScoped<INotificationRepository, NotificationRepository>();
         services.AddScoped<IReleaseRepository, ReleaseRepository>();
+        services.AddScoped<IShareLinkRepository, ShareLinkRepository>();
 
         services.AddOptions<FileStorageOptions>()
          .Bind(configuration.GetSection(FileStorageOptions.SectionName))
