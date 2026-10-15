@@ -26,3 +26,4 @@ l'ancien, qui passe au statut « remplacé par ADR NNNN ».
 | [0018](0018-notifications-par-e-mail.md) | Notifications par e-mail : préparées en arrière-plan à partir du fil d'activité | accepté |
 | [0019](0019-liens-de-partage-externes.md) | Liens de partage externes : jeton haché, lecture seule, journal pseudonymisé | accepté |
 | [0020](0020-mobile-et-application-installable.md) | Mobile et application installable : CSS adaptatif, service worker écrit à la main, rien de privé en cache | accepté |
+| [0021](0021-forme-d-onde-et-apercu-audio.md) | Forme d'onde et aperçu audio : ffmpeg dans une tâche de fond, dessin SVG sans bibliothèque | accepté |
