@@ -8,6 +8,7 @@ import {
 } from '../types'
 import { formatReleaseDate } from '../format'
 import ReleaseForm from '../components/ReleaseForm.vue'
+import ShareLinksPanel from '@/features/sharing/components/ShareLinksPanel.vue'
 import { songsApi } from '@/features/songs/api/songsApi'
 import type { Song } from '@/features/songs/types'
 import { versionsApi } from '@/features/versions/api/versionsApi'
@@ -289,6 +290,8 @@ async function onRemoveCover() {
           </form>
         </SectionCard>
       </div>
+
+      <ShareLinksPanel v-if="canWrite" :target="{ type: 'Release', id: release.id }" />
     </template>
   </section>
 </template>

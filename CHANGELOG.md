@@ -28,6 +28,7 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) — versions :
 - Sorties (single, EP, album) avec pochette et pistes ordonnées, chaque piste dans la version choisie ; un morceau sur plusieurs sorties (ADR 0016).
 - Badges « Nouveau » et « Modifié » dans la liste des morceaux, retirés à l'ouverture, et page « Activité » du groupe avec « Voir plus » (ADR 0017).
 - Notifications par e-mail (nouvelle version, commentaire, mention) préparées en arrière-plan, tout de suite ou dans un résumé à 7 h, réglables dans « Mon compte » ; lien et en-tête de désinscription dans chaque e-mail (ADR 0018).
+- Liens de partage externes : écoute seule d'une version ou d'une sortie sans compte, page `/s/{jeton}`, expiration de 1 à 90 jours, mot de passe facultatif, révocation, journal des ouvertures et des écoutes visible des membres (ADR 0019).
 ### Modifié
 - Routes de l'API sous `/api/bands/{bandId}/songs…` et du front sous `/b/{bandId}/songs…`.
 - Renommer un groupe est réservé à ses Owner.
@@ -43,6 +44,7 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) — versions :
 - `Song.OwnerId`, remplacé par `Song.BandId`. Les morceaux sans propriétaire valide sont supprimés par la migration `BackfillBands`.
 ### Corrigé
 - Un délai dépassé chez le fournisseur d'e-mails n'arrête plus l'API.
+- Sur Azure, les pochettes des sorties s'affichent : la CSP du front autorise les images du stockage objet.
 - Le bouton « Supprimer » d'un fichier, sur la page d'une version, supprime vraiment le fichier.
 
 ## [0.6.0] - 2026-10-23

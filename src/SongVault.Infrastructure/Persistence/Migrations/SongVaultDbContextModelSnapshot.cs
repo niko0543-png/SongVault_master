@@ -711,6 +711,115 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                     b.ToTable("ReleaseTracks", (string)null);
                 });
 
+            modelBuilder.Entity("SongVault.Domain.Sharing.ShareLink", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("AccessSalt")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("binary(16)")
+                        .IsFixedLength();
+
+                    b.Property<Guid>("BandId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("CreatedById")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Label")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("PasswordHash")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid?>("ReleaseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("TargetType")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<byte[]>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("binary(32)")
+                        .IsFixedLength();
+
+                    b.Property<Guid?>("VersionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BandId");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("ReleaseId");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("VersionId");
+
+                    b.ToTable("ShareLinks", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ShareLinks_Target", "([TargetType] = 'Version' AND [VersionId] IS NOT NULL AND [ReleaseId] IS NULL) OR ([TargetType] = 'Release' AND [ReleaseId] IS NOT NULL AND [VersionId] IS NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("SongVault.Domain.Sharing.ShareLinkAccess", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTimeOffset>("At")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("FileId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("IpHash")
+                        .HasMaxLength(32)
+                        .HasColumnType("binary(32)")
+                        .IsFixedLength();
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<Guid>("ShareLinkId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("UserAgent")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ShareLinkId", "Id");
+
+                    b.ToTable("ShareLinkAccesses", (string)null);
+                });
+
             modelBuilder.Entity("SongVault.Domain.Songs.Song", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1054,6 +1163,39 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("VersionId")
                         .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SongVault.Domain.Sharing.ShareLink", b =>
+                {
+                    b.HasOne("SongVault.Domain.Bands.Band", null)
+                        .WithMany()
+                        .HasForeignKey("BandId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("SongVault.Domain.Releases.Release", null)
+                        .WithMany()
+                        .HasForeignKey("ReleaseId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("SongVault.Domain.Songs.SongVersion", null)
+                        .WithMany()
+                        .HasForeignKey("VersionId")
+                        .OnDelete(DeleteBehavior.Cascade);
+                });
+
+            modelBuilder.Entity("SongVault.Domain.Sharing.ShareLinkAccess", b =>
+                {
+                    b.HasOne("SongVault.Domain.Sharing.ShareLink", null)
+                        .WithMany()
+                        .HasForeignKey("ShareLinkId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 

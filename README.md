@@ -100,6 +100,9 @@ docker compose down -v       # supprime aussi la base et les fichiers
 - **Notifications par e-mail** : nouvelle version, commentaire, mention (« @ » suivi de
   l'adresse d'un membre), chacune tout de suite, dans le résumé du matin ou jamais, au choix
   dans « Mon compte ». Chaque e-mail a son lien de désinscription.
+- **Liens de partage externes** : un lien d'écoute seule vers une version ou une sortie, pour
+  une personne sans compte (ingénieur du son, label, salle), valable 1 à 90 jours, avec un mot
+  de passe facultatif. Révocable à tout moment ; chaque ouverture et chaque écoute sont au journal.
 - **Recherche et filtres** synchronisés avec l'URL.
 - **Comptes utilisateurs et groupes** : chaque morceau appartient à un groupe, un utilisateur peut être membre de plusieurs groupes et ne voit que les leurs. 
   Trois rôles par groupe : propriétaire (gère les membres), membre (crée et modifie), invité (lit et écoute).
@@ -268,6 +271,14 @@ Le contrat OpenAPI est généré depuis le code et ses commentaires XML. En dév
 | `GET` `PUT` `DELETE` | `/api/bands/{bandId}/releases/{id}` | Lire (avec les pistes), modifier, supprimer une sortie |
 | `PUT` | `…/releases/{id}/tracks` | Remplacer toutes les pistes, dans l'ordre envoyé |
 | `GET` `PUT` `DELETE` | `…/releases/{id}/cover` | Lire, envoyer (JPEG, PNG, WebP, 5 Mo), retirer la pochette |
+| `GET` `POST` | `/api/bands/{bandId}/share-links` | Liens de partage d'une version (`?versionId=`) ou d'une sortie (`?releaseId=`), créer un lien (Member ; le lien complet n'est donné qu'à la création) |
+| `POST` | `…/share-links/{id}/revoke` | Révoquer un lien : il ne marche plus, il reste dans la liste |
+| `DELETE` | `…/share-links/{id}` | Supprimer un lien et son journal |
+| `GET` | `…/share-links/{id}/accesses` | Journal du lien : ouvertures, écoutes, mauvais mots de passe |
+| `GET` | `/api/share/{token}` | Page d'un lien de partage, sans connexion (404 inconnu, expiré ou révoqué ; 403 mot de passe attendu) |
+| `POST` | `/api/share/{token}/unlock` | Donner le mot de passe d'un lien ; pose le cookie `songvault.share` (422 s'il est faux) |
+| `GET` | `/api/share/{token}/files/{fileId}/content` | Écouter un fichier audio de la cible du lien |
+| `GET` | `/api/share/{token}/cover` | Pochette de la sortie partagée |
 | `GET` | `/api/files/policy` | Extensions acceptées et taille maximale |
 
 Sous /api/bands/{bandId}, les lectures sont ouvertes à tout membre du groupe et les écritures demandent au moins le rôle Member, 
@@ -328,6 +339,9 @@ npx playwright test                           # E2E (application lancée sur :80
   Conteneur privé ; URL signées limitées à un fichier, pour créer (1 h) ou lire (30 min).
 - **Clés Data Protection** chiffrées par une clé Key Vault sur Azure.
 - **Limitation de débit** sur l'authentification et l'envoi de fichiers (429).
+- **Liens de partage** : jeton aléatoire dont seule l'empreinte est en base, routes publiques
+  en lecture seule limitées aux fichiers audio de la cible, mot de passe haché et essais
+  limités, IP du journal remplacée par une empreinte salée ([ADR 0019](docs/adr/0019-liens-de-partage-externes.md)).
 - **En-têtes de sécurité** : `Content-Security-Policy`, `X-Content-Type-Options`,
   `Referrer-Policy: no-referrer`, `X-Frame-Options: DENY`.
 - **Secrets** : aucun dans le dépôt. `.env` est ignoré par Git, `.env.example` documente

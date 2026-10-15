@@ -15,6 +15,7 @@ using SongVault.Domain.Comments;
 using SongVault.Domain.Releases;
 using SongVault.Domain.Activity;
 using SongVault.Domain.Notifications;
+using SongVault.Domain.Sharing;
 
 namespace SongVault.Infrastructure.Persistence;
 
@@ -44,6 +45,10 @@ public sealed class SongVaultDbContext(
     public DbSet<NotificationDigestItem> NotificationDigestItems => Set<NotificationDigestItem>();
     /// <summary>Sorties (single, EP, album) et leurs pistes (ADR 0016).</summary>
     public DbSet<Release> Releases => Set<Release>();
+    /// <summary>Liens de partage externes et leur journal (ADR 0019).</summary>
+    public DbSet<ShareLink> ShareLinks => Set<ShareLink>();
+    public DbSet<ShareLinkAccess> ShareLinkAccesses => Set<ShareLinkAccess>();
+
     /// <summary>Clés qui signent cookies et liens (ADR 0010) : en base pour survivre à une reconstruction de l'API.</summary>
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 

@@ -12,12 +12,16 @@ public sealed class RateLimitingOptions
     public const string SectionName = "RateLimiting";
     public int UploadsPerMinute { get; set; } = 10;
     public int AuthPerMinute { get; set; } = 10;
+
+    /// <summary>Pages et fichiers des liens de partage (#13), par IP : une écoute avec avances rapides en fait plusieurs.</summary>
+    public int SharePerMinute { get; set; } = 120;
 }
 
 public static class RateLimiting
 {
     public const string Uploads = "uploads";
     public const string Auth = "auth";
+    public const string Share = "share";
 
     public static IServiceCollection AddSongVaultRateLimiting(this IServiceCollection services, IConfiguration configuration)
     {
@@ -42,6 +46,7 @@ public static class RateLimiting
 
             options.AddPolicy(Uploads, http => PerMinute(http, o => o.UploadsPerMinute));
             options.AddPolicy(Auth, http => PerMinute(http, o => o.AuthPerMinute));
+            options.AddPolicy(Share, http => PerMinute(http, o => o.SharePerMinute));
         });
         return services;
     }

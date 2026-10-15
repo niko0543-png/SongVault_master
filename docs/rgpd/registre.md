@@ -106,6 +106,20 @@ fonctionnalité qui collecte, conserve ou transmet des données personnelles.
 | Durée | Préférences : tant que le compte existe. Éléments du résumé : jusqu'à l'envoi du résumé, au plus un jour |
 | Sécurité | Préparé hors requête ; destinataire et préférence revérifiés avant l'envoi ; lien de désinscription signé |
 
+## 9. Liens de partage externes
+
+| | |
+|---|---|
+| Finalité | Faire écouter une version ou une sortie à une personne sans compte, et savoir si le lien a servi |
+| Base légale | Intérêt légitime du groupe (art. 6.1.f) : suivre la diffusion de ses enregistrements |
+| Personnes | Visiteurs du lien (sans compte) ; membre qui l'a créé |
+| Données | Lien : libellé, auteur, dates, mot de passe haché. Journal : date, type d'accès, fichier écouté, empreinte SHA-256 de l'IP salée par lien (jamais l'IP), navigateur (256 caractères au plus) |
+| Destinataires | Les Member et Owner du groupe |
+| Sous-traitants | Hébergeur |
+| Transferts hors UE | Aucun |
+| Durée | Tant que le lien existe : effacé quand un membre le supprime, ou avec la version, la sortie ou le groupe |
+| Sécurité | Jeton aléatoire dont seule l'empreinte est en base ; lecture seule, limitée à la cible ; révocation immédiate ; essais de mot de passe limités ; IP jamais conservée |
+
 ## Sous-traitants
 
 | Sous-traitant | Rôle | Localisation | Contrat de traitement (DPA) | État |
@@ -132,6 +146,8 @@ fonctionnalité qui collecte, conserve ou transmet des données personnelles.
   appartiennent au groupe, l'identifiant de leur auteur ne renvoie plus à personne.
 - Ses commentaires dans les groupes partagés : gardés pour que les fils restent lisibles,
   sans auteur (« Compte supprimé »). Il peut les supprimer lui-même avant de partir.
+- Les liens de partage qu'il a créés dans les groupes partagés : ils appartiennent au groupe
+  et restent actifs, sans auteur, jusqu'à leur expiration ou leur révocation.
 - Les sauvegardes, jusqu'à leur rotation : 7 jours pour la base (restauration à un instant
   donné), 14 jours pour les fichiers (suppression réversible), voir
   `docs/runbook-sauvegardes.md`.

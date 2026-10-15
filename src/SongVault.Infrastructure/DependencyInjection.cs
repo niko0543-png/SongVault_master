@@ -11,6 +11,7 @@ using SongVault.Infrastructure.Storage;
 using Microsoft.Extensions.Options;
 using SongVault.Application.Notifications;
 using SongVault.Infrastructure.Notifications;
+using SongVault.Infrastructure.Sharing;
 
 namespace SongVault.Infrastructure;
 
@@ -44,6 +45,7 @@ public static class DependencyInjection
         services.AddScoped<ISongViewRepository, SongViewRepository>();
         services.AddScoped<INotificationRepository, NotificationRepository>();
         services.AddScoped<IReleaseRepository, ReleaseRepository>();
+        services.AddScoped<IShareLinkRepository, ShareLinkRepository>();
 
         services.AddOptions<FileStorageOptions>()
          .Bind(configuration.GetSection(FileStorageOptions.SectionName))
@@ -105,6 +107,10 @@ public static class DependencyInjection
             .ValidateOnStart();
         services.AddSingleton<IUnsubscribeTokens, UnsubscribeTokens>();
         services.AddHostedService<NotificationWorker>();
+
+        // #13 : liens de partage externes (ADR 0019)
+        services.AddSingleton<ISharePasswordHasher, SharePasswordHasher>();
+        services.AddSingleton<IShareUnlockTokens, ShareUnlockTokens>();
 
         return services;
     }

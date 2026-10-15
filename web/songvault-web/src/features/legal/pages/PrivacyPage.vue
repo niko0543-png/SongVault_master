@@ -46,6 +46,15 @@ import { publisher } from '../publisher'
           <td>Avec l'historique du groupe ; effacées avec le compte qui porte cette adresse</td>
         </tr>
         <tr>
+          <td>
+            Lien de partage ouvert sans compte : date, fichier écouté, navigateur, et une empreinte de
+            votre adresse IP (jamais l'adresse elle-même)
+          </td>
+          <td>Montrer au groupe qui vous a envoyé le lien s'il a été ouvert et écouté</td>
+          <td>Intérêt légitime du groupe</td>
+          <td>Tant que le lien existe ; effacé quand le groupe le supprime</td>
+        </tr>
+        <tr>
           <td>Archive de vos données</td>
           <td>Vous remettre vos données</td>
           <td>Obligation légale</td>
@@ -72,6 +81,7 @@ import { publisher } from '../publisher'
       <li><code>songvault.auth</code> : cookie de session, indispensable pour rester connecté (7 jours au plus).</li>
       <li><code>songvault.band</code> : dernier groupe ouvert, stocké dans votre navigateur.</li>
       <li><code>songvault.afterConfirm</code> : page à rouvrir après la confirmation de votre adresse.</li>
+        <li><code>songvault.share</code> : mot de passe d'un lien de partage déjà donné (12 heures au plus, pour ce lien seulement).</li>
     </ul>
     <p>Aucun cookie de publicité ni de mesure d'audience : aucun consentement n'est donc demandé.</p>
 
