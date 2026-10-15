@@ -3,12 +3,14 @@ import { useTemplateRef } from 'vue'
 import { storeToRefs } from 'pinia'
 import { usePlayerStore } from '../stores/playerStore'
 import { useAudioPlayer } from '../composables/useAudioPlayer'
+import { SKIP_SECONDS, useMediaSession } from '../composables/useMediaSession'
 import { formatTime } from '@/shared/utils/format'
 import { onBeforeUnmount, onMounted } from 'vue'
 import { isGlobalShortcut } from '@/shared/utils/keyboard'
 
 const audioElement = useTemplateRef<HTMLAudioElement>('audio-element')
 useAudioPlayer(audioElement)
+useMediaSession()                                   // #14 : commandes de l'écran verrouillé
 
 const player = usePlayerStore()
 const { track, isPlaying, currentTime, duration, error } = storeToRefs(player)
@@ -33,10 +35,16 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
   <audio ref="audio-element" preload="metadata" />
 
   <div v-if="track" class="player" role="region" aria-label="Lecteur audio">
-    <button type="button" class="play" :aria-label="isPlaying ? 'Mettre en pause' : 'Lire'"
-        aria-keyshortcuts="Space k" :title="isPlaying ? 'Pause (Espace)' : 'Lecture (Espace)'" @click="player.toggle()">
-      {{ isPlaying ? '⏸' : '▶' }}
-    </button>
+    <div class="controls">
+      <button type="button" class="secondary skip" :aria-label="`Reculer de ${SKIP_SECONDS} secondes`"
+              :disabled="!duration" @click="player.skip(-SKIP_SECONDS)">−{{ SKIP_SECONDS }}</button>
+      <button type="button" class="play" :aria-label="isPlaying ? 'Mettre en pause' : 'Lire'"
+          aria-keyshortcuts="Space k" :title="isPlaying ? 'Pause (Espace)' : 'Lecture (Espace)'" @click="player.toggle()">
+        {{ isPlaying ? '⏸' : '▶' }}
+      </button>
+      <button type="button" class="secondary skip" :aria-label="`Avancer de ${SKIP_SECONDS} secondes`"
+              :disabled="!duration" @click="player.skip(SKIP_SECONDS)">+{{ SKIP_SECONDS }}</button>
+    </div>
     <div class="info">
       <strong>{{ track.title }}</strong>
       <small class="muted">{{ track.subtitle }}</small>
@@ -49,15 +57,34 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
       @input="onSeek"
     />
     <span class="time">{{ formatTime(currentTime) }} / {{ formatTime(duration) }}</span>
-    <p v-if="error" class="field-error" role="alert">{{ error }}</p>
+    <p v-if="error" class="field-error error" role="alert">{{ error }}</p>
   </div>
 </template>
 
 <style scoped>
-.player { position: fixed; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: auto minmax(8rem, 1fr) 3fr auto;
-          gap: 1rem; align-items: center; padding: .75rem 1.5rem; background: var(--surface); border-top: 1px solid var(--border); }
+/* #14 : le bas de l'écran reste libre pour la barre d'accueil de l'iPhone (safe-area) */
+.player { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; display: grid;
+          grid-template-columns: auto minmax(8rem, 1fr) 3fr auto; gap: 1rem; align-items: center;
+          padding: .75rem 1.5rem calc(.75rem + env(safe-area-inset-bottom));
+          background: var(--surface); border-top: 1px solid var(--border); }
+.controls { display: flex; align-items: center; gap: .5rem; }
 .play { width: 2.75rem; height: 2.75rem; border-radius: 50%; padding: 0; }
-.info { display: grid; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.skip { padding: .25rem .5rem; font-variant-numeric: tabular-nums; }
+.info { display: grid; min-width: 0; }
+.info > * { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .seek { width: 100%; padding: 0; }
 .time { font-variant-numeric: tabular-nums; }
+.error { grid-column: 1 / -1; }
+
+/* #14 : téléphone. Ligne 1 : titre et temps ; ligne 2 : la barre de position, pleine largeur ;
+   ligne 3 : les trois boutons, centrés sous le pouce */
+@media (max-width: 720px) {
+  .player { grid-template-columns: minmax(0, 1fr) auto; gap: .25rem .75rem; padding: .5rem 1rem calc(.5rem + env(safe-area-inset-bottom)); }
+  .info { grid-column: 1; grid-row: 1; }
+  .time { grid-column: 2; grid-row: 1; font-size: .9rem; }
+  .seek { grid-column: 1 / -1; grid-row: 2; height: 32px; }
+  .controls { grid-column: 1 / -1; grid-row: 3; justify-content: center; gap: 1.5rem; }
+  .play { width: 3.25rem; height: 3.25rem; font-size: 1.25rem; }
+  .skip { min-width: 3rem; }
+}
 </style>
