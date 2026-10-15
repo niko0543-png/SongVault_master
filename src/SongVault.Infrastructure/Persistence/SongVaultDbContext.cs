@@ -48,7 +48,8 @@ public sealed class SongVaultDbContext(
     /// <summary>Liens de partage externes et leur journal (ADR 0019).</summary>
     public DbSet<ShareLink> ShareLinks => Set<ShareLink>();
     public DbSet<ShareLinkAccess> ShareLinkAccesses => Set<ShareLinkAccess>();
-
+    /// <summary>Forme d'onde et MP3 d'écoute des fichiers audio (ADR 0021).</summary>
+    public DbSet<AudioPreview> AudioPreviews => Set<AudioPreview>();
     /// <summary>Clés qui signent cookies et liens (ADR 0010) : en base pour survivre à une reconstruction de l'API.</summary>
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 

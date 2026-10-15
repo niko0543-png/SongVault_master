@@ -46,6 +46,7 @@ public static class DependencyInjection
         services.AddScoped<INotificationRepository, NotificationRepository>();
         services.AddScoped<IReleaseRepository, ReleaseRepository>();
         services.AddScoped<IShareLinkRepository, ShareLinkRepository>();
+        services.AddScoped<IAudioPreviewRepository, AudioPreviewRepository>();
 
         services.AddOptions<FileStorageOptions>()
          .Bind(configuration.GetSection(FileStorageOptions.SectionName))
