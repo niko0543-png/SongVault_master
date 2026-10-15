@@ -128,13 +128,27 @@ internal sealed class ShareLinkRepository(SongVaultDbContext db) : IShareLinkRep
                 t.TrackNumber, t.Title, t.Artist, t.Number, t.VersionTitle, [.. trackFiles[t.VersionId]]))]);
     }
 
-    public Task<StoredFileInfo?> GetSharedFileAsync(ShareLink link, Guid fileId, CancellationToken ct)
+    public async Task<StoredFileInfo?> GetSharedFileAsync(ShareLink link, Guid fileId, CancellationToken ct)
     {
         var versionIds = SharedVersionIds(link);
-        return db.Set<SongFile>().AsNoTracking()
+        var file = await db.Set<SongFile>().AsNoTracking()
             .Where(f => f.Id == fileId && f.FileType == SongFileType.Audio && versionIds.Contains(f.SongVersionId))
-            .Select(f => new StoredFileInfo(f.StorageKey, f.ContentType, f.OriginalFileName))
+            .Select(f => new
+            {
+                f.StorageKey,
+                f.ContentType,
+                f.OriginalFileName,
+                PreviewKey = db.AudioPreviews
+                    .Where(p => p.SongFileId == f.Id && p.Status == AudioPreviewStatus.Ready)
+                    .Select(p => p.PreviewStorageKey)
+                    .FirstOrDefault(),
+            })
             .FirstOrDefaultAsync(ct);
+        if (file is null) return null;
+        // #15 : le visiteur écoute le MP3 léger quand il est prêt, comme les membres
+        return file.PreviewKey is null
+            ? new StoredFileInfo(file.StorageKey, file.ContentType, file.OriginalFileName)
+            : new StoredFileInfo(file.PreviewKey, "audio/mpeg", file.OriginalFileName);
     }
 
     public async Task<StoredFileInfo?> GetSharedCoverAsync(ShareLink link, CancellationToken ct)

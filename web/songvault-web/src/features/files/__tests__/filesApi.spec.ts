@@ -45,3 +45,19 @@ describe('filesApi.upload', () => {
     expect(request).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('filesApi, aperçus (#15)', () => {
+  beforeEach(() => vi.resetAllMocks())
+
+  it("écoute par /listen et télécharge toujours l'original par /content", () => {
+    expect(filesApi.listenUrl('s1', 'v1', 'f1')).toBe('/api/bands/b1/songs/s1/versions/v1/files/f1/listen')
+    expect(filesApi.contentUrl('s1', 'v1', 'f1', true)).toBe('/api/bands/b1/songs/s1/versions/v1/files/f1/content?download=true')
+  })
+
+  it("relance l'aperçu par un POST", async () => {
+    vi.mocked(request).mockResolvedValue({ status: 'Pending' })
+
+    expect(await filesApi.retryPreview('s1', 'v1', 'f1')).toEqual({ status: 'Pending' })
+    expect(request).toHaveBeenCalledWith('/bands/b1/songs/s1/versions/v1/files/f1/preview', { method: 'POST' })
+  })
+})

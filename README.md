@@ -116,6 +116,10 @@ docker compose down -v       # supprime aussi la base et les fichiers
 - **Mobile et application installable** : mise en page prévue dès 360 px de large, menu
   replié, lecteur au pouce avec ±10 s et commandes sur l'écran verrouillé ; s'installe sur
   l'écran d'accueil d'Android et d'iOS, avec une page claire hors connexion.
+- **Forme d'onde et aperçu audio** : chaque fichier audio affiche sa forme d'onde, qui se
+  colore pendant l'écoute et permet d'aller à un endroit d'un clic ; les WAV et FLAC sont
+  écoutés à travers un MP3 léger préparé en arrière-plan par ffmpeg, l'original reste celui
+  qu'on télécharge. Un échec de conversion s'affiche et se relance.
 
 ---
 
@@ -357,8 +361,9 @@ npx playwright test                           # E2E (application lancée sur :80
 
 ## Développer sans Docker
 
-**Prérequis :** SDK .NET 10, Node.js (version indiquée dans `web/songvault-web/.nvmrc`), et un SQL Server (LocalDB, ou le
-conteneur `db` de Compose publié sur `localhost,1433`).
+**Prérequis :** SDK .NET 10, Node.js (version indiquée dans `web/songvault-web/.nvmrc`), un SQL Server (LocalDB, ou le
+conteneur `db` de Compose publié sur `localhost,1433`) et [ffmpeg](https://ffmpeg.org/) dans le `PATH`
+(`winget install Gyan.FFmpeg`), qui prépare les aperçus audio et sert aux tests d'intégration.
 
 ```powershell
 # 1. Configuration locale de l'API (secrets hors du dépôt)
@@ -446,7 +451,8 @@ Choix assumés pour la v1 :
   s'arrête (il se redemande depuis l'écran). Les passer par les tâches de fond ralentirait
   « mot de passe oublié » pour les seuls comptes connus (ADR 0011). Les invitations partent
   encore pendant la requête.
-- Pas de traitement audio côté serveur (forme d'onde, transcodage).
+- Les aperçus audio passent par les tâches de fond, exécutées une à une : pendant la
+  conversion d'un long WAV, un e-mail ou un export attend son tour (ADR 0021).
 - Pas d'écoute hors connexion : l'application installée a besoin du réseau, son service
   worker ne garde aucune donnée de l'API (ADR 0020).
 

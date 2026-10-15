@@ -133,6 +133,55 @@ public sealed class SongFilesController : ControllerBase
         return this.ToResult(result, asAttachment: download, enableRangeProcessing: true);
     }
 
+    /// <summary>Fichier à écouter : le MP3 léger de l'aperçu s'il est prêt, sinon l'original (#15).</summary>
+    /// <remarks>Prend en charge l'en-tête Range. Le téléchargement reste celui de l'original (…/content?download=true).</remarks>
+    /// <param name="songId">Identifiant du morceau.</param>
+    /// <param name="versionId">Identifiant de la version.</param>
+    /// <param name="fileId">Identifiant du fichier.</param>
+    /// <response code="200">Le contenu complet.</response>
+    /// <response code="206">Une partie du contenu (requête Range).</response>
+    /// <response code="302">Stockage Azure Blob : redirection vers une URL signée, valable 30 minutes.</response>
+    [HttpGet("{fileId:guid}/listen")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status206PartialContent)]
+    [ProducesResponseType(StatusCodes.Status302Found)]
+    public async Task<IActionResult> Listen(
+        Guid songId, Guid versionId, Guid fileId, [FromServices] ListenSongFileHandler handler, CancellationToken ct)
+    {
+        var result = await handler.HandleAsync(songId, versionId, fileId, ct);
+        return this.ToResult(result, asAttachment: false, enableRangeProcessing: true);
+    }
+
+    /// <summary>Forme d'onde précalculée d'un fichier audio (#15).</summary>
+    /// <param name="songId">Identifiant du morceau.</param>
+    /// <param name="versionId">Identifiant de la version.</param>
+    /// <param name="fileId">Identifiant du fichier.</param>
+    /// <response code="200">La forme d'onde ; elle ne change plus, le navigateur la garde un jour.</response>
+    /// <response code="404">Fichier inconnu, pas audio, ou aperçu pas encore prêt.</response>
+    [HttpGet("{fileId:guid}/waveform")]
+    [ProducesResponseType<WaveformResponse>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<WaveformResponse>> Waveform(
+        Guid songId, Guid versionId, Guid fileId, [FromServices] GetWaveformHandler handler, CancellationToken ct)
+    {
+        var waveform = await handler.HandleAsync(songId, versionId, fileId, ct);
+        Response.Headers.CacheControl = "private, max-age=86400";
+        return Ok(WaveformResponse.From(waveform));
+    }
+
+    /// <summary>Relance la préparation d'un aperçu en échec (#15).</summary>
+    /// <param name="songId">Identifiant du morceau.</param>
+    /// <param name="versionId">Identifiant de la version.</param>
+    /// <param name="fileId">Identifiant du fichier.</param>
+    /// <response code="202">Aperçu de nouveau en préparation.</response>
+    /// <response code="404">Fichier inconnu ou pas audio.</response>
+    /// <response code="409">L'aperçu est déjà prêt, ou déjà en préparation.</response>
+    [HttpPost("{fileId:guid}/preview")]
+    [ProducesResponseType<AudioPreviewResponse>(StatusCodes.Status202Accepted)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<AudioPreviewResponse>> RetryPreview(
+        Guid songId, Guid versionId, Guid fileId, [FromServices] RetryAudioPreviewHandler handler, CancellationToken ct)
+        => Accepted(new AudioPreviewResponse(await handler.HandleAsync(songId, versionId, fileId, ct)));
+
     /// <summary>Supprime un fichier de la version.</summary>
     /// <param name="songId">Identifiant du morceau.</param>
     /// <param name="versionId">Identifiant de la version.</param>

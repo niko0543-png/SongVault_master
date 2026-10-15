@@ -37,6 +37,8 @@ Le script met à jour l'infrastructure et les images, lance les migrations, puis
 
 Pour envoyer de vrais e-mails, ajouter `-EmailProvider Brevo -EmailFrom no-reply@ton-domaine.fr`, avec `$env:BREVO_API_KEY` défini.
 
+Depuis v1.8.0 (ADR 0021), l'API prépare après chaque envoi un aperçu MP3 et une forme d'onde. Au premier démarrage de cette version, la migration crée une tâche par fichier audio déjà présent : elles passent une à une dans les minutes qui suivent (`Préparation de l'aperçu…` dans la page de la version en attendant). Un aperçu en échec se relance depuis cette page, bouton « Réessayer » ; le message d'erreur complet est dans les journaux (`audio.preview`).
+
 ## Revenir à la version précédente
 
 Redéployer le tag précédent : `.\scripts\deploy-azure.ps1 -ImageTag v1.0.0`. Les migrations ne sont pas annulées. Une version qui en ajoute une ne se défait donc pas ainsi : restaurer la base ([runbook des sauvegardes](runbook-sauvegardes.md#restaurer-la-base-à-un-instant-donné)).

@@ -42,6 +42,11 @@ WORKDIR /app
 # un volume nommé VIDE monté ici héritera de ce propriétaire.
 RUN mkdir -p /var/songvault/files && chown $APP_UID /var/songvault/files
 
+# #15 : ffmpeg prépare les aperçus MP3 et les formes d'onde (paquet Debian, pas de clé ni de dépôt en plus)
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ffmpeg \
+ && rm -rf /var/lib/apt/lists/*
+
 COPY --from=build /app/publish .
 USER $APP_UID
 EXPOSE 8080

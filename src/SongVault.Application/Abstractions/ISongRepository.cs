@@ -20,7 +20,12 @@ public interface ISongRepository
     Task<StoredFileInfo?> GetFileAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct);
     /// <summary>Le fichier, son morceau et sa version, s'il est dans cette version de ce morceau du groupe actif ; sinon null (#8, #11).</summary>
     Task<SongFileLabel?> GetFileLabelAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct);
+    /// <summary>Clés des fichiers du morceau et de leurs MP3 d'aperçu (#15), à effacer du stockage avec lui.</summary>
     Task<IReadOnlyList<string>> ListStorageKeysAsync(Guid songId, CancellationToken ct);
+    /// <summary>Le fichier à écouter : le MP3 d'aperçu s'il est prêt, sinon l'original (ADR 0021).</summary>
+    Task<StoredFileInfo?> GetListenFileAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct);
+    /// <summary>Forme d'onde d'un fichier de ce groupe, si son aperçu est prêt (ADR 0021).</summary>
+    Task<AudioWaveformDto?> GetWaveformAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct);
     /// <summary>Pour chaque version trouvée dans le groupe actif, l'identifiant de son morceau (#10). Les autres sont absentes.</summary>
     Task<IReadOnlyDictionary<Guid, Guid>> GetVersionSongIdsAsync(IReadOnlyCollection<Guid> versionIds, CancellationToken ct);
 }

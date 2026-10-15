@@ -31,13 +31,15 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) — versions :
 - Liens de partage externes : écoute seule d'une version ou d'une sortie sans compte, page `/s/{jeton}`, expiration de 1 à 90 jours, mot de passe facultatif, révocation, journal des ouvertures et des écoutes visible des membres (ADR 0019).
 - Mobile : menu replié sous 720 px, pages lisibles dès 360 px de large, cibles tactiles de 44 px, lecteur au pouce avec ±10 s et commandes de l'écran verrouillé (Media Session).
 - Application installable sur Android et iOS : manifeste, icônes, service worker et page « Pas de connexion » (ADR 0020).
+- Forme d'onde des fichiers audio, colorée pendant l'écoute, clic ou flèches pour se déplacer ; aperçu MP3 de 128 kbit/s des WAV et FLAC préparé en arrière-plan par ffmpeg, utilisé par le lecteur et les liens de partage, l'original restant le fichier téléchargé ; échec visible et bouton « Réessayer » (ADR 0021).
 ### Modifié
 - Routes de l'API sous `/api/bands/{bandId}/songs…` et du front sous `/b/{bandId}/songs…`.
 - Renommer un groupe est réservé à ses Owner.
 - La connexion exige une adresse confirmée ; les comptes existants sont marqués confirmés par la migration `ConfirmExistingEmails`.
 - L'inscription ne connecte plus directement : elle mène à « Vérifiez votre boîte mail ».
 - Le lien de réinitialisation du mot de passe s'ouvre aussi depuis un navigateur déjà connecté.
-- `scripts/purge-orphan-files.ps1` tient compte des archives d'export, puis des pochettes des sorties.
+- `scripts/purge-orphan-files.ps1` tient compte des archives d'export, puis des pochettes des sorties, puis des aperçus MP3.
+- L'image de l'API contient ffmpeg ; la migration `AddAudioPreviews` prépare l'aperçu des fichiers audio déjà envoyés.
 - Un morceau présent sur une sortie ne se supprime plus : l'API répond 409 avec le nom des sorties.
 - Répondre à un commentaire vérifie aussi le morceau et la version de la route : 404 s'ils ne correspondent pas au fichier.
 - Taille maximale d'un fichier envoyé depuis l'application : 2 Go au lieu de 50 Mo.

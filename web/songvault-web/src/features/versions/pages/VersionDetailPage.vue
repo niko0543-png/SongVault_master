@@ -14,6 +14,8 @@ import FileList from '@/features/files/components/FileList.vue'
 import FileUploader from '@/features/files/components/FileUploader.vue'
 import type { SongFile } from '@/features/files/types'
 import { filesApi } from '@/features/files/api/filesApi'
+import { usePreviewPolling } from '@/features/files/composables/usePreviewPolling'
+import { versionsApi } from '../api/versionsApi'
 import CommentsPanel from '@/features/comments/components/CommentsPanel.vue'
 import ShareLinksPanel from '@/features/sharing/components/ShareLinksPanel.vue'
 import { usePlayerStore } from '@/features/player/stores/playerStore'
@@ -135,6 +137,24 @@ function onUploaded(file: SongFile) {
   version.value?.files.push(file)
 }
 
+// #15 : l'aperçu se prépare en arrière-plan ; on suit son état sans recharger le formulaire
+usePreviewPolling(
+  () => version.value?.files,
+  async () => (await versionsApi.get(props.songId, props.versionId)).files,
+)
+
+async function onRetryPreview(file: SongFile) {
+  deletingId.value = file.id
+  fileError.value = null
+  try {
+    file.preview = (await filesApi.retryPreview(props.songId, props.versionId, file.id)).status
+  } catch (e) {
+    fileError.value = getErrorMessage(e)
+  } finally {
+    deletingId.value = null
+  }
+}
+
 async function onDeleteFile(file: SongFile) {
   if (!version.value) return
   const confirmed = await confirm({
@@ -163,6 +183,19 @@ function trackOf(file: SongFile): Track {
     songId: props.songId, songTitle: song.value?.title ?? '',
     versionId: props.versionId, versionNumber: version.value?.number ?? 0, file,
   })
+}
+
+/** #15 : la forme d'onde du fichier en cours de lecture se colore au fil de l'écoute. */
+const playing = computed(() => {
+  const id = player.track?.id
+  return id && player.duration > 0 ? { fileId: id, progress: player.currentTime / player.duration } : null
+})
+
+function onSeek(file: SongFile, seconds: number) {
+  if (!version.value || !song.value) return
+  commentedId.value = file.id
+  if (player.track?.id === file.id) player.seek(seconds)
+  else void player.playAt(trackOf(file), seconds)
 }
 
 function onPlay(file: SongFile) {
@@ -269,7 +302,8 @@ const commentedFile = computed(() =>
       <SectionCard title="Fichiers">
         <p v-if="fileError" class="field-error" role="alert">{{ fileError }}</p>
         <FileList :song-id="songId" :version-id="version.id" :files="version.files" :readonly="!canWrite"
-                  :busy-id="deletingId" @play="onPlay" @delete="onDeleteFile" />
+                                    :busy-id="deletingId" :playing="playing"
+                  @play="onPlay" @delete="onDeleteFile" @seek="onSeek" @retry="onRetryPreview" />
         <FileUploader v-if="canWrite" :song-id="songId" :version-id="version.id" @uploaded="onUploaded" />
       </SectionCard>
       <ShareLinksPanel v-if="canWrite" :target="{ type: 'Version', id: version.id }" />

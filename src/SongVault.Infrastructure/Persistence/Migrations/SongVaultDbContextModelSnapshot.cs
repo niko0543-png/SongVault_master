@@ -438,6 +438,42 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                     b.ToTable("Comments", (string)null);
                 });
 
+            modelBuilder.Entity("SongVault.Domain.Files.AudioPreview", b =>
+                {
+                    b.Property<Guid>("SongFileId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int?>("DurationMs")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<byte[]>("Peaks")
+                        .HasMaxLength(1000)
+                        .HasColumnType("varbinary(1000)");
+
+                    b.Property<string>("PreviewStorageKey")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTimeOffset>("RequestedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("SongFileId");
+
+                    b.ToTable("AudioPreviews", (string)null);
+                });
+
             modelBuilder.Entity("SongVault.Domain.Files.FileUpload", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1090,6 +1126,15 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                     b.HasOne("SongVault.Domain.Files.SongFile", null)
                         .WithMany()
                         .HasForeignKey("SongFileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SongVault.Domain.Files.AudioPreview", b =>
+                {
+                    b.HasOne("SongVault.Domain.Files.SongFile", null)
+                        .WithOne()
+                        .HasForeignKey("SongVault.Domain.Files.AudioPreview", "SongFileId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

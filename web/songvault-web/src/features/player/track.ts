@@ -19,6 +19,6 @@ export function toTrack(args: {
     id: args.file.id,
     title: `${args.songTitle} — v${args.versionNumber}`,
     subtitle: args.file.originalFileName,
-    src: filesApi.contentUrl(args.songId, args.versionId, args.file.id),
+    src: filesApi.listenUrl(args.songId, args.versionId, args.file.id),       // #15 : aperçu MP3 si prêt
   }
 }

@@ -123,9 +123,13 @@ internal sealed class AccountRepository(SongVaultDbContext db, UserManager<Ident
 
         var songs = db.Songs.IgnoreQueryFilters([SongVaultDbContext.BandFilter])
             .Where(s => soloBandIds.Contains(s.BandId));
-        var keys = await songs.SelectMany(s => s.Versions).SelectMany(v => v.Files)
-            .Select(f => f.StorageKey)
-            .ToListAsync(ct);
+        var files = songs.SelectMany(s => s.Versions).SelectMany(v => v.Files);
+        var keys = await files.Select(f => f.StorageKey).ToListAsync(ct);
+        // #15 : leurs MP3 d'aperçu (les lignes partent en cascade avec les fichiers)
+        keys.AddRange(await db.AudioPreviews
+            .Where(p => p.PreviewStorageKey != null && files.Any(f => f.Id == p.SongFileId))
+            .Select(p => p.PreviewStorageKey!)
+            .ToListAsync(ct));
         // Sorties de ces groupes (#10) : leurs pochettes, puis les sorties avant les morceaux que citent leurs pistes
         var releases = db.Releases.IgnoreQueryFilters([SongVaultDbContext.BandFilter])
             .Where(r => soloBandIds.Contains(r.BandId));

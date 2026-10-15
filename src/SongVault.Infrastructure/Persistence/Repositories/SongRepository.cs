@@ -95,7 +95,8 @@ internal sealed class SongRepository(SongVaultDbContext db, IBandContext bandCon
                 v.Bpm, v.Key == null ? null : v.Key.Value,
                 v.CreatedAt, v.UpdatedAt,
                 v.Files.OrderBy(f => f.UploadedAt)
-                       .Select(f => new SongFileDto(f.Id, f.OriginalFileName, f.ContentType, f.SizeBytes, f.FileType, f.UploadedAt))
+                       .Select(f => new SongFileDto(f.Id, f.OriginalFileName, f.ContentType, f.SizeBytes, f.FileType, f.UploadedAt,
+                           db.AudioPreviews.Where(p => p.SongFileId == f.Id).Select(p => (AudioPreviewStatus?)p.Status).FirstOrDefault()))
                        .ToList()))
             .FirstOrDefaultAsync(ct);
 
@@ -118,11 +119,54 @@ internal sealed class SongRepository(SongVaultDbContext db, IBandContext bandCon
             .FirstOrDefaultAsync(ct);
 
     public async Task<IReadOnlyList<string>> ListStorageKeysAsync(Guid songId, CancellationToken ct)
-        => await BandVersions.AsNoTracking()
-            .Where(v => v.SongId == songId)
+    {
+        var files = BandVersions.AsNoTracking().Where(v => v.SongId == songId).SelectMany(v => v.Files);
+        var keys = await files.Select(f => f.StorageKey).ToListAsync(ct);
+        // #15 : et les MP3 d'aperçu de ces fichiers
+        keys.AddRange(await db.AudioPreviews.AsNoTracking()
+            .Where(p => p.PreviewStorageKey != null && files.Any(f => f.Id == p.SongFileId))
+            .Select(p => p.PreviewStorageKey!)
+            .ToListAsync(ct));
+        return keys;
+    }
+
+    // ---------- Aperçus audio (#15) ----------
+    public async Task<StoredFileInfo?> GetListenFileAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct)
+    {
+        var file = await BandVersions.AsNoTracking()
+            .Where(v => v.SongId == songId && v.Id == versionId)
             .SelectMany(v => v.Files)
-            .Select(f => f.StorageKey)
-            .ToListAsync(ct);
+            .Where(f => f.Id == fileId)
+            .Select(f => new
+            {
+                f.StorageKey,
+                f.ContentType,
+                f.OriginalFileName,
+                PreviewKey = db.AudioPreviews
+                    .Where(p => p.SongFileId == f.Id && p.Status == AudioPreviewStatus.Ready)
+                    .Select(p => p.PreviewStorageKey)
+                    .FirstOrDefault(),
+            })
+            .FirstOrDefaultAsync(ct);
+        if (file is null) return null;
+        return file.PreviewKey is null
+            ? new StoredFileInfo(file.StorageKey, file.ContentType, file.OriginalFileName)
+            : new StoredFileInfo(file.PreviewKey, "audio/mpeg", file.OriginalFileName);
+    }
+
+    public async Task<AudioWaveformDto?> GetWaveformAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct)
+    {
+        var waveform = await BandVersions.AsNoTracking()
+            .Where(v => v.SongId == songId && v.Id == versionId)
+            .SelectMany(v => v.Files)
+            .Where(f => f.Id == fileId)
+            .SelectMany(f => db.AudioPreviews.Where(p => p.SongFileId == f.Id && p.Status == AudioPreviewStatus.Ready))
+            .Select(p => new { p.DurationMs, p.Peaks })
+            .FirstOrDefaultAsync(ct);
+        return waveform is { DurationMs: { } duration, Peaks: { } peaks }
+            ? new AudioWaveformDto(duration, [.. peaks.Select(b => (int)b)])
+            : null;
+    }
 
     public async Task<IReadOnlyDictionary<Guid, Guid>> GetVersionSongIdsAsync(
     IReadOnlyCollection<Guid> versionIds, CancellationToken ct)
