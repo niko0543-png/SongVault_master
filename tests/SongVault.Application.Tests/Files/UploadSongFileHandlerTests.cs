@@ -3,6 +3,7 @@ using SongVault.Application.Files;
 using SongVault.Application.Tests.Fakes;
 using SongVault.Domain.Songs;
 using SongVault.Application.Activity;
+using SongVault.Domain.Files;
 
 namespace SongVault.Application.Tests.Files;
 
@@ -13,9 +14,11 @@ public sealed class UploadSongFileHandlerTests
     private readonly FakeSongRepository _songs = new();
     private readonly FakeUnitOfWork _uow = new();
     private readonly FakeFileStorageService _storage = new();
+    private readonly FakeAudioPreviewRepository _previews = new();
+    private readonly FakeBackgroundJobs _jobs = new();
 
     private UploadSongFileHandler Sut() => new(_songs, _uow, _storage, new FixedTimeProvider(Now),
-           new ActivityLog(new FakeActivityRepository(), new FakeCurrentUser()));
+           new ActivityLog(new FakeActivityRepository(), new FakeCurrentUser()), new AudioPreviewQueue(_previews, _jobs));
 
     private UploadSongFileCommand Command(long length, byte[] content, string fileName = "maquette.mp3")
     {
@@ -57,5 +60,29 @@ public sealed class UploadSongFileHandlerTests
 
         var stored = Assert.Single(_storage.Files).Value;
         Assert.Equal(mp3, stored);       // le flux a bien été remis au début avant l'enregistrement
+    }
+
+    [Fact]
+    public async Task Un_fichier_audio_part_avec_son_apercu_a_preparer()
+    {
+        byte[] mp3 = [.. "ID3"u8, 0x04, 0x00, .. new byte[100]];
+
+        var file = await Sut().HandleAsync(Command(mp3.Length, mp3), CancellationToken.None);
+
+        Assert.Equal(AudioPreviewStatus.Pending, file.Preview);
+        Assert.Equal(file.Id, Assert.Single(_previews.Previews).SongFileId);
+        var job = Assert.Single(_jobs.Enqueued);
+        Assert.Equal((AudioPreviewJob.JobType, file.Id.ToString(), Now), job);
+        Assert.Equal(1, _uow.SaveCount);                  // fichier, aperçu et tâche : un seul enregistrement
+    }
+
+    [Fact]
+    public async Task Un_document_n_a_pas_d_apercu()
+    {
+        var file = await Sut().HandleAsync(Command(5, "%PDF-"u8.ToArray(), "paroles.pdf"), CancellationToken.None);
+
+        Assert.Null(file.Preview);
+        Assert.Empty(_previews.Previews);
+        Assert.Empty(_jobs.Enqueued);
     }
 }

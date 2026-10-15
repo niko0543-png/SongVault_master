@@ -55,6 +55,9 @@ public static class DependencyInjection
         services.AddScoped<DownloadDataExportHandler>();
         services.AddScoped<IBackgroundJobHandler, ExportAccountJob>();
         services.AddScoped<IBackgroundJobHandler, ExpireExportJob>();
+        // #15 : forme d'onde et aperçu audio (ADR 0021)
+        services.AddScoped<AudioPreviewQueue>();
+        services.AddScoped<IBackgroundJobHandler, AudioPreviewJob>();
         services.AddScoped<DeleteAccountHandler>();
         services.AddScoped<IBackgroundJobHandler, PurgeAccountJob>();
         // #6 : envoi direct vers le stockage (ADR 0012)

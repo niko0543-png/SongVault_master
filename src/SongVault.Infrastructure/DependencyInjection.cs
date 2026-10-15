@@ -12,6 +12,7 @@ using Microsoft.Extensions.Options;
 using SongVault.Application.Notifications;
 using SongVault.Infrastructure.Notifications;
 using SongVault.Infrastructure.Sharing;
+using SongVault.Infrastructure.Audio;
 
 namespace SongVault.Infrastructure;
 
@@ -108,6 +109,16 @@ public static class DependencyInjection
             .ValidateOnStart();
         services.AddSingleton<IUnsubscribeTokens, UnsubscribeTokens>();
         services.AddHostedService<NotificationWorker>();
+
+        // #15 : forme d'onde et MP3 d'écoute, calculés par ffmpeg en tâche de fond (ADR 0021)
+        services.AddOptions<AudioPreviewOptions>()
+            .Bind(configuration.GetSection(AudioPreviewOptions.SectionName))
+            .Validate(o => !string.IsNullOrWhiteSpace(o.FfmpegPath), "AudioPreview:FfmpegPath est obligatoire.")
+            .Validate(o => o.Timeout > TimeSpan.Zero, "AudioPreview:Timeout doit être positif.")
+            .Validate(o => o.Mp3BitrateKbps is >= 32 and <= 320, "AudioPreview:Mp3BitrateKbps va de 32 à 320.")
+            .ValidateOnStart();
+        services.AddSingleton<IAudioProcessor, FfmpegAudioProcessor>();
+
 
         // #13 : liens de partage externes (ADR 0019)
         services.AddSingleton<ISharePasswordHasher, SharePasswordHasher>();

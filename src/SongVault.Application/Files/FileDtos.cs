@@ -12,12 +12,18 @@ namespace SongVault.Application.Files;
 /// <param name="SizeBytes">Taille du fichier en octets</param>
 /// <param name="FileType">Classification du type de fichier (Audio, Video, Document, etc.)</param>
 /// <param name="UploadedAt">Date et heure du téléchargement du fichier</param>
+/// <param name="Preview">Fichier audio : état de son aperçu (ADR 0021) ; null pour les autres fichiers</param>
 public sealed record SongFileDto(Guid Id, string OriginalFileName, string ContentType, long SizeBytes,
-    SongFileType FileType, DateTimeOffset UploadedAt)
+    SongFileType FileType, DateTimeOffset UploadedAt, AudioPreviewStatus? Preview = null)
 {
-    public static SongFileDto From(SongFile f) =>
-        new(f.Id, f.OriginalFileName, f.ContentType, f.SizeBytes, f.FileType, f.UploadedAt);
+    public static SongFileDto From(SongFile f) => From(f, null);
+
+    public static SongFileDto From(SongFile f, AudioPreviewStatus? preview) =>
+        new(f.Id, f.OriginalFileName, f.ContentType, f.SizeBytes, f.FileType, f.UploadedAt, preview);
 }
+
+/// <summary>Forme d'onde précalculée d'un fichier audio (ADR 0021) : AudioPreview.PeakCount points de 0 à 255.</summary>
+public sealed record AudioWaveformDto(int DurationMs, IReadOnlyList<int> Peaks);
 
 /// <summary>
 /// Informations internes nécessaires au téléchargement d'un fichier.

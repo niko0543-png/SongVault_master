@@ -2,12 +2,13 @@
 using SongVault.Application.Activity;
 using SongVault.Application.Common.Exceptions;
 using SongVault.Domain.Activity;
+using SongVault.Domain.Files;
 
 namespace SongVault.Application.Files;
 
 public sealed class UploadSongFileHandler(
     ISongRepository songs, IUnitOfWork unitOfWork, IFileStorageService storage, TimeProvider clock,
-    ActivityLog activity)
+    ActivityLog activity, AudioPreviewQueue previews)
 {
     public async Task<SongFileDto> HandleAsync(UploadSongFileCommand command, CancellationToken ct)
     {
@@ -39,8 +40,9 @@ public sealed class UploadSongFileHandler(
             var file = version.AddFile(FileNameSanitizer.Sanitize(command.FileName), storageKey,
                 rule.ContentType, command.Length, rule.FileType, now);
             activity.FileChanged(ActivityType.FileAdded, song, version, file, now);
+            var preview = previews.RequestFor(file, now);                 // #15 : aperçu préparé en tâche de fond
             await unitOfWork.SaveChangesAsync(ct);                        // 2. base
-            return SongFileDto.From(file);
+            return SongFileDto.From(file, preview);
         }
         catch
         {
@@ -78,7 +80,9 @@ public sealed class DeleteSongFileHandler(
         var file = version.RemoveFile(fileId) ?? throw new NotFoundException("SongFile", fileId);
         activity.FileChanged(ActivityType.FileRemoved, song, version, file, clock.GetUtcNow());
 
-        await unitOfWork.SaveChangesAsync(ct);                       // 1. base
+        await unitOfWork.SaveChangesAsync(ct);                       // 1. base (l'aperçu part en cascade)
         await storage.DeleteAsync(file.StorageKey, CancellationToken.None);  // 2. fichier
+        if (file.FileType == SongFileType.Audio)                     // 3. son MP3 d'aperçu (#15), s'il existe
+            await storage.DeleteAsync(AudioPreview.StorageKeyFor(file.Id), CancellationToken.None);
     }
 }
