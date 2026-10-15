@@ -14,6 +14,7 @@ using SongVault.Application.Songs.GetSong;
 using SongVault.Application.Songs.ListSongs;
 using SongVault.Application.Songs.UpdateSong;
 using SongVault.Application.Versions;
+using SongVault.Application.Sharing;
 
 namespace SongVault.Application;
 
@@ -89,6 +90,18 @@ public static class DependencyInjection
         services.AddScoped<GetNotificationPreferencesHandler>();
         services.AddScoped<UpdateNotificationPreferencesHandler>();
         services.AddScoped<UnsubscribeHandler>();
+        // #13 : liens de partage externes (ADR 0019)
+        services.AddScoped<CreateShareLinkHandler>();
+        services.AddScoped<ListShareLinksHandler>();
+        services.AddScoped<RevokeShareLinkHandler>();
+        services.AddScoped<DeleteShareLinkHandler>();
+        services.AddScoped<ListShareLinkAccessesHandler>();
+        services.AddScoped<ShareLinkGate>();
+        services.AddScoped<ShareAccessLog>();
+        services.AddScoped<OpenSharedContentHandler>();
+        services.AddScoped<UnlockShareLinkHandler>();
+        services.AddScoped<DownloadSharedFileHandler>();
+        services.AddScoped<DownloadSharedCoverHandler>();
 
         return services;
     }
