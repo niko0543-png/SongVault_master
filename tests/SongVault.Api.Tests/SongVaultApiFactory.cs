@@ -36,6 +36,7 @@ public sealed class SongVaultApiFactory : WebApplicationFactory<Program>, IAsync
         builder.UseSetting("FileStorage:RootPath", _filesRoot);
         builder.UseSetting("RateLimiting:UploadsPerMinute", "1000");
         builder.UseSetting("RateLimiting:AuthPerMinute", "1000");
+        builder.UseSetting("RateLimiting:SharePerMinute", "1000");
         builder.UseSetting("App:PublicUrl", "http://localhost:8080");
         // #5 : pas de service d'arrière-plan ; les tests lancent les tâches avec RunDueJobsAsync
         builder.UseSetting("BackgroundJobs:Enabled", "false");
