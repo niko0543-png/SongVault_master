@@ -1,11 +1,11 @@
 import './assets/main.css'
-
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 import { useAuthStore } from './features/auth/stores/authStore'
 import { setUnauthorizedHandler } from './shared/api/httpClient'
+import { registerServiceWorker } from './app/registerServiceWorker'
 
 const app = createApp(App)
 app.use(createPinia())             // AVANT le routeur : la garde utilise un store
@@ -20,3 +20,4 @@ setUnauthorizedHandler(() => {
 })
 
 app.mount('#app')
+registerServiceWorker()                 // #14 : application installable, page hors connexion
