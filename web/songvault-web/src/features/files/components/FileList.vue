@@ -30,6 +30,11 @@ const icons: Record<SongFileType, string> = { Audio: '🎵', Tablature: '🎸', 
 <style scoped>
 .file-list { list-style: none; padding: 0; display: grid; gap: .5rem; }
 .file-item { display: grid; grid-template-columns: auto 1fr auto; gap: .75rem; align-items: center; }
-.file-info { display: grid; overflow-wrap: anywhere; }
-.file-actions { display: flex; gap: .5rem; align-items: center; }
+.file-info { display: grid; overflow-wrap: anywhere; min-width: 0; }
+.file-actions { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+/* #14 : téléphone. Les boutons passent sous le nom du fichier, qui garde toute la largeur */
+@media (max-width: 600px) {
+  .file-item { grid-template-columns: auto minmax(0, 1fr); }
+  .file-actions { grid-column: 1 / -1; }
+}
 </style>

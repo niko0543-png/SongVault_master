@@ -113,6 +113,9 @@ docker compose down -v       # supprime aussi la base et les fichiers
   suppression du compte, effacé définitivement 30 jours plus tard ; mentions légales et politique de confidentialité.
 - **Accessibilité** : navigation complète au clavier, lien d'évitement, focus géré à
   chaque changement de page, boîtes de confirmation accessibles.
+- **Mobile et application installable** : mise en page prévue dès 360 px de large, menu
+  replié, lecteur au pouce avec ±10 s et commandes sur l'écran verrouillé ; s'installe sur
+  l'écran d'accueil d'Android et d'iOS, avec une page claire hors connexion.
 
 ---
 
@@ -298,14 +301,15 @@ volumineux, 422 règle métier, 429 trop de requêtes.
 | Application | xUnit, faux repositories | … | cas d'usage |
 | Intégration API | xUnit, WebApplicationFactory, **Testcontainers SQL Server** | … | HTTP de bout en bout contre un vrai SQL Server : codes d'erreur, concurrence, isolation par utilisateur, sécurité des fichiers |
 | Front | Vitest, Vue Test Utils | … | stores Pinia, composables, garde de navigation |
-| Bout en bout | Playwright | 2 | inscription → morceau → version → fichier → lecture → déconnexion |
+| Bout en bout | Playwright | 5 | inscription → morceau → version → fichier → lecture → déconnexion ; à 360 px : aucun défilement horizontal, lecteur et menu ; application installable |
 
 <!-- Remplacez les … par les chiffres de `dotnet test` et `npm run test:unit -- --run`. -->
 
 - Couverture du code : voir [docs/test-coverage.md](docs/test-coverage.md)
   (`scripts/coverage.ps1` génère le rapport).
-- Accessibilité Lighthouse : **…/100** sur la liste, le détail d'un morceau et le détail
-  d'une version.
+- Accessibilité Lighthouse, en mode mobile : **…/100** sur la connexion, la liste, le détail
+  d'une version et la page d'un lien de partage.
+  Le … se remplace à l'étape 2 de la PR, avec le score le plus bas des quatre pages.
 - Requêtes SQL maîtrisées : 2 pour la liste, 3 pour le détail d'un morceau, 4 pour le
   détail d'une version, quel que soit le volume de données.
 
@@ -443,6 +447,8 @@ Choix assumés pour la v1 :
   « mot de passe oublié » pour les seuls comptes connus (ADR 0011). Les invitations partent
   encore pendant la requête.
 - Pas de traitement audio côté serveur (forme d'onde, transcodage).
+- Pas d'écoute hors connexion : l'application installée a besoin du réseau, son service
+  worker ne garde aucune donnée de l'API (ADR 0020).
 
 Pistes suivies dans les [issues](https://github.com/<owner>/<repo>/issues).
 

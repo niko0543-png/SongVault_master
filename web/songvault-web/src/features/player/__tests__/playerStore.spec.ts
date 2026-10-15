@@ -81,6 +81,19 @@ describe('playerStore', () => {
     expect(player.track?.id).toBe('b')
   })
 
+  it('skip avance ou recule sans sortir du fichier', async () => {
+    await player.play(trackA)
+    audio.dispatchEvent(new Event('loadedmetadata'))      // durée connue : 240 s
+    audio.currentTime = 5
+
+    player.skip(-10)
+    expect(audio.currentTime).toBe(0)
+    player.skip(10)
+    expect(audio.currentTime).toBe(10)
+    audio.currentTime = 235
+    player.skip(10)
+    expect(audio.currentTime).toBe(240)
+  })
   
   it('detach retire les écouteurs', async () => {
     player.detach()

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Icône SongVault (#14) : source des PNG de public/icons, régénérés par scripts/generate-icons.mjs -->
+  <rect width="512" height="512" rx="96" fill="#5b3fd1"/>
+  <!-- Deux croches liées, dans le cercle central de 80 % : rien n'est coupé par un masque rond (icône « maskable ») -->
+  <g fill="#fff">
+    <path d="M196 140 L376 108 V316 a52 44 0 1 1 -32 -40.6 V178 L228 199 V348 a52 44 0 1 1 -32 -40.6 Z"/>
+  </g>
+</svg>

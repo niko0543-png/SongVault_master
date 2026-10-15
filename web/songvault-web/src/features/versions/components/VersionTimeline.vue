@@ -40,6 +40,10 @@ const emit = defineEmits<{ changeStatus: [versionId: string, status: SongVersion
 .timeline { list-style: none; padding: 0; display: grid; gap: .5rem; }
 .timeline-item { display: grid; grid-template-columns: auto 1fr auto auto; gap: .75rem; align-items: center; }
 .number { font-weight: 700; font-size: 1.2rem; color: var(--primary); }
-.content { display: grid; }
 .timeline-item select { width: auto; }
+/* #14 : téléphone. Numéro et titre sur la première ligne, statut et sélecteur dessous */
+@media (max-width: 600px) {
+  .timeline-item { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .timeline-item select { grid-column: 1 / -1; width: 100%; }
+}
 </style>

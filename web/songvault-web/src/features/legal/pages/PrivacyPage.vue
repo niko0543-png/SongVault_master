@@ -105,4 +105,15 @@ import { publisher } from '../publisher'
 .legal { max-width: 46rem; }
 table { width: 100%; border-collapse: collapse; margin: .5rem 0 1rem; font-size: .95rem; }
 th, td { text-align: left; vertical-align: top; padding: .5rem; border-bottom: 1px solid var(--border); }
+/* #14 : téléphone. Une fiche par ligne du tableau, chaque cellule précédée de son en-tête */
+@media (max-width: 600px) {
+  thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  tr { display: block; padding: .5rem 0; border-bottom: 1px solid var(--border); }
+  td { display: block; border: 0; padding: .15rem 0; }
+  td::before { display: block; font-weight: 600; font-size: .85rem; color: var(--muted); }
+  td:nth-child(1)::before { content: 'Données'; }
+  td:nth-child(2)::before { content: 'Pourquoi'; }
+  td:nth-child(3)::before { content: 'Base légale'; }
+  td:nth-child(4)::before { content: 'Combien de temps'; }
+}
 </style>

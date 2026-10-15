@@ -14,8 +14,20 @@
 * {
   box-sizing: border-box;
 }
+html {
+  -webkit-text-size-adjust: 100%; /* #14 : iOS ne grossit pas le texte en mode paysage */
+}
 body {
   margin: 0;
+}
+/* #14 : une image ou un lecteur ne dépasse jamais de son bloc */
+img,
+audio,
+video {
+  max-width: 100%;
+}
+h1 {
+  overflow-wrap: anywhere; /* un titre de morceau très long passe à la ligne au lieu d'élargir la page */
 }
 a {
   color: var(--primary);
@@ -75,6 +87,10 @@ select {
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
+  flex-wrap: wrap; /* #14 : les boutons passent sous le titre sur un téléphone */
+}
+.page-header > * {
+  min-width: 0;
 }
 .muted {
   color: var(--muted);
@@ -92,4 +108,12 @@ select {
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
+}
+/* #14 : au doigt, une cible fait au moins 44 px de haut (recommandation Apple et WCAG 2.5.5) */
+@media (pointer: coarse) {
+  button,
+  select,
+  input:not([type='checkbox'], [type='radio'], [type='range'], [type='file']) {
+    min-height: 44px;
+  }
 }

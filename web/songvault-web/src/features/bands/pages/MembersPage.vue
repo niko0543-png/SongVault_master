@@ -137,6 +137,11 @@ async function onLeave() {
 <style scoped>
 .member-list { list-style: none; padding: 0; display: grid; gap: .5rem; }
 .member { display: grid; grid-template-columns: 1fr auto auto; gap: .75rem; align-items: center; }
-.member-info { display: grid; overflow-wrap: anywhere; }
+.member-info { display: grid; overflow-wrap: anywhere; min-width: 0; }
+/* #14 : téléphone. L'adresse garde toute la largeur ; rôle et bouton passent dessous */
+@media (max-width: 600px) {
+  .member { grid-template-columns: minmax(0, 1fr) auto; }
+  .member-info { grid-column: 1 / -1; }
+}
 .member select { width: auto; }
 </style>

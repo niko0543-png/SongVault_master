@@ -98,6 +98,14 @@ export const usePlayerStore = defineStore('player', () => {
     currentTime.value = seconds
   }
 
+    /** #14 : recule ou avance de quelques secondes (boutons du lecteur, commandes de l'écran verrouillé), sans sortir du fichier. */
+  function skip(deltaSeconds: number) {
+    if (!audio) return
+    const end = duration.value || audio.duration || 0
+    seek(Math.min(Math.max(audio.currentTime + deltaSeconds, 0), end))
+  }
+
+
   /** Lit la piste à partir de cette position, en la chargeant si besoin (horodatage d'un commentaire, #8). */
   async function playAt(next: Track, seconds: number) {
     if (track.value?.src === next.src) seek(seconds)
@@ -123,5 +131,5 @@ function stop() {
   error.value = null
 }
 
-    return { track, isPlaying, currentTime, duration, error, attach, detach, play, playAt, pause, toggle, seek, switchTo, stop }
+    return { track, isPlaying, currentTime, duration, error, attach, detach, play, playAt, pause, toggle, seek, skip, switchTo, stop }
 })

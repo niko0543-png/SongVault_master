@@ -2,9 +2,18 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- #14 : viewport-fit=cover pour utiliser tout l'écran de l'iPhone (les marges viennent de env(safe-area-inset-*)) -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="description" content="SongVault : gérez les morceaux de votre groupe et leurs versions successives." />
-    <link rel="icon" href="/favicon.ico" />
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
+    <!-- #14 : application installable (Android : manifeste ; iOS : icône et titre de l'écran d'accueil) -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#5b3fd1" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="SongVault" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <title>SongVault</title>
   </head>
   <body>

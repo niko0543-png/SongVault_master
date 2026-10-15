@@ -137,6 +137,6 @@ async function onRevoke(invitation: Invitation) {
 h3 { font-size: 1rem; margin: 1rem 0 .5rem; }
 .invitation-list { list-style: none; padding: 0; display: grid; gap: .5rem; }
 .invitation { display: grid; grid-template-columns: 1fr auto; gap: .75rem; align-items: center; }
-.invitation-info { display: grid; overflow-wrap: anywhere; }
+.invitation-info { display: grid; overflow-wrap: anywhere; min-width: 0; }
 @media (max-width: 600px) { .invite-form { grid-template-columns: 1fr; } }
 </style>
