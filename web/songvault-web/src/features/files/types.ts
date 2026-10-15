@@ -1,5 +1,8 @@
 export type SongFileType = 'Audio' | 'Tablature' | 'Document'
 
+/** #15 : état de l'aperçu MP3 et de la forme d'onde d'un fichier audio (null pour les autres). */
+export type AudioPreviewStatus = 'Pending' | 'Ready' | 'Failed'
+
 export interface SongFile {
   id: string
   originalFileName: string
@@ -7,6 +10,14 @@ export interface SongFile {
   sizeBytes: number
   fileType: SongFileType
   uploadedAt: string
+  /** Absent des réponses d'avant #15 et des faux des tests : traité comme null. */
+  preview?: AudioPreviewStatus | null
+}
+
+/** #15 : 1000 crêtes de 0 à 255, la plus forte valant 255. */
+export interface AudioWaveform {
+  durationMs: number
+  peaks: number[]
 }
 
 export interface FilePolicy {

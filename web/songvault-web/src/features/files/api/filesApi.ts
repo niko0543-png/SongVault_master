@@ -1,12 +1,25 @@
 import { request } from '@/shared/api/httpClient'
 import { bandPath } from '@/shared/api/bandPath'
 import { putFile } from './putFile'
-import type { FilePolicy, FileUploadTicket, SongFile } from '../types'
+import type { AudioPreviewStatus, AudioWaveform, FilePolicy, FileUploadTicket, SongFile } from '../types'
 
 const base = (songId: string, versionId: string) => bandPath(`/songs/${songId}/versions/${versionId}/files`)
 
 function contentUrl(songId: string, versionId: string, fileId: string, download = false) {
   return `/api${base(songId, versionId)}/${fileId}/content${download ? '?download=true' : ''}`
+}
+
+/** #15 : ce que le lecteur charge : l'aperçu MP3 quand il est prêt, sinon l'original. */
+function listenUrl(songId: string, versionId: string, fileId: string) {
+  return `/api${base(songId, versionId)}/${fileId}/listen`
+}
+
+function waveform(songId: string, versionId: string, fileId: string) {
+  return request<AudioWaveform>(`${base(songId, versionId)}/${fileId}/waveform`)
+}
+
+function retryPreview(songId: string, versionId: string, fileId: string) {
+  return request<{ status: AudioPreviewStatus }>(`${base(songId, versionId)}/${fileId}/preview`, { method: 'POST' })
 }
 
 function policy() {
@@ -31,4 +44,4 @@ function remove(songId: string, versionId: string, fileId: string) {
   return request<void>(`${base(songId, versionId)}/${fileId}`, { method: 'DELETE' })
 }
 
-export const filesApi = { contentUrl, policy, upload, remove }
+export const filesApi = { contentUrl, listenUrl, waveform, retryPreview, policy, upload, remove }
