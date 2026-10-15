@@ -1,5 +1,5 @@
-<#
-.SYNOPSIS  Supprime du volume songvault-files les fichiers qu'aucune ligne de SongFiles ni de DataExports ni de Releases (pochettes) ne référence.
+﻿<#
+.SYNOPSIS  Supprime du volume songvault-files les fichiers qu'aucune ligne de SongFiles ni de DataExports ni de Releases (pochettes) ni d'AudioPreviews (aperçus MP3) ne référence.
 .EXAMPLE   .\scripts\purge-orphan-files.ps1
 #>
 $ErrorActionPreference = 'Stop'
@@ -10,7 +10,7 @@ $sqlcmd   = '/opt/mssql-tools18/bin/sqlcmd'
 Push-Location $RepoRoot
 try {
     $referenced = docker compose exec -T db $sqlcmd -S localhost -U sa -P $password -C -b -h -1 -W `
-		-d SongVault -Q "SET NOCOUNT ON; SELECT StorageKey FROM SongFiles UNION ALL SELECT StorageKey FROM DataExports WHERE StorageKey IS NOT NULL UNION ALL SELECT CoverStorageKey FROM Releases WHERE CoverStorageKey IS NOT NULL"
+		-d SongVault -Q "SET NOCOUNT ON; SELECT StorageKey FROM SongFiles UNION ALL SELECT StorageKey FROM DataExports WHERE StorageKey IS NOT NULL UNION ALL SELECT CoverStorageKey FROM Releases WHERE CoverStorageKey IS NOT NULL UNION ALL SELECT PreviewStorageKey FROM AudioPreviews WHERE PreviewStorageKey IS NOT NULL"
     Assert-LastExit 'lecture des clés'
     $onDisk = docker compose exec -T api ls -1 /var/songvault/files
     Assert-LastExit 'liste du volume'

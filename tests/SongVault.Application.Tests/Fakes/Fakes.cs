@@ -107,6 +107,12 @@ internal sealed class FakeSongRepository : ISongRepository
         return Task.FromResult(keys);
     }
 
+    public Task<StoredFileInfo?> GetListenFileAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct)
+       => GetFileAsync(songId, versionId, fileId, ct);         // pas d'aperçu en mémoire : l'original
+
+    public Task<AudioWaveformDto?> GetWaveformAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct)
+        => Task.FromResult<AudioWaveformDto?>(null);
+
     public Task<IReadOnlyDictionary<Guid, Guid>> GetVersionSongIdsAsync(IReadOnlyCollection<Guid> versionIds, CancellationToken ct)
     {
         IReadOnlyDictionary<Guid, Guid> result = Songs.SelectMany(s => s.Versions)
