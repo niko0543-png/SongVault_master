@@ -3,12 +3,18 @@
 .EXAMPLE   $env:SONGVAULT_SQL_PASSWORD = '…' ; .\scripts\deploy-azure.ps1 -ImageTag v1.1.0
 .EXAMPLE   .\scripts\deploy-azure.ps1 -ImageTag v1.1.0 -ResourceGroup songvault-drill -NoDeleteLocks
 .EXAMPLE   $env:BREVO_API_KEY = '…' ; .\scripts\deploy-azure.ps1 -ImageTag v1.1.0 -EmailProvider Brevo -EmailFrom no-reply@songvault.eu
+.EXAMPLE   $env:STRIPE_SECRET_KEY = '…' ; $env:STRIPE_WEBHOOK_SECRET = '…'
+           .\scripts\deploy-azure.ps1 -ImageTag v1.9.0 -BillingProvider Stripe -StripePriceBand price_… -StripePriceStudio price_…
 .NOTES     Prérequis : Azure CLI connecté (az login) et images publiées par le workflow « images ».
            Secrets lus dans l'environnement, jamais en paramètre :
              SONGVAULT_SQL_PASSWORD  mot de passe de l'administrateur SQL (obligatoire, toujours le même)
              BREVO_API_KEY           clé d'API Brevo : à définir la première fois, ou pour la changer
+             STRIPE_SECRET_KEY       clé secrète Stripe (sk_live_…) : avec -BillingProvider Stripe, la première fois (#16)
+             STRIPE_WEBHOOK_SECRET   secret de signature du webhook (whsec_…) : idem
            Sans -EmailProvider ni -EmailFrom, les réglages e-mail de l'API en place sont gardés, clé Brevo
            comprise (#27). Un nouveau groupe de ressources part sur Log : aucun e-mail ne part.
+           De même sans -BillingProvider ni prix : les réglages de paiement en place sont gardés ;
+           un nouveau groupe part sur None (formules et quotas, sans paiement en ligne).
 #>
 param(
     [Parameter(Mandatory)][string]$ImageTag,
@@ -17,6 +23,10 @@ param(
     # Sans valeur : celle de l'API déjà déployée (Log et no-reply@songvault.local pour un nouveau groupe)
     [ValidateSet('Log', 'Brevo')][string]$EmailProvider,
     [string]$EmailFrom,
+    # Sans valeur : celle de l'API déjà déployée (None pour un nouveau groupe)
+    [ValidateSet('None', 'Stripe')][string]$BillingProvider,
+    [string]$StripePriceBand,
+    [string]$StripePriceStudio,
     # Sans verrous sur la base et le stockage : environnement d'exercice, supprimé ensuite (ADR 0013)
     [switch]$NoDeleteLocks
 )
@@ -43,6 +53,29 @@ function Get-DeployedEmail([string]$Group, [string]$App) {
     return $settings
 }
 
+# Réglages de paiement de l'API en place (#16), même principe que pour les e-mails
+function Get-DeployedBilling([string]$Group, [string]$App) {
+    $settings = @{ Provider = 'None'; PriceBand = ''; PriceStudio = ''; SecretKey = ''; WebhookSecret = '' }
+    if ((az group exists --name $Group) -ne 'true') { return $settings }
+    $json = az containerapp list --resource-group $Group `
+        --query "[?name=='$App'] | [0].properties.template.containers[0].env" --output json
+    Assert-LastExit "lecture des réglages de $App"
+    $vars = $json | Out-String | ConvertFrom-Json
+    if (-not $vars) { return $settings }
+    $provider = ($vars | Where-Object name -eq 'Billing__Provider').value
+    if ($provider) { $settings.Provider = $provider }
+    $settings.PriceBand = "$(($vars | Where-Object name -eq 'Billing__Stripe__Prices__band').value)"
+    $settings.PriceStudio = "$(($vars | Where-Object name -eq 'Billing__Stripe__Prices__studio').value)"
+    $json = az containerapp secret list --resource-group $Group --name $App --show-values --output json
+    Assert-LastExit 'lecture des secrets Stripe'
+    $secretList = $json | Out-String | ConvertFrom-Json
+    $key = ($secretList | Where-Object name -eq 'stripe-secret-key').value
+    $hook = ($secretList | Where-Object name -eq 'stripe-webhook-secret').value
+    if ($key -and $key -ne 'aucune') { $settings.SecretKey = $key }
+    if ($hook -and $hook -ne 'aucune') { $settings.WebhookSecret = $hook }
+    return $settings
+}
+
 if (-not $env:SONGVAULT_SQL_PASSWORD) { throw 'Définir $env:SONGVAULT_SQL_PASSWORD (mot de passe administrateur SQL).' }
 
 $deployed = Get-DeployedEmail $ResourceGroup 'songvault-api'
@@ -54,6 +87,24 @@ if ($EmailProvider -eq 'Brevo' -and $EmailFrom -like '*@songvault.local') {
     throw 'Avec Brevo, passer -EmailFrom avec une adresse du domaine authentifié chez Brevo.'
 }
 
+$billing = Get-DeployedBilling $ResourceGroup 'songvault-api'
+if (-not $BillingProvider) { $BillingProvider = $billing.Provider }
+if (-not $StripePriceBand) { $StripePriceBand = $billing.PriceBand }
+if (-not $StripePriceStudio) { $StripePriceStudio = $billing.PriceStudio }
+$stripeSecretKey = if ($env:STRIPE_SECRET_KEY) { $env:STRIPE_SECRET_KEY } else { $billing.SecretKey }
+$stripeWebhookSecret = if ($env:STRIPE_WEBHOOK_SECRET) { $env:STRIPE_WEBHOOK_SECRET } else { $billing.WebhookSecret }
+if ($BillingProvider -eq 'Stripe') {
+    if (-not $stripeSecretKey -or -not $stripeWebhookSecret) {
+        throw 'Définir $env:STRIPE_SECRET_KEY et $env:STRIPE_WEBHOOK_SECRET pour encaisser avec Stripe.'
+    }
+    if (-not $StripePriceBand -or -not $StripePriceStudio) {
+        throw 'Avec Stripe, passer -StripePriceBand et -StripePriceStudio (identifiants price_… du tableau de bord).'
+    }
+    if ($ResourceGroup -eq 'songvault-prod' -and $stripeSecretKey -like 'sk_test_*') {
+        Write-Warning 'Clé Stripe de test en production : aucun vrai paiement ne sera encaissé.'
+    }
+}
+
 # Les secrets passent par un fichier de paramètres temporaire : jamais dans la ligne de commande
 $secrets = Join-Path ([IO.Path]::GetTempPath()) "songvault-$([guid]::NewGuid()).parameters.json"
 $parameters = @{
@@ -62,6 +113,11 @@ $parameters = @{
     parameters     = @{
         sqlAdminPassword = @{ value = $env:SONGVAULT_SQL_PASSWORD }
         brevoApiKey      = @{ value = "$brevoApiKey" }
+        stripeSecretKey     = @{ value = "$stripeSecretKey" }
+        stripeWebhookSecret = @{ value = "$stripeWebhookSecret" }
+        # Pas des secrets, mais peut-être vides : un fichier de paramètres les passe tels quels
+        stripePriceBand     = @{ value = "$StripePriceBand" }
+        stripePriceStudio   = @{ value = "$StripePriceStudio" }
     }
 }
 [IO.File]::WriteAllText($secrets, ($parameters | ConvertTo-Json -Depth 5))     # UTF-8 sans BOM
@@ -72,12 +128,12 @@ try {
     az group create --name $ResourceGroup --location $Location --output none
     Assert-LastExit 'création du groupe de ressources'
 
-    Write-Host "2/4 Infrastructure (infra/main.bicep), images $ImageTag, e-mails $EmailProvider ($EmailFrom)"
+    Write-Host "2/4 Infrastructure (infra/main.bicep), images $ImageTag, e-mails $EmailProvider ($EmailFrom), paiement $BillingProvider"
 	$locks = if ($NoDeleteLocks) { 'false' } else { 'true' }
     $json = az deployment group create --resource-group $ResourceGroup --name "songvault-$ImageTag" `
         --template-file infra/main.bicep `
         --parameters "@$secrets" imageTag=$ImageTag emailProvider=$EmailProvider emailFrom=$EmailFrom `
-            enableDeleteLocks=$locks `
+            enableDeleteLocks=$locks billingProvider=$BillingProvider `
         --query properties.outputs --output json
     Assert-LastExit 'déploiement Bicep'
     $outputs = $json | Out-String | ConvertFrom-Json
@@ -112,6 +168,9 @@ try {
     Write-Host "SongVault : $($outputs.publicUrl.value)"
     if ($EmailProvider -eq 'Log') {
         Write-Warning 'E-mails : Log. Aucun e-mail ne part, ils sont écrits dans les journaux de l''API.'
+    }
+    if ($BillingProvider -eq 'None') {
+        Write-Host 'Paiement : None. Formules et quotas appliqués, paiement en ligne fermé.'
     }
 }
 finally {

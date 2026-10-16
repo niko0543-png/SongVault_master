@@ -120,13 +120,27 @@ fonctionnalité qui collecte, conserve ou transmet des données personnelles.
 | Durée | Tant que le lien existe : effacé quand un membre le supprime, ou avec la version, la sortie ou le groupe |
 | Sécurité | Jeton aléatoire dont seule l'empreinte est en base ; lecture seule, limitée à la cible ; révocation immédiate ; essais de mot de passe limités ; IP jamais conservée |
 
+## 10. Abonnements payants
+
+| | |
+|---|---|
+| Finalité | Encaisser l'abonnement d'un groupe et appliquer sa formule |
+| Base légale | Contrat (art. 6.1.b) ; obligation légale pour les factures (art. 6.1.c) |
+| Personnes | Propriétaires qui paient l'abonnement d'un groupe |
+| Données | Chez SongVault : formule, état, fin de période, identifiants Stripe du client et de l'abonnement. Chez Stripe : nom, e-mail, carte, adresse de facturation, factures |
+| Destinataires | Les Owner du groupe (page Facturation) |
+| Sous-traitants | Stripe ; Brevo (e-mail « paiement refusé ») ; hébergeur |
+| Transferts hors UE | Stripe peut traiter aux États-Unis (Data Privacy Framework, clauses contractuelles types) |
+| Durée | Abonnement : tant que le groupe existe. Factures : 10 ans (Code de commerce, art. L123-22), dans Stripe |
+| Sécurité | Aucune donnée de carte chez SongVault (Checkout et portail hébergés par Stripe) ; webhook signé, vérifié, rejoué sans effet |
+
 ## Sous-traitants
 
 | Sous-traitant | Rôle | Localisation | Contrat de traitement (DPA) | État |
 |---|---|---|---|---|
 | Microsoft Ireland Operations Ltd (Azure, région France Central) | Base, fichiers, API, journaux | UE (France) | Addendum de protection des données des produits et services Microsoft (DPA), intégré au contrat d'abonnement | accepté avec l'abonnement Azure |
 | Brevo (Sendinblue SAS) | Envoi des e-mails (adresse, sujet et contenu de chaque e-mail ; journal d'envoi chez Brevo) | UE (France) | DPA intégré aux conditions générales de Brevo | accepté à l'ouverture du compte, le 16 octobre 2026 ; copie archivée hors du dépôt |
-| [Stripe] (#16) | Paiement | UE / États-Unis (clauses contractuelles types) | DPA de Stripe | quand #16 sera fait |
+| Stripe Payments Europe Ltd (Irlande) | Paiement : Checkout, portail client, factures | UE (Irlande), transferts possibles aux États-Unis (Data Privacy Framework, clauses contractuelles types) | DPA intégré au contrat de services Stripe | à accepter à l'activation du compte Stripe (#16) ; copie archivée hors du dépôt |
 | [Supervision] (#18) | Erreurs et traces | à choisir | à vérifier | quand #18 sera fait |
 
 ## Droits des personnes
@@ -158,5 +172,7 @@ fonctionnalité qui collecte, conserve ou transmet des données personnelles.
 - [x] Hébergeur choisi (#6) et ajouté aux mentions légales et à ce registre
 - [ ] DPA de l'hébergeur accepté, copie archivée
 - [x] DPA de Brevo accepté, copie archivée (#27)
+- [ ] DPA de Stripe accepté, copie archivée (#16)
+- [ ] CGV et médiateur de la consommation complétés et relus avant d'ouvrir le paiement (#16)
 - [ ] Durées des journaux et des sauvegardes fixées (#6, #7) et reportées ici et dans la politique
 - [ ] Mentions légales et politique de confidentialité relues par un professionnel
