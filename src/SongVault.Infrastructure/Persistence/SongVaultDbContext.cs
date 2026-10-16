@@ -16,6 +16,7 @@ using SongVault.Domain.Releases;
 using SongVault.Domain.Activity;
 using SongVault.Domain.Notifications;
 using SongVault.Domain.Sharing;
+using SongVault.Domain.Billing;
 
 namespace SongVault.Infrastructure.Persistence;
 
@@ -50,6 +51,10 @@ public sealed class SongVaultDbContext(
     public DbSet<ShareLinkAccess> ShareLinkAccesses => Set<ShareLinkAccess>();
     /// <summary>Forme d'onde et MP3 d'écoute des fichiers audio (ADR 0021).</summary>
     public DbSet<AudioPreview> AudioPreviews => Set<AudioPreview>();
+    /// <summary>Formules, abonnements des groupes et événements Stripe déjà traités (ADR 0023).</summary>
+    public DbSet<Plan> Plans => Set<Plan>();
+    public DbSet<Subscription> Subscriptions => Set<Subscription>();
+    public DbSet<ProcessedStripeEvent> ProcessedStripeEvents => Set<ProcessedStripeEvent>();
     /// <summary>Clés qui signent cookies et liens (ADR 0010) : en base pour survivre à une reconstruction de l'API.</summary>
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
