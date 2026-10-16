@@ -3,7 +3,8 @@ import { describeBands, formatMonthlyPrice, usageRatio } from '../format'
 
 describe('format des formules', () => {
   it('prix mensuel en euros, ou « Gratuit »', () => {
-    expect(formatMonthlyPrice(600)).toBe('6,00 € par mois')
+  // Intl met une espace insécable avant « € » (fine ou non selon la version d'ICU) : on compare avec des espaces simples
+    expect(formatMonthlyPrice(600).replace(/\s/g, ' ')).toBe('6,00 € par mois')
     expect(formatMonthlyPrice(0)).toBe('Gratuit')
   })
 
