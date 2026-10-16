@@ -85,7 +85,10 @@ function onDrop(event: DragEvent) {
       Envoi de {{ currentName }}…
       <span v-if="progress !== null" data-testid="upload-progress">{{ Math.round(progress * 100) }} %</span>
     </div>
-    <p v-if="message" class="field-error" role="alert" data-testid="upload-error">{{ message }}</p>
+      <p v-if="message" class="field-error" role="alert" data-testid="upload-error">
+        {{ message }}
+        <RouterLink v-if="isQuotaError && bands.can('admin')" :to="{ name: 'billing' }">Voir les formules</RouterLink>
+      </p>
   </div>
 </template>
 
