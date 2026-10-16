@@ -125,7 +125,7 @@ fonctionnalité qui collecte, conserve ou transmet des données personnelles.
 | Sous-traitant | Rôle | Localisation | Contrat de traitement (DPA) | État |
 |---|---|---|---|---|
 | Microsoft Ireland Operations Ltd (Azure, région France Central) | Base, fichiers, API, journaux | UE (France) | Addendum de protection des données des produits et services Microsoft (DPA), intégré au contrat d'abonnement | accepté avec l'abonnement Azure |
-| Brevo (Sendinblue SAS) | Envoi des e-mails | UE (France) | DPA intégré aux conditions générales de Brevo | à accepter à l'ouverture du compte |
+| Brevo (Sendinblue SAS) | Envoi des e-mails (adresse, sujet et contenu de chaque e-mail ; journal d'envoi chez Brevo) | UE (France) | DPA intégré aux conditions générales de Brevo | accepté à l'ouverture du compte, le 16 octobre 2026 ; copie archivée hors du dépôt |
 | [Stripe] (#16) | Paiement | UE / États-Unis (clauses contractuelles types) | DPA de Stripe | quand #16 sera fait |
 | [Supervision] (#18) | Erreurs et traces | à choisir | à vérifier | quand #18 sera fait |
 
@@ -156,6 +156,7 @@ fonctionnalité qui collecte, conserve ou transmet des données personnelles.
 
 - [ ] Identité de l'éditeur et contact dans `web/songvault-web/src/features/legal/publisher.ts`
 - [x] Hébergeur choisi (#6) et ajouté aux mentions légales et à ce registre
-- [ ] DPA de l'hébergeur et de Brevo acceptés, copies archivées
+- [ ] DPA de l'hébergeur accepté, copie archivée
+- [x] DPA de Brevo accepté, copie archivée (#27)
 - [ ] Durées des journaux et des sauvegardes fixées (#6, #7) et reportées ici et dans la politique
 - [ ] Mentions légales et politique de confidentialité relues par un professionnel
