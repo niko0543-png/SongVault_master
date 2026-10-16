@@ -13,6 +13,7 @@ using SongVault.Application.Notifications;
 using SongVault.Infrastructure.Notifications;
 using SongVault.Infrastructure.Sharing;
 using SongVault.Infrastructure.Audio;
+using SongVault.Infrastructure.Billing;
 
 namespace SongVault.Infrastructure;
 
@@ -119,7 +120,8 @@ public static class DependencyInjection
             .Validate(o => o.Mp3BitrateKbps is >= 32 and <= 320, "AudioPreview:Mp3BitrateKbps va de 32 à 320.")
             .ValidateOnStart();
         services.AddSingleton<IAudioProcessor, FfmpegAudioProcessor>();
-
+        // #16 : formules, quotas et paiement par Stripe (ADR 0023)
+        services.AddHostedService<StorageRecountWorker>();
 
         // #13 : liens de partage externes (ADR 0019)
         services.AddSingleton<ISharePasswordHasher, SharePasswordHasher>();

@@ -15,6 +15,7 @@ using SongVault.Application.Songs.ListSongs;
 using SongVault.Application.Songs.UpdateSong;
 using SongVault.Application.Versions;
 using SongVault.Application.Sharing;
+using SongVault.Application.Billing;
 
 namespace SongVault.Application;
 
@@ -108,6 +109,10 @@ public static class DependencyInjection
         services.AddScoped<UnlockShareLinkHandler>();
         services.AddScoped<DownloadSharedFileHandler>();
         services.AddScoped<DownloadSharedCoverHandler>();
+        // #16 : formules, quotas et abonnements (ADR 0023)
+        services.AddScoped<PlanLimits>();
+        services.AddScoped<StorageRecountScheduler>();
+        services.AddScoped<IBackgroundJobHandler, StorageRecountJob>();
 
         return services;
     }

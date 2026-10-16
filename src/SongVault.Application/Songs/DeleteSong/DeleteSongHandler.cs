@@ -2,12 +2,13 @@
 using SongVault.Application.Activity;
 using SongVault.Application.Common.Exceptions;
 using SongVault.Domain.Activity;
+using SongVault.Application.Billing;
 
 namespace SongVault.Application.Songs.DeleteSong;
 
 public sealed class DeleteSongHandler(
     ISongRepository songs, IReleaseRepository releases, IUnitOfWork unitOfWork, IFileStorageService storage,
-    TimeProvider clock, ActivityLog activity)
+    TimeProvider clock, ActivityLog activity, PlanLimits limits)
 {
     public async Task HandleAsync(Guid id, CancellationToken ct)
     {
@@ -24,6 +25,7 @@ public sealed class DeleteSongHandler(
         songs.Remove(song);
         activity.SongChanged(ActivityType.SongDeleted, song, clock.GetUtcNow());    // le titre reste dans le fil
         await unitOfWork.SaveChangesAsync(ct);                  // la base supprime versions et fichiers en cascade
+        await limits.RefreshStorageAsync(song.BandId, ct);      // #16 : la place libérée se voit tout de suite
 
         foreach (var key in keys)
             await storage.DeleteAsync(key, CancellationToken.None);

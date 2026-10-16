@@ -1,8 +1,8 @@
 ﻿using System.Net;
 using System.Net.Http.Json;
-
 using SongVault.Api.Contracts.Bands;
 using SongVault.Domain.Bands;
+using SongVault.Api.Tests.Billing;
 
 namespace SongVault.Api.Tests.Bands;
 
@@ -29,7 +29,8 @@ public sealed class BandsEndpointsTests(SongVaultApiFactory factory)
     public async Task Post_cree_un_groupe_dont_je_suis_Owner()
     {
         var client = await factory.CreateNewUserClientAsync();
-        await MineAsync(client);                                  // crée le groupe personnel
+        var personal = (await MineAsync(client))[0].Id;           // crée le groupe personnel
+        await factory.GrantPlanAsync(personal);                   // #16 : un second groupe demande une formule payante
 
         var response = await client.PostAsJsonAsync("/api/bands", new { name = "Les Autres" });
 
