@@ -27,3 +27,4 @@ l'ancien, qui passe au statut « remplacé par ADR NNNN ».
 | [0019](0019-liens-de-partage-externes.md) | Liens de partage externes : jeton haché, lecture seule, journal pseudonymisé | accepté |
 | [0020](0020-mobile-et-application-installable.md) | Mobile et application installable : CSS adaptatif, service worker écrit à la main, rien de privé en cache | accepté |
 | [0021](0021-forme-d-onde-et-apercu-audio.md) | Forme d'onde et aperçu audio : ffmpeg dans une tâche de fond, dessin SVG sans bibliothèque | accepté |
+| [0022](0022-e-mails-en-production-avec-brevo.md) | E-mails en production : Brevo, domaine authentifié, réglage gardé d'un déploiement à l'autre | accepté |
