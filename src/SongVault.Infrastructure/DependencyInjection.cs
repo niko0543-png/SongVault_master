@@ -13,6 +13,7 @@ using SongVault.Application.Notifications;
 using SongVault.Infrastructure.Notifications;
 using SongVault.Infrastructure.Sharing;
 using SongVault.Infrastructure.Audio;
+using SongVault.Infrastructure.Billing;
 
 namespace SongVault.Infrastructure;
 
@@ -48,6 +49,7 @@ public static class DependencyInjection
         services.AddScoped<IReleaseRepository, ReleaseRepository>();
         services.AddScoped<IShareLinkRepository, ShareLinkRepository>();
         services.AddScoped<IAudioPreviewRepository, AudioPreviewRepository>();
+        services.AddScoped<IBillingRepository, BillingRepository>();
 
         services.AddOptions<FileStorageOptions>()
          .Bind(configuration.GetSection(FileStorageOptions.SectionName))
@@ -118,7 +120,28 @@ public static class DependencyInjection
             .Validate(o => o.Mp3BitrateKbps is >= 32 and <= 320, "AudioPreview:Mp3BitrateKbps va de 32 à 320.")
             .ValidateOnStart();
         services.AddSingleton<IAudioProcessor, FfmpegAudioProcessor>();
-
+        // #16 : formules, quotas et paiement par Stripe (ADR 0023)
+        services.AddOptions<BillingOptions>()
+            .Bind(configuration.GetSection(BillingOptions.SectionName))
+            .Validate(o => o.Provider is BillingOptions.NoneProvider or BillingOptions.StripeProvider,
+                "Billing:Provider doit valoir None ou Stripe.")
+            .Validate(o => o.Provider != BillingOptions.StripeProvider || o.Stripe.SecretKey.StartsWith("sk_", StringComparison.Ordinal),
+                "Billing:Stripe:SecretKey (sk_test_… ou sk_live_…) est obligatoire avec Stripe.")
+            .Validate(o => o.Provider != BillingOptions.StripeProvider || o.Stripe.WebhookSecret.StartsWith("whsec_", StringComparison.Ordinal),
+                "Billing:Stripe:WebhookSecret (whsec_…) est obligatoire avec Stripe.")
+            .Validate(o => o.Provider != BillingOptions.StripeProvider || o.Stripe.Prices.Count > 0,
+                "Billing:Stripe:Prices doit donner le prix Stripe de chaque formule payante.")
+            .ValidateOnStart();
+        if (configuration[$"{BillingOptions.SectionName}:Provider"] == BillingOptions.StripeProvider)
+            services.AddHttpClient<IPaymentGateway, StripePaymentGateway>(c =>
+            {
+                c.BaseAddress = new Uri("https://api.stripe.com/");
+                c.Timeout = TimeSpan.FromSeconds(30);
+            });
+        else
+            services.AddSingleton<IPaymentGateway, DisabledPaymentGateway>();
+        services.AddSingleton<IPaymentEventReader, StripeEventReader>();
+        services.AddHostedService<StorageRecountWorker>();
 
         // #13 : liens de partage externes (ADR 0019)
         services.AddSingleton<ISharePasswordHasher, SharePasswordHasher>();

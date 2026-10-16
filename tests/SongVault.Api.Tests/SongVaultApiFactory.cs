@@ -42,6 +42,8 @@ public sealed class SongVaultApiFactory : WebApplicationFactory<Program>, IAsync
         builder.UseSetting("BackgroundJobs:Enabled", "false");
         // #12 : pas de préparation automatique des notifications ; les tests appellent RunNotificationsAsync
         builder.UseSetting("Notifications:Enabled", "false");
+        // #16 : formules et quotas actifs, paiement fermé (Billing:Provider None) ; le webhook vérifie ce secret
+        builder.UseSetting("Billing:Stripe:WebhookSecret", SongVault.Api.Tests.Billing.StripeTestHelpers.WebhookSecret);
         builder.ConfigureTestServices(services => services.AddSingleton<IEmailSender>(Emails));
         // Masque, dans les tests uniquement, les erreurs SQL attendues du test de concurrence
         builder.UseSetting("Logging:LogLevel:Microsoft.EntityFrameworkCore.Update", "None");

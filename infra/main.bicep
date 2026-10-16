@@ -27,6 +27,20 @@ param emailFrom string = 'no-reply@songvault.local'
 @secure()
 param brevoApiKey string = ''
 
+@description('Paiement en ligne (#16) : None (formules et quotas sans paiement) ou Stripe.')
+@allowed(['None', 'Stripe'])
+param billingProvider string = 'None'
+
+@secure()
+param stripeSecretKey string = ''
+
+@secure()
+param stripeWebhookSecret string = ''
+
+@description('Identifiants des prix Stripe (price_…) des formules payantes ; ce ne sont pas des secrets.')
+param stripePriceBand string = ''
+param stripePriceStudio string = ''
+
 @description('Verrous « suppression impossible » sur la base et le stockage. false seulement pour l\'exercice de restauration, supprimé ensuite.')
 param enableDeleteLocks bool = true
 
@@ -228,6 +242,8 @@ resource api 'Microsoft.App/containerApps@2024-03-01' = {
         { name: 'sql-connection', value: sqlConnectionString }
         { name: 'storage-connection', value: storageConnectionString }
         { name: 'brevo-api-key', value: empty(brevoApiKey) ? 'aucune' : brevoApiKey }   // un secret vide est refusé
+        { name: 'stripe-secret-key', value: empty(stripeSecretKey) ? 'aucune' : stripeSecretKey }
+        { name: 'stripe-webhook-secret', value: empty(stripeWebhookSecret) ? 'aucune' : stripeWebhookSecret }
       ]
     }
     template: {
@@ -248,6 +264,11 @@ resource api 'Microsoft.App/containerApps@2024-03-01' = {
             { name: 'Email__Provider', value: emailProvider }
             { name: 'Email__FromAddress', value: emailFrom }
             { name: 'Email__Brevo__ApiKey', secretRef: 'brevo-api-key' }
+            { name: 'Billing__Provider', value: billingProvider }
+            { name: 'Billing__Stripe__SecretKey', secretRef: 'stripe-secret-key' }
+            { name: 'Billing__Stripe__WebhookSecret', secretRef: 'stripe-webhook-secret' }
+            { name: 'Billing__Stripe__Prices__band', value: stripePriceBand }
+            { name: 'Billing__Stripe__Prices__studio', value: stripePriceStudio }
             { name: 'App__PublicUrl', value: publicUrl }
             { name: 'DataProtection__KeyVaultKeyUri', value: dataProtectionKey.properties.keyUri }
           ]

@@ -73,6 +73,19 @@ const router = createRouter({
       component: () => import('@/features/legal/pages/PrivacyPage.vue'),
       meta: { public: true, title: 'Politique de confidentialité' },
     },
+    {
+      // #16 : formules et conditions de vente, lisibles avant de créer un compte
+      path: '/formules',
+      name: 'plans',
+      component: () => import('@/features/billing/pages/PlansPage.vue'),
+      meta: { public: true, title: 'Formules' },
+    },
+    {
+      path: '/conditions-generales-de-vente',
+      name: 'terms-of-sale',
+      component: () => import('@/features/legal/pages/TermsOfSalePage.vue'),
+      meta: { public: true, title: 'Conditions générales de vente' },
+    },
      {
       // Lien des e-mails de notification (#12) : sans connexion, le jeton suffit
       path: '/unsubscribe',

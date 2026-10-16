@@ -33,6 +33,9 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) — versions :
 - Application installable sur Android et iOS : manifeste, icônes, service worker et page « Pas de connexion » (ADR 0020).
 - Forme d'onde des fichiers audio, colorée pendant l'écoute, clic ou flèches pour se déplacer ; aperçu MP3 de 128 kbit/s des WAV et FLAC préparé en arrière-plan par ffmpeg, utilisé par le lecteur et les liens de partage, l'original restant le fichier téléchargé ; échec visible et bouton « Réessayer » (ADR 0021).
 - Script `scripts/test-brevo.ps1` : vérifie la clé Brevo et l'expéditeur depuis le PC, avec un e-mail de test (ADR 0022).
+- Formules et quotas : Gratuit (2 Go, un groupe), Groupe (50 Go) et Studio (250 Go) dans la table `Plans` ; stockage de chaque groupe recalculé après chaque envoi et chaque nuit ; envoi refusé (402) au-delà du quota, jamais d'effacement ; second groupe gratuit refusé (ADR 0023).
+- Abonnement d'un groupe par Stripe : page Facturation (propriétaires), Checkout, portail client, webhook signé et idempotent, e-mail aux propriétaires quand un paiement est refusé ; activé par `Billing:Provider=Stripe`.
+- Pages publiques Formules (`/formules`) et Conditions générales de vente ; jauge de stockage sur la liste des morceaux.
 ### Modifié
 - Routes de l'API sous `/api/bands/{bandId}/songs…` et du front sous `/b/{bandId}/songs…`.
 - Renommer un groupe est réservé à ses Owner.
@@ -46,6 +49,8 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) — versions :
 - Taille maximale d'un fichier envoyé depuis l'application : 2 Go au lieu de 50 Mo.
 - nginx est configuré par variables (`API_UPSTREAM`, `STORAGE_ORIGIN`) et transmet `X-Forwarded-Host`.
 - `scripts/deploy-azure.ps1` garde les réglages e-mail de l'API en place quand `-EmailProvider` et `-EmailFrom` sont omis, clé Brevo comprise ; il refuse Brevo avec une adresse `@songvault.local` et avertit quand aucun e-mail ne part (ADR 0022).
+- La suppression du compte est refusée (409) tant qu'un groupe dont on est seul membre a un abonnement en cours ; la purge résilie chez Stripe ce qui resterait.
+- `scripts/deploy-azure.ps1` : options `-BillingProvider`, `-StripePriceBand`, `-StripePriceStudio`, secrets `STRIPE_SECRET_KEY` et `STRIPE_WEBHOOK_SECRET` ; réglages de paiement gardés d'un déploiement à l'autre.
 ### Supprimé
 - `Song.OwnerId`, remplacé par `Song.BandId`. Les morceaux sans propriétaire valide sont supprimés par la migration `BackfillBands`.
 ### Corrigé

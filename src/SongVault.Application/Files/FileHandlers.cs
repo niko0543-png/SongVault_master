@@ -3,12 +3,13 @@ using SongVault.Application.Activity;
 using SongVault.Application.Common.Exceptions;
 using SongVault.Domain.Activity;
 using SongVault.Domain.Files;
+using SongVault.Application.Billing;
 
 namespace SongVault.Application.Files;
 
 public sealed class UploadSongFileHandler(
     ISongRepository songs, IUnitOfWork unitOfWork, IFileStorageService storage, TimeProvider clock,
-    ActivityLog activity, AudioPreviewQueue previews)
+    ActivityLog activity, AudioPreviewQueue previews, PlanLimits limits)
 {
     public async Task<SongFileDto> HandleAsync(UploadSongFileCommand command, CancellationToken ct)
     {
@@ -32,8 +33,11 @@ public sealed class UploadSongFileHandler(
         var version = song.FindVersion(command.VersionId)
                       ?? throw new NotFoundException("SongVersion", command.VersionId);
 
+        await limits.EnsureStorageAsync(song.BandId, command.Length, ct);   // #16 : avant de stocker quoi que ce soit
+
         var storageKey = $"{Guid.CreateVersion7():N}{rule.Extension}";   // jamais dérivé du nom client
         await storage.SaveAsync(storageKey, command.Content, ct);         // 1. fichier
+        SongFileDto saved;
         try
         {
             var now = clock.GetUtcNow();
@@ -42,13 +46,15 @@ public sealed class UploadSongFileHandler(
             activity.FileChanged(ActivityType.FileAdded, song, version, file, now);
             var preview = previews.RequestFor(file, now);                 // #15 : aperçu préparé en tâche de fond
             await unitOfWork.SaveChangesAsync(ct);                        // 2. base
-            return SongFileDto.From(file, preview);
+            saved = SongFileDto.From(file, preview);
         }
         catch
         {
             await storage.DeleteAsync(storageKey, CancellationToken.None); // compensation
             throw;
         }
+        await limits.RefreshStorageAsync(song.BandId, ct);                // 3. jauge (#16), le fichier est enregistré
+        return saved;
     }
 }
 
@@ -71,7 +77,7 @@ public sealed class DownloadSongFileHandler(ISongRepository songs, IFileStorageS
 
 public sealed class DeleteSongFileHandler(
     ISongRepository songs, IUnitOfWork unitOfWork, IFileStorageService storage, TimeProvider clock,
-    ActivityLog activity)
+    ActivityLog activity, PlanLimits limits)
 {
     public async Task HandleAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct)
     {
@@ -81,6 +87,7 @@ public sealed class DeleteSongFileHandler(
         activity.FileChanged(ActivityType.FileRemoved, song, version, file, clock.GetUtcNow());
 
         await unitOfWork.SaveChangesAsync(ct);                       // 1. base (l'aperçu part en cascade)
+        await limits.RefreshStorageAsync(song.BandId, ct);           //    et la jauge (#16)
         await storage.DeleteAsync(file.StorageKey, CancellationToken.None);  // 2. fichier
         if (file.FileType == SongFileType.Audio)                     // 3. son MP3 d'aperçu (#15), s'il existe
             await storage.DeleteAsync(AudioPreview.StorageKeyFor(file.Id), CancellationToken.None);

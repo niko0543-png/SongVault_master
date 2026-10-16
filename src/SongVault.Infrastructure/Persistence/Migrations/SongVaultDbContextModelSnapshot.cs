@@ -359,6 +359,9 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<long>("StorageUsedBytes")
+                        .HasColumnType("bigint");
+
                     b.HasKey("Id");
 
                     b.ToTable("Bands", (string)null);
@@ -386,6 +389,123 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("BandMemberships", (string)null);
+                });
+
+            modelBuilder.Entity("SongVault.Domain.Billing.Plan", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int?>("MaxBandsPerOwner")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MonthlyPriceCents")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<long>("StorageQuotaBytes")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Plans", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = "free",
+                            MaxBandsPerOwner = 1,
+                            MonthlyPriceCents = 0,
+                            Name = "Gratuit",
+                            SortOrder = 1,
+                            StorageQuotaBytes = 2147483648L
+                        },
+                        new
+                        {
+                            Id = "band",
+                            MonthlyPriceCents = 600,
+                            Name = "Groupe",
+                            SortOrder = 2,
+                            StorageQuotaBytes = 53687091200L
+                        },
+                        new
+                        {
+                            Id = "studio",
+                            MonthlyPriceCents = 1500,
+                            Name = "Studio",
+                            SortOrder = 3,
+                            StorageQuotaBytes = 268435456000L
+                        });
+                });
+
+            modelBuilder.Entity("SongVault.Domain.Billing.ProcessedStripeEvent", b =>
+                {
+                    b.Property<string>("EventId")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<DateTimeOffset>("ProcessedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("EventId");
+
+                    b.ToTable("ProcessedStripeEvents", (string)null);
+                });
+
+            modelBuilder.Entity("SongVault.Domain.Billing.Subscription", b =>
+                {
+                    b.Property<Guid>("BandId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("CancelAtPeriodEnd")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset?>("CurrentPeriodEnd")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("PlanId")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("StripeCustomerId")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("StripeSubscriptionId")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("BandId");
+
+                    b.HasIndex("PlanId");
+
+                    b.HasIndex("StripeSubscriptionId")
+                        .IsUnique()
+                        .HasFilter("[StripeSubscriptionId] IS NOT NULL");
+
+                    b.ToTable("Subscriptions", (string)null);
                 });
 
             modelBuilder.Entity("SongVault.Domain.Comments.Comment", b =>
@@ -1113,6 +1233,21 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SongVault.Domain.Billing.Subscription", b =>
+                {
+                    b.HasOne("SongVault.Domain.Bands.Band", null)
+                        .WithOne()
+                        .HasForeignKey("SongVault.Domain.Billing.Subscription", "BandId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SongVault.Domain.Billing.Plan", null)
+                        .WithMany()
+                        .HasForeignKey("PlanId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 

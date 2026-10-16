@@ -27,6 +27,9 @@ internal sealed class GlobalExceptionHandler(
             BadHttpRequestException bad => (bad.StatusCode, "Requête invalide"),
             UnsupportedFileException => (StatusCodes.Status400BadRequest, "Fichier refusé"),
             FileTooLargeException => (StatusCodes.Status413PayloadTooLarge, "Fichier trop volumineux"),
+            PlanLimitException => (StatusCodes.Status402PaymentRequired, "Limite de la formule atteinte"),
+            InvalidPaymentEventException => (StatusCodes.Status400BadRequest, "Événement de paiement refusé"),
+            BillingUnavailableException => (StatusCodes.Status503ServiceUnavailable, "Paiement indisponible"),
             _ => (StatusCodes.Status500InternalServerError, "Une erreur interne est survenue"),
         };
 
@@ -44,7 +47,8 @@ internal sealed class GlobalExceptionHandler(
                 Status = status,
                 Title = title,
                 // Jamais le message brut d'une exception inattendue : il peut contenir SQL, chemins, secrets…
-                Detail = status >= 500 ? null : exception.Message,
+                // Paiement indisponible (503) : message écrit pour l'utilisateur, sans détail de Stripe
+                Detail = status >= 500 && exception is not BillingUnavailableException ? null : exception.Message,
             },
         });
     }

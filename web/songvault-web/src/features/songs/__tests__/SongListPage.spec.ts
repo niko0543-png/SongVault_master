@@ -10,6 +10,8 @@ import type { BandRole } from '@/features/bands/types'
 
 // Remplace le module entier : aucun appel réseau pendant les tests
 vi.mock('../api/songsApi')
+vi.mock('@/features/billing/api/billingApi')
+17. 
 
 const song: Song = {
   id: '1', title: 'Nocturne', artist: 'Band', description: null,

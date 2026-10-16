@@ -7,6 +7,7 @@ using SongVault.Domain.Common;
 using SongVault.Domain.Songs;
 using SongVault.Domain.Releases;
 using SongVault.Application.Activity;
+using SongVault.Application.Billing;
 
 namespace SongVault.Application.Tests.Songs;
 
@@ -18,9 +19,9 @@ public sealed class SongCrudHandlersTests
     private readonly FixedTimeProvider _clock = new(Now.AddHours(1));
     private readonly FakeFileStorageService _storage = new();
     private readonly FakeActivityRepository _activity = new();
-
     private ActivityLog Log() => new(_activity, new FakeCurrentUser());
     private readonly FakeReleaseRepository _releases = new();
+    private readonly FakeBillingRepository _billing = new();
 
     private Song ExistingSong()
     {
@@ -67,10 +68,11 @@ public sealed class SongCrudHandlersTests
     {
         var song = ExistingSong();
 
-        await new DeleteSongHandler(_songs, _releases, _uow, _storage, _clock, Log()).HandleAsync(song.Id, CancellationToken.None);
+        await new DeleteSongHandler(_songs, _releases, _uow, _storage, _clock, Log(), new PlanLimits(_billing)).HandleAsync(song.Id, CancellationToken.None);
 
         Assert.Empty(_songs.Songs);
         Assert.Equal(1, _uow.SaveCount);
+        Assert.Equal(song.BandId, Assert.Single(_billing.Refreshed));   // la jauge suit la suppression
     }
 
     [Fact]
@@ -83,7 +85,7 @@ public sealed class SongCrudHandlersTests
         _releases.Releases.Add(release);
 
         var error = await Assert.ThrowsAsync<ConflictException>(
-            () => new DeleteSongHandler(_songs, _releases, _uow, _storage, _clock, Log()).HandleAsync(song.Id, CancellationToken.None));
+            () => new DeleteSongHandler(_songs, _releases, _uow, _storage, _clock, Log(), new PlanLimits(_billing)).HandleAsync(song.Id, CancellationToken.None));
 
         Assert.Contains("« Nuits blanches »", error.Message);
         Assert.Single(_songs.Songs);
@@ -95,7 +97,7 @@ public sealed class SongCrudHandlersTests
     public async Task Delete_morceau_absent_leve_NotFound()
     {
         await Assert.ThrowsAsync<NotFoundException>(
-            () => new DeleteSongHandler(_songs, _releases, _uow, _storage, _clock, Log()).HandleAsync(Guid.NewGuid(), CancellationToken.None));
+            () => new DeleteSongHandler(_songs, _releases, _uow, _storage, _clock, Log(), new PlanLimits(_billing)).HandleAsync(Guid.NewGuid(), CancellationToken.None));
     }
 
     [Theory]

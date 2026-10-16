@@ -3,13 +3,14 @@ using SongVault.Application.Activity;
 using SongVault.Application.Common.Exceptions;
 using SongVault.Domain.Activity;
 using SongVault.Domain.Files;
+using SongVault.Application.Billing;
 
 namespace SongVault.Application.Files;
 
 /// <summary>1. Annonce : contrôles, puis adresse où le navigateur envoie le fichier (ADR 0012).</summary>
 public sealed class StartFileUploadHandler(
     ISongRepository songs, IFileUploadRepository uploads, IFileStorageService storage, IBackgroundJobs jobs,
-    IUnitOfWork unitOfWork, ICurrentUser currentUser, TimeProvider clock)
+    IUnitOfWork unitOfWork, ICurrentUser currentUser, TimeProvider clock, PlanLimits limits)
 {
     public async Task<FileUploadTicket> HandleAsync(StartFileUploadCommand command, CancellationToken ct)
     {
@@ -23,6 +24,7 @@ public sealed class StartFileUploadHandler(
         var song = await songs.GetWithVersionAsync(command.SongId, command.VersionId, ct)
                    ?? throw new NotFoundException("Song", command.SongId);
         _ = song.FindVersion(command.VersionId) ?? throw new NotFoundException("SongVersion", command.VersionId);
+        await limits.EnsureStorageAsync(song.BandId, command.SizeBytes, ct);     // #16 : refus avant l'envoi
 
         var upload = FileUpload.Start(command.SongId, command.VersionId, currentUser.UserId,
             FileNameSanitizer.Sanitize(command.FileName),
@@ -58,7 +60,7 @@ public sealed class ReceiveFileUploadHandler(
 /// <summary>3. Confirmation : taille et signature contrôlées, puis fichier rattaché à la version.</summary>
 public sealed class CompleteFileUploadHandler(
     ISongRepository songs, IFileUploadRepository uploads, IFileStorageService storage, IUnitOfWork unitOfWork,
-    ICurrentUser currentUser, TimeProvider clock, ActivityLog activity, AudioPreviewQueue previews)
+        ICurrentUser currentUser, TimeProvider clock, ActivityLog activity, AudioPreviewQueue previews, PlanLimits limits)
 {
     public async Task<SongFileDto> HandleAsync(Guid songId, Guid versionId, Guid uploadId, CancellationToken ct)
     {
@@ -82,10 +84,19 @@ public sealed class CompleteFileUploadHandler(
                 : null;
         if (problem is not null)
         {
-            await storage.DeleteAsync(upload.StorageKey, CancellationToken.None);
-            uploads.Remove(upload);
-            await unitOfWork.SaveChangesAsync(ct);
+            await DiscardAsync(upload, ct);
             throw new UnsupportedFileException(problem);
+        }
+
+        // #16 : d'autres fichiers ont pu arriver depuis l'annonce ; le quota se vérifie encore sur ce qui est enregistré
+        try
+        {
+            await limits.EnsureStorageAsync(song.BandId, length, ct);
+        }
+        catch (PlanLimitException)
+        {
+            await DiscardAsync(upload, ct);
+            throw;
         }
 
         var file = version.AddFile(upload.FileName, upload.StorageKey, rule.ContentType, length, rule.FileType, now);
@@ -95,7 +106,15 @@ public sealed class CompleteFileUploadHandler(
         // Le fichier rattaché et l'envoi effacé, ensemble. Si la tâche d'expiration vient d'effacer la ligne,
         // l'effacement ne touche aucune ligne : EF lève un conflit (409) et rien n'est rattaché.
         await unitOfWork.SaveChangesAsync(ct);
+        await limits.RefreshStorageAsync(song.BandId, ct);                 // #16 : la jauge suit
         return SongFileDto.From(file, preview);
+    }
+
+    private async Task DiscardAsync(FileUpload upload, CancellationToken ct)
+    {
+        await storage.DeleteAsync(upload.StorageKey, CancellationToken.None);
+        uploads.Remove(upload);
+        await unitOfWork.SaveChangesAsync(ct);
     }
 
     private async Task<bool> HasValidSignatureAsync(string storageKey, string extension, CancellationToken ct)

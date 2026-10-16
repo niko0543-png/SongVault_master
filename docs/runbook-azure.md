@@ -162,6 +162,69 @@ az containerapp show -g songvault-prod -n songvault-api --query "properties.outb
 
 Revenir temporairement aux journaux, sans e-mail réel : `.\scripts\deploy-azure.ps1 -ImageTag $tag -EmailProvider Log` (`$tag` comme dans « Changer la clé Brevo »). La clé reste dans le secret ; repasser avec `-EmailProvider Brevo`.
 
+## Paiements (Stripe)
+
+Chaque groupe a une formule ([ADR 0023](adr/0023-abonnements-et-quotas.md)) : Gratuit (2 Go), Groupe (50 Go) ou Studio (250 Go). Les quotas s'appliquent toujours ; le paiement en ligne n'est ouvert qu'avec `Billing__Provider` à `Stripe`. Tant qu'il vaut `None`, la page Facturation dit que le paiement n'est pas ouvert.
+
+Voir le réglage en place :
+
+```powershell
+az containerapp show -g songvault-prod -n songvault-api --query "properties.template.containers[0].env[?starts_with(name, 'Billing__')].{nom:name, valeur:value}" -o table
+
+```
+Comme pour Brevo, un redéploiement simple garde ces réglages, secrets compris.
+
+### Offrir une formule à un groupe
+
+Sans paiement : avant l'ouverture, pour un groupe de test ou un geste commercial. Dans le portail Azure, base `SongVault`, Éditeur de requêtes (compte `songvaultadmin`, autoriser l'adresse IP du PC quand le portail le propose, retirer la règle après) :
+
+```sql
+DECLARE @band uniqueidentifier = (SELECT Id FROM Bands WHERE Name = N'Nom du groupe');
+INSERT INTO Subscriptions (BandId, PlanId, Status, CancelAtPeriodEnd, UpdatedAt)
+VALUES (@band, 'studio', 'Active', 0, SYSDATETIMEOFFSET());
+
+```
+Une ligne existe déjà (ancien abonnement) : `UPDATE Subscriptions SET PlanId = 'studio', Status = 'Active', StripeSubscriptionId = NULL, UpdatedAt = SYSDATETIMEOFFSET() WHERE BandId = @band;` (le client Stripe est gardé). Reprendre la formule : `DELETE FROM Subscriptions WHERE BandId = @band AND StripeSubscriptionId IS NULL;`. Un paiement remplace une formule offerte.
+
+Le stockage d'un groupe se lit dans `SELECT Name, StorageUsedBytes / 1048576 AS Mo FROM Bands ORDER BY StorageUsedBytes DESC;` ; il est recalculé après chaque envoi et chaque nuit à 3 h.
+
+### Ouvrir le paiement
+
+Une fois l'entreprise immatriculée, les CGV et le médiateur complétés dans `web/songvault-web/src/features/legal/publisher.ts`, et le DPA de Stripe archivé ([registre](rgpd/registre.md)).
+
+1. **Compte Stripe activé** (dashboard.stripe.com, mode production) : entreprise, SIRET, IBAN pour les virements, et la double authentification.
+2. **Produits** : « Catalogue de produits », créer « SongVault Groupe » avec un prix récurrent mensuel de 6,00 € TTC, et « SongVault Studio » à 15,00 €. Noter les deux identifiants de prix (`price_…`).
+3. **Conditions** : « Paramètres », « Informations publiques », adresse des conditions d'utilisation : `https://<adresse du site>/conditions-generales-de-vente`. Sans elle, Checkout refuse la case « J'accepte les CGV ».
+4. **Portail client** : « Paramètres », « Facturation », « Portail client » : activer la mise à jour du moyen de paiement, l'historique des factures, l'annulation (à la fin de la période) et le changement de formule entre les deux produits.
+5. **Webhook** : « Développeurs », « Webhooks », « Ajouter une destination » : adresse `https://<adresse du site>/api/billing/stripe/webhook`, version d'API `2025-03-31.basil`, événements `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`. Noter le secret de signature (`whsec_…`).
+6. **Clé secrète** : « Développeurs », « Clés API », la clé secrète `sk_live_…`. La ranger dans le gestionnaire de mots de passe avec le secret du webhook ; ne jamais l'envoyer par e-mail ni en capture.
+7. Déployer :
+
+```powershell
+$tag = (az containerapp show -g songvault-prod -n songvault-api --query "properties.template.containers[0].image" -o tsv).Split(':')[-1]
+$env:SONGVAULT_SQL_PASSWORD = Read-Host 'Mot de passe SQL'
+$env:STRIPE_SECRET_KEY = Read-Host 'Clé secrète Stripe'
+$env:STRIPE_WEBHOOK_SECRET = Read-Host 'Secret du webhook Stripe'
+.\scripts\deploy-azure.ps1 -ImageTag $tag -BillingProvider Stripe -StripePriceBand price_… -StripePriceStudio price_…
+Remove-Item Env:STRIPE_SECRET_KEY, Env:STRIPE_WEBHOOK_SECRET
+
+```
+8. Payer une formule pour un groupe à soi, avec sa propre carte. Vérifier la page Facturation, puis rembourser et résilier depuis le tableau de bord Stripe.
+
+Revenir à `None` : `.\scripts\deploy-azure.ps1 -ImageTag $tag -BillingProvider None`. Les abonnements en cours continuent chez Stripe, mais le webhook n'est plus lu : à ne faire que s'il n'y en a aucun.
+
+### Un groupe a payé mais reste en Gratuit
+
+La formule change à la réception du webhook, pas au retour sur le site.
+
+1. Stripe, « Webhooks », la destination SongVault : les envois en échec sont en rouge, avec la réponse de l'API. `400` : le secret `stripe-webhook-secret` ne correspond pas à celui de la destination ; redéployer avec le bon. `5xx` : voir les journaux de l'API.
+2. Une fois corrigé, « Renvoyer » l'événement : chaque événement n'est appliqué qu'une fois, le renvoyer est sans risque.
+3. Dans les journaux de l'API : `Événement Stripe evt_… (type) : Applied`, `Duplicate` ou `Ignored`.
+
+### Changer la clé Stripe
+
+Après une fuite, ou une fois par an : « Clés API », « Faire tourner la clé », puis le déploiement de l'étape 7 avec la nouvelle clé seulement (`$env:STRIPE_SECRET_KEY`). Le secret du webhook se change de la même façon, depuis la destination (« Faire tourner le secret »).
+
 ## Changer la clé du compte de stockage
 
 C'est le seul moyen d'invalider d'un coup toutes les URL signées en cours, par exemple après une fuite. Les envois en cours échouent, il suffit de les recommencer.

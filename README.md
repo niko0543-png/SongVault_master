@@ -120,6 +120,10 @@ docker compose down -v       # supprime aussi la base et les fichiers
   colore pendant l'écoute et permet d'aller à un endroit d'un clic ; les WAV et FLAC sont
   écoutés à travers un MP3 léger préparé en arrière-plan par ffmpeg, l'original reste celui
   qu'on télécharge. Un échec de conversion s'affiche et se relance.
+- **Formules et quotas** : chaque groupe a sa formule (Gratuit 2 Go, Groupe 50 Go, Studio
+  250 Go), une jauge de stockage sur la liste des morceaux, et un refus clair au-delà. Le
+  propriétaire paie par Stripe (Checkout et portail client : carte, factures, résiliation),
+  activé par `Billing:Provider` ; sans lui, formules et quotas s'appliquent quand même.
 
 ---
 
@@ -383,6 +387,20 @@ npm ci
 npm run dev
 ```
 
+Paiement en mode test de Stripe (facultatif, #16) : créer les deux prix dans le tableau de bord en mode test, puis
+
+```powershell
+dotnet user-secrets set "Billing:Provider" "Stripe" --project src/SongVault.Api
+dotnet user-secrets set "Billing:Stripe:SecretKey" (Read-Host 'Clé secrète de test sk_test_') --project src/SongVault.Api
+dotnet user-secrets set "Billing:Stripe:Prices:band" "price_…" --project src/SongVault.Api
+dotnet user-secrets set "Billing:Stripe:Prices:studio" "price_…" --project src/SongVault.Api
+# Stripe CLI : relaie les événements vers l'API et affiche le secret du webhook (whsec_…) à enregistrer
+stripe listen --forward-to http://localhost:5080/api/billing/stripe/webhook
+dotnet user-secrets set "Billing:Stripe:WebhookSecret" "whsec_…" --project src/SongVault.Api
+
+```
+Carte de test : `4242 4242 4242 4242`, date future, n'importe quel code. Carte refusée : `4000 0000 0000 0002`.
+
 ---
 
 ## Intégration continue
@@ -458,6 +476,8 @@ Choix assumés pour la v1 :
   conversion d'un long WAV, un e-mail ou un export attend son tour (ADR 0021).
 - Pas d'écoute hors connexion : l'application installée a besoin du réseau, son service
   worker ne garde aucune donnée de l'API (ADR 0020).
+- TVA non calculée par Stripe (`AutomaticTax` à faux) : prix TTC fixes, valables tant que
+  les ventes restent en France sous la franchise en base (ADR 0023).
 
 Pistes suivies dans les [issues](https://github.com/<owner>/<repo>/issues).
 

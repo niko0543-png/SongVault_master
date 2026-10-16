@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useBandStore } from '../stores/bandStore'
-import { getErrorMessage } from '@/shared/api/ApiError'
+import { ApiError, getErrorMessage } from '@/shared/api/ApiError'
 import type { BandRole } from '../types'
 
 const store = useBandStore()
@@ -15,6 +15,8 @@ const roleLabels: Record<BandRole, string> = { Owner: 'propriétaire', Member: '
 const isCreating = ref(false)
 const newName = ref('')
 const error = ref<string | null>(null)
+  /** #16 : refus de la formule gratuite (un seul groupe) ; lien vers les formules. */
+const isPlanLimit = ref(false)
 
 function onSelect(event: Event) {
   const bandId = (event.target as HTMLSelectElement).value
@@ -23,6 +25,7 @@ function onSelect(event: Event) {
 
 async function onCreate() {
   error.value = null
+  isPlanLimit.value = false
   try {
     const band = await store.create(newName.value)
     isCreating.value = false
@@ -30,6 +33,7 @@ async function onCreate() {
     await router.push({ name: 'songs', params: { bandId: band.id } })
   } catch (e) {
     error.value = getErrorMessage(e)
+    isPlanLimit.value = e instanceof ApiError && e.status === 402
   }
 }
 </script>
@@ -48,7 +52,10 @@ async function onCreate() {
       <input v-model="newName" aria-label="Nom du nouveau groupe" placeholder="Nom du groupe" required maxlength="100" />
       <button type="submit">Créer</button>
       <button type="button" class="secondary" @click="isCreating = false">Annuler</button>
-      <p v-if="error" role="alert" class="field-error">{{ error }}</p>
+      <p v-if="error" role="alert" class="field-error">
+        {{ error }}
+        <RouterLink v-if="isPlanLimit" :to="{ name: 'plans' }">Voir les formules</RouterLink>
+      </p>
     </form>
   </div>
 </template>

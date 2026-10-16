@@ -4,6 +4,7 @@ using SongVault.Application.Tests.Fakes;
 using SongVault.Domain.Songs;
 using SongVault.Application.Activity;
 using SongVault.Domain.Files;
+using SongVault.Application.Billing;
 
 namespace SongVault.Application.Tests.Files;
 
@@ -16,15 +17,17 @@ public sealed class UploadSongFileHandlerTests
     private readonly FakeFileStorageService _storage = new();
     private readonly FakeAudioPreviewRepository _previews = new();
     private readonly FakeBackgroundJobs _jobs = new();
+    private readonly FakeBillingRepository _billing = new();
 
     private UploadSongFileHandler Sut() => new(_songs, _uow, _storage, new FixedTimeProvider(Now),
-           new ActivityLog(new FakeActivityRepository(), new FakeCurrentUser()), new AudioPreviewQueue(_previews, _jobs));
+           new ActivityLog(new FakeActivityRepository(), new FakeCurrentUser()), new AudioPreviewQueue(_previews, _jobs), new PlanLimits(_billing));
 
     private UploadSongFileCommand Command(long length, byte[] content, string fileName = "maquette.mp3")
     {
         var song = Song.Create(Guid.NewGuid(), "Nocturne", null, null, Now);
         var version = song.AddVersion("v1", SongVersionStatus.Demo, null, null, Now);
         _songs.Songs.Add(song);
+        _billing.StorageUsed[song.BandId] = 0;
         return new UploadSongFileCommand(song.Id, version.Id, fileName, length, new MemoryStream(content));
     }
 
@@ -60,6 +63,32 @@ public sealed class UploadSongFileHandlerTests
 
         var stored = Assert.Single(_storage.Files).Value;
         Assert.Equal(mp3, stored);       // le flux a bien été remis au début avant l'enregistrement
+    }
+
+    [Fact]
+    public async Task Refuse_un_fichier_qui_depasse_le_quota_sans_rien_stocker()
+    {
+        byte[] mp3 = [.. "ID3"u8, 0x04, 0x00, .. new byte[100]];
+        var command = Command(mp3.Length, mp3);
+        var bandId = _songs.Songs.Single().BandId;
+        _billing.StorageUsed[bandId] = 950;                    // formule gratuite des fakes : 1000 octets
+
+        var error = await Assert.ThrowsAsync<PlanLimitException>(() => Sut().HandleAsync(command, CancellationToken.None));
+
+        Assert.Contains("Stockage du groupe plein", error.Message);
+        Assert.Empty(_storage.Files);
+        Assert.Equal(0, _uow.SaveCount);
+    }
+
+    [Fact]
+    public async Task Un_envoi_reussi_recalcule_le_stockage_du_groupe()
+    {
+        byte[] mp3 = [.. "ID3"u8, 0x04, 0x00, .. new byte[100]];
+        var command = Command(mp3.Length, mp3);
+
+        await Sut().HandleAsync(command, CancellationToken.None);
+
+        Assert.Equal(_songs.Songs.Single().BandId, Assert.Single(_billing.Refreshed));
     }
 
     [Fact]

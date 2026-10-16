@@ -1,9 +1,9 @@
 ﻿using System.Net;
 using System.Net.Http.Json;
-
 using SongVault.Api.Contracts.Bands;
 using SongVault.Api.Contracts.Common;
 using SongVault.Api.Contracts.Songs;
+using SongVault.Api.Tests.Billing;
 
 namespace SongVault.Api.Tests.Auth;
 
@@ -116,6 +116,7 @@ public sealed class OwnershipTests(SongVaultApiFactory factory)
     {
         var a = await factory.CreateNewUserClientAsync();
         var personal = await a.SongsUrlAsync();
+        await factory.GrantPlanAsync(await a.FirstBandIdAsync());   // #16 : un second groupe demande une formule payante
         var second = (await (await a.PostAsJsonAsync("/api/bands", new { name = "Les Autres" }))
             .Content.ReadFromJsonAsync<BandResponse>(TestJson.Options))!;
         await a.PostAsJsonAsync(personal, new { title = "Perso" });

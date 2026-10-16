@@ -12,6 +12,12 @@ public sealed class Band
     public Guid Id { get; private set; }
     public string Name { get; private set; } = default!;
     public DateTimeOffset CreatedAt { get; private set; }
+
+    /// <summary>
+    /// Taille des fichiers des morceaux du groupe (#16, ADR 0023). Recalculée en SQL par IBillingRepository
+    /// après chaque envoi et chaque suppression, et chaque nuit : jamais modifiée ici.
+    /// </summary>
+    public long StorageUsedBytes { get; private set; }
     public IReadOnlyCollection<BandMembership> Memberships => _memberships.AsReadOnly();
 
     public static Band Create(string name, string ownerUserId, DateTimeOffset now)

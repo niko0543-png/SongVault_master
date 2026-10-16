@@ -6,6 +6,8 @@ import { validateFile } from '../validation'
 import type { SongFile } from '../types'
 import { useAsyncAction } from '@/shared/composables/useAsyncAction'
 import { ApiError, getErrorMessage } from '@/shared/api/ApiError'
+import { RouterLink } from 'vue-router'
+import { useBandStore } from '@/features/bands/stores/bandStore'
 
 const props = defineProps<{ songId: string; versionId: string }>()
 const emit = defineEmits<{ uploaded: [file: SongFile] }>()
@@ -17,13 +19,17 @@ const currentName = ref<string | null>(null)
 const isDragging = ref(false)
 const progress = ref<number | null>(null)                    // de 0 à 1 ; null tant que l'envoi n'a pas commencé
 
+const bands = useBandStore()
 const upload = useAsyncAction((file: File) =>
   filesApi.upload(props.songId, props.versionId, file, (ratio) => { progress.value = ratio }))
+/** #16 : le dernier refus vient du quota ; le propriétaire peut changer de formule. */
+const isQuotaError = computed(() => upload.error.value instanceof ApiError && upload.error.value.status === 402)
 const accept = computed(() => policy.value?.allowedExtensions.join(',') ?? '')
 
 function serverMessage(error: unknown): string {
   if (error instanceof ApiError && error.status === 413) return 'Fichier trop volumineux pour le serveur.'
   if (error instanceof ApiError && error.status === 400) return error.message   // ex. « Type de fichier non autorisé… »
+  if (error instanceof ApiError && error.status === 402) return error.message   // #16 : « Stockage du groupe plein… »
   if (error instanceof ApiError && error.status === 403 && error.message === 'Envoi refusé')
     return "L'envoi a été refusé par le stockage (adresse expirée ?). Recommencez."
   return getErrorMessage(error)
@@ -79,7 +85,10 @@ function onDrop(event: DragEvent) {
       Envoi de {{ currentName }}…
       <span v-if="progress !== null" data-testid="upload-progress">{{ Math.round(progress * 100) }} %</span>
     </div>
-    <p v-if="message" class="field-error" role="alert" data-testid="upload-error">{{ message }}</p>
+      <p v-if="message" class="field-error" role="alert" data-testid="upload-error">
+        {{ message }}
+        <RouterLink v-if="isQuotaError && bands.can('admin')" :to="{ name: 'billing' }">Voir les formules</RouterLink>
+      </p>
   </div>
 </template>
 
