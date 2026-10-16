@@ -49,6 +49,7 @@ async function onLogout() {
       <RouterLink v-if="bands.activeId" :to="{ name: 'releases', params: { bandId: bands.activeId } }">Sorties</RouterLink>
       <RouterLink v-if="bands.activeId" :to="{ name: 'activity', params: { bandId: bands.activeId } }">Activité</RouterLink>
       <RouterLink v-if="bands.activeId" :to="{ name: 'band-members', params: { bandId: bands.activeId } }">Membres</RouterLink>
+      <RouterLink v-if="bands.activeId && bands.can('admin')" :to="{ name: 'billing', params: { bandId: bands.activeId } }">Facturation</RouterLink>
       <RouterLink :to="{ name: 'account' }" class="muted account-link" title="Mon compte">{{ user?.email }}</RouterLink>
       <button type="button" class="secondary" @click="onLogout">Se déconnecter</button>
     </nav>
@@ -62,6 +63,8 @@ async function onLogout() {
   <footer class="app-footer">
     <RouterLink :to="{ name: 'legal-notice' }">Mentions légales</RouterLink>
     <RouterLink :to="{ name: 'privacy' }">Confidentialité</RouterLink>
+    <RouterLink :to="{ name: 'plans' }">Formules</RouterLink>
+    <RouterLink :to="{ name: 'terms-of-sale' }">CGV</RouterLink>
   </footer>
 
   <AudioPlayer v-if="isAuthenticated" />

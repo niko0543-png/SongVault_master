@@ -55,6 +55,15 @@ import { publisher } from '../publisher'
           <td>Tant que le lien existe ; effacé quand le groupe le supprime</td>
         </tr>
         <tr>
+          <td>
+            Abonnement d'un groupe : formule, état, identifiants Stripe du client et de l'abonnement
+            (jamais le numéro de carte, que seul Stripe reçoit)
+          </td>
+          <td>Encaisser l'abonnement et appliquer la formule</td>
+          <td>Contrat</td>
+          <td>Tant que le groupe existe ; les factures sont gardées 10 ans par Stripe (obligation comptable)</td>
+        </tr>
+        <tr>
           <td>Archive de vos données</td>
           <td>Vous remettre vos données</td>
           <td>Obligation légale</td>
@@ -70,12 +79,13 @@ import { publisher } from '../publisher'
     </table>
 
     <h2>Qui y a accès</h2>
-    <p>
+   <p>
       Les membres de vos groupes, selon leur rôle. Nos sous-traitants, tous dans l'Union européenne :
-      l'hébergeur (Microsoft Azure, en France) et Brevo, qui envoie les e-mails. Aucune donnée n'est vendue
+      l'hébergeur (Microsoft Azure, en France) et Brevo, qui envoie les e-mails. Pour les abonnements payants,
+      Stripe Payments Europe (Irlande) reçoit votre adresse e-mail et votre carte ; Stripe peut traiter ces
+      données aux États-Unis, dans le cadre du Data Privacy Framework UE-États-Unis. Aucune donnée n'est vendue
       ni utilisée à des fins publicitaires.
     </p>
-
     <h2>Cookies et stockage du navigateur</h2>
     <ul>
       <li><code>songvault.auth</code> : cookie de session, indispensable pour rester connecté (7 jours au plus).</li>

@@ -6,6 +6,7 @@ import { useSongsStore } from '../stores/songsStore'
 import { useBandStore } from '@/features/bands/stores/bandStore'
 import SongCard from '../components/SongCard.vue'
 import SearchBar from '../components/SearchBar.vue'
+import BandStorageGauge from '@/features/billing/components/BandStorageGauge.vue'
 import LoadingState from '@/shared/components/LoadingState.vue'
 import EmptyState from '@/shared/components/EmptyState.vue'
 import ErrorState from '@/shared/components/ErrorState.vue'
@@ -90,7 +91,7 @@ onMounted(() => {
       <h1>Morceaux</h1>
         <RouterLink v-if="bands.can('write')" :to="{ name: 'song-create' }">+ Nouveau morceau</RouterLink>
     </header>
-
+    <BandStorageGauge />
     <SearchBar v-model:search="search" v-model:status="status" />
 
     <LoadingState v-if="isLoading || (!isLoaded && !error)" />

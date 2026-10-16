@@ -9,6 +9,8 @@ declare module 'vue-router' {
     title?: string
     /** Page d'écriture : un Guest est renvoyé à la liste des morceaux (#2). */
     write?: boolean
+        /** Page réservée aux propriétaires du groupe : les autres sont renvoyés à la liste des morceaux (#16). */
+    owner?: boolean
   }
 }
 
