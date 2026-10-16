@@ -412,7 +412,10 @@ images Docker et actions GitHub, regroupées pour limiter le bruit.
 - **E-mails** : `EMAIL_PROVIDER=Log` (défaut) écrit les e-mails dans les journaux de l'API ;
   `EMAIL_PROVIDER=Brevo` les envoie, avec `BREVO_API_KEY` et `EMAIL_FROM` (adresse validée
   chez Brevo). `PUBLIC_URL` est l'adresse du site utilisée dans les liens
-  ([ADR 0009](docs/adr/0009-invitations-et-e-mails.md)).
+  ([ADR 0009](docs/adr/0009-invitations-et-e-mails.md)). En production, Brevo envoie depuis
+  un domaine authentifié, et le réglage est gardé d'un déploiement à l'autre
+  ([ADR 0022](docs/adr/0022-e-mails-en-production-avec-brevo.md),
+  [runbook](docs/runbook-azure.md#e-mails-brevo)).
 - **Santé** : `GET /health/live` (processus vivant) et `GET /health/ready` (base joignable)
   sur l'API, utilisés par les healthchecks Compose.
 - **Journaux** : JSON structurés hors développement (`docker compose logs api`).

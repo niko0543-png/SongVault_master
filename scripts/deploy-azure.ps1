@@ -2,25 +2,57 @@
 .SYNOPSIS  Déploie SongVault sur Azure (ADR 0012) : infrastructure, migrations, puis redémarrage de l'API.
 .EXAMPLE   $env:SONGVAULT_SQL_PASSWORD = '…' ; .\scripts\deploy-azure.ps1 -ImageTag v1.1.0
 .EXAMPLE   .\scripts\deploy-azure.ps1 -ImageTag v1.1.0 -ResourceGroup songvault-drill -NoDeleteLocks
+.EXAMPLE   $env:BREVO_API_KEY = '…' ; .\scripts\deploy-azure.ps1 -ImageTag v1.1.0 -EmailProvider Brevo -EmailFrom no-reply@songvault.eu
 .NOTES     Prérequis : Azure CLI connecté (az login) et images publiées par le workflow « images ».
            Secrets lus dans l'environnement, jamais en paramètre :
              SONGVAULT_SQL_PASSWORD  mot de passe de l'administrateur SQL (obligatoire, toujours le même)
-             BREVO_API_KEY           clé d'API Brevo (avec -EmailProvider Brevo)
+             BREVO_API_KEY           clé d'API Brevo : à définir la première fois, ou pour la changer
+           Sans -EmailProvider ni -EmailFrom, les réglages e-mail de l'API en place sont gardés, clé Brevo
+           comprise (#27). Un nouveau groupe de ressources part sur Log : aucun e-mail ne part.
 #>
 param(
     [Parameter(Mandatory)][string]$ImageTag,
     [string]$ResourceGroup = 'songvault-prod',
     [string]$Location = 'francecentral',
-    [ValidateSet('Log', 'Brevo')][string]$EmailProvider = 'Log',
-	[string]$EmailFrom = 'no-reply@songvault.local',
+    # Sans valeur : celle de l'API déjà déployée (Log et no-reply@songvault.local pour un nouveau groupe)
+    [ValidateSet('Log', 'Brevo')][string]$EmailProvider,
+    [string]$EmailFrom,
     # Sans verrous sur la base et le stockage : environnement d'exercice, supprimé ensuite (ADR 0013)
     [switch]$NoDeleteLocks
 )
 $ErrorActionPreference = 'Stop'
 . "$PSScriptRoot\_common.ps1"
 
+# Réglages e-mail de l'API en place, pour qu'un redéploiement ne repasse pas aux journaux sans le dire
+function Get-DeployedEmail([string]$Group, [string]$App) {
+    $settings = @{ Provider = 'Log'; From = 'no-reply@songvault.local'; ApiKey = '' }
+    if ((az group exists --name $Group) -ne 'true') { return $settings }
+    $json = az containerapp list --resource-group $Group `
+        --query "[?name=='$App'] | [0].properties.template.containers[0].env" --output json
+    Assert-LastExit "lecture des réglages de $App"
+    $vars = $json | Out-String | ConvertFrom-Json
+    if (-not $vars) { return $settings }                                  # pas encore d'API dans ce groupe
+    $provider = ($vars | Where-Object name -eq 'Email__Provider').value
+    $from = ($vars | Where-Object name -eq 'Email__FromAddress').value
+    if ($provider) { $settings.Provider = $provider }
+    if ($from) { $settings.From = $from }
+    $key = az containerapp secret list --resource-group $Group --name $App --show-values `
+        --query "[?name=='brevo-api-key'] | [0].value" --output tsv
+    Assert-LastExit 'lecture du secret brevo-api-key'
+    if ($key -and $key -ne 'aucune') { $settings.ApiKey = $key }          # 'aucune' : valeur mise par main.bicep
+    return $settings
+}
+
 if (-not $env:SONGVAULT_SQL_PASSWORD) { throw 'Définir $env:SONGVAULT_SQL_PASSWORD (mot de passe administrateur SQL).' }
-if ($EmailProvider -eq 'Brevo' -and -not $env:BREVO_API_KEY) { throw 'Définir $env:BREVO_API_KEY pour envoyer avec Brevo.' }
+
+$deployed = Get-DeployedEmail $ResourceGroup 'songvault-api'
+if (-not $EmailProvider) { $EmailProvider = $deployed.Provider }
+if (-not $EmailFrom) { $EmailFrom = $deployed.From }
+$brevoApiKey = if ($env:BREVO_API_KEY) { $env:BREVO_API_KEY } else { $deployed.ApiKey }
+if ($EmailProvider -eq 'Brevo' -and -not $brevoApiKey) { throw 'Définir $env:BREVO_API_KEY pour envoyer avec Brevo.' }
+if ($EmailProvider -eq 'Brevo' -and $EmailFrom -like '*@songvault.local') {
+    throw 'Avec Brevo, passer -EmailFrom avec une adresse du domaine authentifié chez Brevo.'
+}
 
 # Les secrets passent par un fichier de paramètres temporaire : jamais dans la ligne de commande
 $secrets = Join-Path ([IO.Path]::GetTempPath()) "songvault-$([guid]::NewGuid()).parameters.json"
@@ -29,7 +61,7 @@ $parameters = @{
     contentVersion = '1.0.0.0'
     parameters     = @{
         sqlAdminPassword = @{ value = $env:SONGVAULT_SQL_PASSWORD }
-        brevoApiKey      = @{ value = "$env:BREVO_API_KEY" }
+        brevoApiKey      = @{ value = "$brevoApiKey" }
     }
 }
 [IO.File]::WriteAllText($secrets, ($parameters | ConvertTo-Json -Depth 5))     # UTF-8 sans BOM
@@ -40,7 +72,7 @@ try {
     az group create --name $ResourceGroup --location $Location --output none
     Assert-LastExit 'création du groupe de ressources'
 
-    Write-Host "2/4 Infrastructure (infra/main.bicep), images $ImageTag"
+    Write-Host "2/4 Infrastructure (infra/main.bicep), images $ImageTag, e-mails $EmailProvider ($EmailFrom)"
 	$locks = if ($NoDeleteLocks) { 'false' } else { 'true' }
     $json = az deployment group create --resource-group $ResourceGroup --name "songvault-$ImageTag" `
         --template-file infra/main.bicep `
@@ -78,6 +110,9 @@ try {
     Assert-LastExit "redémarrage de l'API"
 
     Write-Host "SongVault : $($outputs.publicUrl.value)"
+    if ($EmailProvider -eq 'Log') {
+        Write-Warning 'E-mails : Log. Aucun e-mail ne part, ils sont écrits dans les journaux de l''API.'
+    }
 }
 finally {
     Remove-Item $secrets -ErrorAction SilentlyContinue

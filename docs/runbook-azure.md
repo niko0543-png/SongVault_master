@@ -35,7 +35,7 @@ $env:SONGVAULT_SQL_PASSWORD = Read-Host 'Mot de passe SQL'
 
 Le script met à jour l'infrastructure et les images, lance les migrations, puis redémarre l'API. Il affiche l'adresse du site à la fin.
 
-Pour envoyer de vrais e-mails, ajouter `-EmailProvider Brevo -EmailFrom no-reply@ton-domaine.fr`, avec `$env:BREVO_API_KEY` défini.
+Les réglages e-mail de l'API en place sont gardés d'un déploiement à l'autre, clé Brevo comprise ([ADR 0022](adr/0022-e-mails-en-production-avec-brevo.md)) : voir [E-mails](#e-mails-brevo). Le script le rappelle à l'étape 2/4 et avertit à la fin si aucun e-mail ne part.
 
 Depuis v1.8.0 (ADR 0021), l'API prépare après chaque envoi un aperçu MP3 et une forme d'onde. Au premier démarrage de cette version, la migration crée une tâche par fichier audio déjà présent : elles passent une à une dans les minutes qui suivent (`Préparation de l'aperçu…` dans la page de la version en attendant). Un aperçu en échec se relance depuis cette page, bouton « Réessayer » ; le message d'erreur complet est dans les journaux (`audio.preview`).
 
@@ -76,6 +76,91 @@ SELECT TOP 1 FriendlyName, CHARINDEX('encryptedKey', Xml) AS Chiffree FROM DataP
 ```
 
 `Chiffree` doit être supérieur à 0. Si l'API ne démarre pas avec une erreur Key Vault (403), le rôle de son identité n'est pas encore appliqué : relancer le script quelques minutes plus tard.
+
+## E-mails (Brevo)
+
+L'API envoie ses e-mails par Brevo, depuis `no-reply@songvault.eu` ([ADR 0022](adr/0022-e-mails-en-production-avec-brevo.md)). Le domaine est chez OVHcloud, zone DNS comprise, et authentifié chez Brevo. `no-reply@` est un alias de la boîte `contact@songvault.eu` (Zimbra, webmail sur https://webmail.mail.ovh.net/), qui est aussi l'adresse du compte Brevo : ses alertes y arrivent.
+
+Voir le réglage en place :
+
+```powershell
+az containerapp show -g songvault-prod -n songvault-api --query "properties.template.containers[0].env[?starts_with(name, 'Email__')].{nom:name, valeur:value}" -o table
+
+```
+`Email__Provider` doit valoir `Brevo`. La clé n'apparaît pas : elle est dans le secret `brevo-api-key`.
+
+### Enregistrements DNS
+
+Chez OVHcloud : Web Cloud, « Noms de domaine », `songvault.eu`, onglet « Zone DNS ». Les valeurs exactes sont dans Brevo, « Expéditeurs, domaines et IP dédiées », « Domaines », bouton d'authentification du domaine.
+
+| Rôle | Type | Nom |
+|---|---|---|
+| Code Brevo (preuve de propriété) | TXT | `@` (sous-domaine vide chez OVHcloud), `brevo-code:…` |
+| DKIM 1 (signature) | CNAME | `brevo1._domainkey`, vers `b1.songvault-eu.dkim.brevo.com.` |
+| DKIM 2 (signature) | CNAME | `brevo2._domainkey`, vers `b2.songvault-eu.dkim.brevo.com.` |
+| DMARC | TXT | `_dmarc`, `v=DMARC1; p=none; rua=mailto:rua@dmarc.brevo.com` |
+
+Les autres entrées de la zone (MX, SPF, DKIM `ovhmo-selector`) servent à la boîte Zimbra : ne pas y toucher.
+
+Vérifier depuis le PC, en interrogeant directement le DNS d'OVHcloud :
+
+```powershell
+Resolve-DnsName -Type TXT songvault.eu -Server dns103.ovh.net
+Resolve-DnsName -Type TXT _dmarc.songvault.eu -Server dns103.ovh.net
+Resolve-DnsName -Type CNAME brevo1._domainkey.songvault.eu -Server dns103.ovh.net
+Resolve-DnsName -Type CNAME brevo2._domainkey.songvault.eu -Server dns103.ovh.net
+
+```
+Ne pas supprimer ces enregistrements, ni laisser expirer le domaine (renouvellement automatique chez OVHcloud, prochain en octobre 2027) : les e-mails partiraient en indésirables, ou plus du tout.
+
+### Vérifier la clé et l'expéditeur sans déployer
+
+```powershell
+$env:BREVO_API_KEY = Read-Host 'Clé Brevo'
+.\scripts\test-brevo.ps1 -From no-reply@songvault.eu -To <ton adresse>
+
+```
+Le script affiche le compte et les crédits restants, puis envoie un e-mail de test.
+
+### Changer la clé Brevo
+
+Après une fuite, ou une fois par an.
+
+1. Dans Brevo, « SMTP et API », « Clés API » : générer une nouvelle clé, la ranger dans le gestionnaire de mots de passe.
+2. Redéployer la version en place avec cette clé :
+
+```powershell
+$tag = (az containerapp show -g songvault-prod -n songvault-api --query "properties.template.containers[0].image" -o tsv).Split(':')[-1]
+$env:SONGVAULT_SQL_PASSWORD = Read-Host 'Mot de passe SQL'
+$env:BREVO_API_KEY = Read-Host 'Nouvelle clé Brevo'
+.\scripts\deploy-azure.ps1 -ImageTag $tag
+
+```
+3. Se faire envoyer un e-mail (« Mot de passe oublié » sur le site), puis supprimer l'ancienne clé dans Brevo.
+
+### Un e-mail n'arrive pas
+
+1. Dans Brevo, les journaux des e-mails transactionnels : l'e-mail y est-il, et dans quel état (livré, refusé, bloqué) ?
+2. Absent chez Brevo : l'API n'a pas pu le confier. Chercher dans `songvault-logs` :
+
+```kql
+ContainerAppConsoleLogs_CL
+| where ContainerAppName_s == "songvault-api" and TimeGenerated > ago(1d)
+| where Log_s has "Brevo"
+| project TimeGenerated, Log_s
+
+```
+- `Brevo a refusé l'e-mail (401)` avec un message sur l'adresse IP : Brevo bloque une nouvelle adresse sortante de l'API. Il envoie aussi un e-mail d'alerte. Autoriser les adresses sortantes actuelles dans Brevo, « Paramètres », « Sécurité », « IP autorisées » :
+
+```powershell
+az containerapp show -g songvault-prod -n songvault-api --query "properties.outboundIpAddresses" -o tsv
+
+```
+- `Brevo a refusé l'e-mail (401)` sans mention d'IP : la clé est fausse ou supprimée, la changer comme plus haut.
+- `(402)` ou un message sur les crédits : la limite de l'offre Brevo est atteinte. Les notifications en échec se voient dans les tâches de fond ; une confirmation d'adresse ou un mot de passe oublié se redemande depuis le site.
+- `(400)` sur l'expéditeur : l'adresse `Email__FromAddress` n'est pas un expéditeur validé du domaine authentifié.
+
+Revenir temporairement aux journaux, sans e-mail réel : `.\scripts\deploy-azure.ps1 -ImageTag $tag -EmailProvider Log` (`$tag` comme dans « Changer la clé Brevo »). La clé reste dans le secret ; repasser avec `-EmailProvider Brevo`.
 
 ## Changer la clé du compte de stockage
 

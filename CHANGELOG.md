@@ -32,6 +32,7 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) — versions :
 - Mobile : menu replié sous 720 px, pages lisibles dès 360 px de large, cibles tactiles de 44 px, lecteur au pouce avec ±10 s et commandes de l'écran verrouillé (Media Session).
 - Application installable sur Android et iOS : manifeste, icônes, service worker et page « Pas de connexion » (ADR 0020).
 - Forme d'onde des fichiers audio, colorée pendant l'écoute, clic ou flèches pour se déplacer ; aperçu MP3 de 128 kbit/s des WAV et FLAC préparé en arrière-plan par ffmpeg, utilisé par le lecteur et les liens de partage, l'original restant le fichier téléchargé ; échec visible et bouton « Réessayer » (ADR 0021).
+- Script `scripts/test-brevo.ps1` : vérifie la clé Brevo et l'expéditeur depuis le PC, avec un e-mail de test (ADR 0022).
 ### Modifié
 - Routes de l'API sous `/api/bands/{bandId}/songs…` et du front sous `/b/{bandId}/songs…`.
 - Renommer un groupe est réservé à ses Owner.
@@ -44,6 +45,7 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) — versions :
 - Répondre à un commentaire vérifie aussi le morceau et la version de la route : 404 s'ils ne correspondent pas au fichier.
 - Taille maximale d'un fichier envoyé depuis l'application : 2 Go au lieu de 50 Mo.
 - nginx est configuré par variables (`API_UPSTREAM`, `STORAGE_ORIGIN`) et transmet `X-Forwarded-Host`.
+- `scripts/deploy-azure.ps1` garde les réglages e-mail de l'API en place quand `-EmailProvider` et `-EmailFrom` sont omis, clé Brevo comprise ; il refuse Brevo avec une adresse `@songvault.local` et avertit quand aucun e-mail ne part (ADR 0022).
 ### Supprimé
 - `Song.OwnerId`, remplacé par `Song.BandId`. Les morceaux sans propriétaire valide sont supprimés par la migration `BackfillBands`.
 ### Corrigé
