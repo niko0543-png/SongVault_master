@@ -9,14 +9,15 @@ public sealed record DeleteAccountCommand(string Password);
 
 public sealed class DeleteAccountHandler(
     IAccountRepository accounts, IBackgroundJobs jobs, IUnitOfWork unitOfWork, ICurrentUser currentUser,
-    TimeProvider clock)
+    TimeProvider clock, IBillingRepository billing)
 {
     /// <summary>Délai avant l'effacement définitif (ADR 0011).</summary>
     public static readonly TimeSpan PurgeDelay = TimeSpan.FromDays(30);
 
     /// <summary>
     /// Désactive le compte connecté et programme sa purge. 422 si le mot de passe est faux,
-    /// 409 s'il est le dernier Owner d'un groupe qui a d'autres membres.
+    /// 409 s'il est le dernier Owner d'un groupe qui a d'autres membres, ou si un groupe dont il est le seul
+    /// membre a un abonnement Stripe qui n'est pas résilié (#16) : il serait encore prélevé après la suppression.
     /// </summary>
     public async Task HandleAsync(DeleteAccountCommand command, CancellationToken ct)
     {
@@ -24,8 +25,18 @@ public sealed class DeleteAccountHandler(
         if (!await accounts.CheckPasswordAsync(userId, command.Password, ct))
             throw new DomainException("Mot de passe incorrect.");
 
+        var bands = await accounts.ListBandsAsync(userId, ct);
+        var solo = bands.Where(b => b.Memberships.Count == 1).ToList();
+        var paying = (await billing.ListSubscriptionsAsync([.. solo.Select(b => b.Id)], ct))
+            .Where(s => s.IsLiveOnStripe && !s.CancelAtPeriodEnd)
+            .Select(s => $"« {solo.Single(b => b.Id == s.BandId).Name} »")
+            .ToList();
+        if (paying.Count > 0)
+            throw new ConflictException(
+                $"{string.Join(", ", paying)} {(paying.Count > 1 ? "ont" : "a")} un abonnement en cours : résiliez-le depuis la page Facturation, puis supprimez votre compte.");
+
         var blocking = new List<string>();
-        foreach (var band in await accounts.ListBandsAsync(userId, ct))
+        foreach (var band in bands)
         {
             if (band.Memberships.Count == 1) continue;           // seul membre : le groupe part avec le compte, à la purge
             try

@@ -111,7 +111,14 @@ public static class DependencyInjection
         services.AddScoped<DownloadSharedCoverHandler>();
         // #16 : formules, quotas et abonnements (ADR 0023)
         services.AddScoped<PlanLimits>();
+        services.AddScoped<ListPlansHandler>();
+        services.AddScoped<GetBandUsageHandler>();
+        services.AddScoped<GetBillingHandler>();
+        services.AddScoped<StartCheckoutHandler>();
+        services.AddScoped<OpenBillingPortalHandler>();
+        services.AddScoped<HandlePaymentEventHandler>();
         services.AddScoped<StorageRecountScheduler>();
+        services.AddScoped<IBackgroundJobHandler, PaymentFailedJob>();
         services.AddScoped<IBackgroundJobHandler, StorageRecountJob>();
 
         return services;
