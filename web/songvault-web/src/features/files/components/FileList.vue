@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { SongFile, SongFileType } from '../types'
+import { isReadable, type SongFile, type SongFileType } from '../types'
 import { filesApi } from '../api/filesApi'
 import FileWaveform from './FileWaveform.vue'
 import { formatDate, formatFileSize } from '@/shared/utils/format'
@@ -18,6 +18,7 @@ defineEmits<{
   delete: [file: SongFile]
   seek: [file: SongFile, seconds: number]
   retry: [file: SongFile]
+  retryScan: [file: SongFile]
 }>()
 
 const icons: Record<SongFileType, string> = { Audio: '🎵', Tablature: '🎸', Document: '📄' }
@@ -31,7 +32,16 @@ const icons: Record<SongFileType, string> = { Audio: '🎵', Tablature: '🎸', 
       <div class="file-info">
         <span>{{ file.originalFileName }}</span>
         <small class="muted">{{ formatFileSize(file.sizeBytes) }} · {{ formatDate(file.uploadedAt) }}</small>
-        <small v-if="file.preview === 'Pending'" class="muted" role="status">Préparation de l'aperçu…</small>
+        <small v-if="file.scan === 'Pending'" class="muted" role="status">Analyse antivirus en cours…</small>
+        <small v-else-if="file.scan === 'Infected'" class="preview-failed" data-testid="scan-infected">
+          Bloqué : l'antivirus a détecté une menace ({{ file.scanThreat }}). Ce fichier ne peut être ni écouté ni téléchargé.
+        </small>
+        <small v-else-if="file.scan === 'Failed'" class="preview-failed">
+          L'analyse antivirus a échoué.
+          <button v-if="!readonly" type="button" class="link" :disabled="busyId === file.id"
+                  @click="$emit('retryScan', file)">Relancer l'analyse</button>
+        </small>
+        <small v-else-if="file.preview === 'Pending'" class="muted" role="status">Préparation de l'aperçu…</small>
         <small v-else-if="file.preview === 'Failed'" class="preview-failed">
           Aperçu indisponible : l'écoute utilise le fichier original.
           <button v-if="!readonly" type="button" class="link" :disabled="busyId === file.id"
@@ -39,11 +49,13 @@ const icons: Record<SongFileType, string> = { Audio: '🎵', Tablature: '🎸', 
         </small>
       </div>
       <div class="file-actions">
-        <button v-if="file.fileType === 'Audio'" type="button" class="secondary" @click="$emit('play', file)">▶ Écouter</button>
-        <a :href="filesApi.contentUrl(songId, versionId, file.id, true)" download>Télécharger</a>
+        <template v-if="isReadable(file)">
+          <button v-if="file.fileType === 'Audio'" type="button" class="secondary" @click="$emit('play', file)">▶ Écouter</button>
+          <a :href="filesApi.contentUrl(songId, versionId, file.id, true)" download>Télécharger</a>
+        </template>
         <button v-if="!readonly" type="button" class="secondary" :disabled="busyId === file.id" @click="$emit('delete', file)">Supprimer</button>
       </div>
-      <FileWaveform v-if="file.preview === 'Ready'" class="file-waveform"
+      <FileWaveform v-if="file.preview === 'Ready' && isReadable(file)" class="file-waveform"
                     :song-id="songId" :version-id="versionId" :file-id="file.id" :label="file.originalFileName"
                     :progress="playing?.fileId === file.id ? playing.progress : 0"
                     @seek="(seconds) => $emit('seek', file, seconds)" />

@@ -18,6 +18,7 @@ async function expectNoHorizontalScroll(page: Page) {
 }
 
 test('à 360 px, aucune page ne défile à l\'horizontale et le lecteur tient sous le pouce', async ({ page }) => {
+  test.setTimeout(60_000)                       // #17 : l'analyse antivirus passe avant l'écoute
   await page.goto('/login')
   await expectNoHorizontalScroll(page)
   await page.goto('/confidentialite')
@@ -33,6 +34,7 @@ test('à 360 px, aucune page ne défile à l\'horizontale et le lecteur tient so
   await page.getByRole('link', { name: 'Mix final avec les chœurs refaits au studio' }).click()
   await page.getByLabel('Choisir un fichier').setInputFiles(demoMp3)
   const file = page.getByTestId('file-item').filter({ hasText: 'demo.mp3' })
+  await expect(file.getByRole('button', { name: /Écouter/ })).toBeVisible({ timeout: 30_000 })   // #17 : après l'analyse
   await file.getByRole('button', { name: /Écouter/ }).click()
   await expectNoHorizontalScroll(page)
 

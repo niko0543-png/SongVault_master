@@ -39,3 +39,44 @@ describe('FileList, aperçus (#15)', () => {
     expect(mountList([failed], true).find('button.link').exists()).toBe(false)
   })
 })
+
+describe('FileList, analyse antivirus (#17)', () => {
+  const scanned = (id: string, scan: SongFile['scan'], scanThreat: string | null = null): SongFile =>
+    ({ ...audio(id, 'Ready'), scan, scanThreat })
+
+  it("n'offre ni écoute ni téléchargement tant que le fichier n'est pas déclaré sain", () => {
+    const wrapper = mountList([scanned('pending', 'Pending'), scanned('infected', 'Infected', 'Win.Test.EICAR_HDB-1'),
+      scanned('failed', 'Failed'), scanned('ready', 'Clean')])
+
+    const items = wrapper.findAll('[data-testid="file-item"]')
+    expect(items[0]!.text()).toContain('Analyse antivirus en cours…')
+    expect(items[1]!.get('[data-testid="scan-infected"]').text()).toContain('Win.Test.EICAR_HDB-1')
+    expect(items[2]!.text()).toContain("L'analyse antivirus a échoué")
+    for (const item of items.slice(0, 3)) {
+      expect(item.text()).not.toContain('Écouter')
+      expect(item.find('a[download]').exists()).toBe(false)
+      expect(item.text()).toContain('Supprimer')                  // un fichier bloqué se supprime
+    }
+    expect(items[3]!.text()).toContain('Écouter')
+    expect(wrapper.findAllComponents({ name: 'FileWaveform' })).toHaveLength(1)
+  })
+
+  it("s'écoute et se télécharge sans analyse quand l'antivirus est désactivé", () => {
+    const wrapper = mountList([scanned('free', 'NotScanned')])
+
+    const item = wrapper.get('[data-testid="file-item"]')
+    expect(item.text()).toContain('Écouter')
+    expect(item.find('a[download]').exists()).toBe(true)
+    expect(item.text()).not.toContain('Analyse antivirus')
+  })
+
+  it("propose de relancer une analyse en échec, sauf en lecture seule", async () => {
+    const failed = scanned('failed', 'Failed')
+    const wrapper = mountList([failed])
+
+    await wrapper.get('button.link').trigger('click')
+
+    expect(wrapper.emitted('retryScan')).toEqual([[failed]])
+    expect(mountList([failed], true).find('button.link').exists()).toBe(false)
+  })
+})
