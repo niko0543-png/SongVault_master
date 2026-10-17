@@ -34,6 +34,11 @@ jobs:
             context: web/songvault-web
             file: web/songvault-web/Dockerfile
             target: ''
+          # #17 : ClamAV réglé pour nos fichiers, à côté de l'API dans Azure (ADR 0024)
+          - name: songvault-clamav
+            context: infra/clamav
+            file: infra/clamav/Dockerfile
+            target: ''
     steps:
       - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v3

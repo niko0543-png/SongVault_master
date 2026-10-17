@@ -6,6 +6,7 @@ import { createSong, createVersion, registerNewUser } from './helpers'
 const demoMp3 = fileURLToPath(new URL('./fixtures/demo.mp3', import.meta.url))
 
 test('un musicien uploade une maquette, la lance, puis se déconnecte', async ({ page }) => {
+  test.setTimeout(60_000)                       // #17 : l'analyse antivirus passe avant l'écoute
   await registerNewUser(page)
   await createSong(page, 'Démo E2E')
   await createVersion(page, 'Maquette', 1)
@@ -19,6 +20,10 @@ test('un musicien uploade une maquette, la lance, puis se déconnecte', async ({
   const file = page.getByTestId('file-item').filter({ hasText: 'demo.mp3' })
   await expect(file).toBeVisible()
 
+  // #17 : l'écoute apparaît une fois le fichier analysé par ClamAV (tâche de fond, puis relecture toutes les 5 s)
+  await expect(file.getByText('Analyse antivirus en cours…')).toBeVisible()
+  await expect(file.getByRole('button', { name: /Écouter/ })).toBeVisible({ timeout: 30_000 })
+  
   // Lecture : on vérifie l'état du lecteur, pas le son
   await file.getByRole('button', { name: /Écouter/ }).click()
   const player = page.getByRole('region', { name: 'Lecteur audio' })

@@ -62,6 +62,12 @@ public static class DependencyInjection
         services.AddScoped<ListenSongFileHandler>();
         services.AddScoped<GetWaveformHandler>();
         services.AddScoped<RetryAudioPreviewHandler>();
+        // #17 : analyse antivirus (ADR 0024)
+        services.AddScoped<FileScanQueue>();
+        services.AddScoped<IBackgroundJobHandler, FileScanJob>();
+        services.AddScoped<IBackgroundJobHandler, InfectedFileNoticeJob>();
+        services.AddScoped<RetryFileScanHandler>();
+        services.AddScoped<RescanNotScannedFilesHandler>();
         services.AddScoped<DeleteAccountHandler>();
         services.AddScoped<IBackgroundJobHandler, PurgeAccountJob>();
         // #6 : envoi direct vers le stockage (ADR 0012)

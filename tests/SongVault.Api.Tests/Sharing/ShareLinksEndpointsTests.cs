@@ -17,8 +17,8 @@ public sealed class ShareLinksEndpointsTests(SongVaultApiFactory factory)
 {
     private sealed record SharedVersion(Guid BandId, string SongUrl, Guid SongId, Guid VersionId, Guid FileId, byte[] Bytes);
 
-    /// <summary>Morceau, version et fichier MP3 dans le premier groupe du client.</summary>
-    private static async Task<SharedVersion> VersionWithAudioAsync(HttpClient client, string title = "Aube")
+    /// <summary>Morceau, version et fichier MP3 dans le premier groupe du client ; scanned : analyse antivirus faite (#17).</summary>
+    private async Task<SharedVersion> VersionWithAudioAsync(HttpClient client, string title = "Aube", bool scanned = true)
     {
         var bandId = await client.FirstBandIdAsync();
         var created = await client.PostAsJsonAsync($"/api/bands/{bandId}/songs", new { title });
@@ -30,6 +30,7 @@ public sealed class ShareLinksEndpointsTests(SongVaultApiFactory factory)
         var upload = await client.PostAsync($"{version.Headers.Location}/files", TestFiles.Form(bytes, $"{title}-mix.mp3"));
         Assert.Equal(HttpStatusCode.Created, upload.StatusCode);
         var file = (await upload.Content.ReadFromJsonAsync<SongFileResponse>(TestJson.Options))!;
+        if (scanned) await SongVaultApiFactory.RunDueJobsAsync(factory.Services);
         return new SharedVersion(bandId, songUrl, song.Id, v.Id, file.Id, bytes);
     }
 
@@ -51,6 +52,27 @@ public sealed class ShareLinksEndpointsTests(SongVaultApiFactory factory)
     private static async Task<List<ShareLinkAccessResponse>> AccessesAsync(HttpClient client, Guid bandId, Guid linkId)
         => (await client.GetFromJsonAsync<List<ShareLinkAccessResponse>>(
             $"/api/bands/{bandId}/share-links/{linkId}/accesses", TestJson.Options))!;
+
+    [Fact]
+    [Trait("Category", "Security")]
+    public async Task Le_visiteur_ne_voit_un_fichier_qu_une_fois_declare_sain()
+    {
+        var owner = await factory.CreateNewUserClientAsync();
+        var shared = await VersionWithAudioAsync(owner, scanned: false);
+        var link = await ShareAsync(owner, shared.BandId, ShareTargetType.Version, shared.VersionId);
+        var visitor = Visitor();
+        var audio = $"{Api(link)}/files/{shared.FileId}/content";
+
+        var before = await visitor.GetFromJsonAsync<SharedContentResponse>(Api(link), TestJson.Options);
+        Assert.Empty(before!.Tracks.Single().Files);
+        Assert.Equal(HttpStatusCode.NotFound, (await visitor.GetAsync(audio)).StatusCode);
+
+        await SongVaultApiFactory.RunDueJobsAsync(factory.Services);
+
+        var after = await visitor.GetFromJsonAsync<SharedContentResponse>(Api(link), TestJson.Options);
+        Assert.Equal(shared.FileId, Assert.Single(after!.Tracks.Single().Files).Id);
+        Assert.Equal(HttpStatusCode.OK, (await visitor.GetAsync(audio)).StatusCode);
+    }
 
     [Fact]
     public async Task Sans_compte_on_ecoute_la_version_et_rien_d_autre()

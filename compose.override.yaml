@@ -4,6 +4,9 @@ services:
   db:
     ports:
       - "1433:1433"        # SSMS / Explorateur SQL / dotnet ef depuis le PC
+  clamav:
+    ports:
+      - "3310:3310"        # #17 : l'API lancée par dotnet run analyse les fichiers ici      
   api:
     ports:
       - "5081:8080"        # appels directs à l'API, health checks, OpenAPI

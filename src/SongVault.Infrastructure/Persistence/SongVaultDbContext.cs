@@ -51,6 +51,8 @@ public sealed class SongVaultDbContext(
     public DbSet<ShareLinkAccess> ShareLinkAccesses => Set<ShareLinkAccess>();
     /// <summary>Forme d'onde et MP3 d'écoute des fichiers audio (ADR 0021).</summary>
     public DbSet<AudioPreview> AudioPreviews => Set<AudioPreview>();
+    /// <summary>Analyse antivirus des fichiers (ADR 0024).</summary>
+    public DbSet<FileScan> FileScans => Set<FileScan>();
     /// <summary>Formules, abonnements des groupes et événements Stripe déjà traités (ADR 0023).</summary>
     public DbSet<Plan> Plans => Set<Plan>();
     public DbSet<Subscription> Subscriptions => Set<Subscription>();

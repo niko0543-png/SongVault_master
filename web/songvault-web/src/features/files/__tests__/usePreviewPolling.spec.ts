@@ -52,6 +52,30 @@ describe('usePreviewPolling', () => {
     expect(list.value[0]!.preview).toBe('Ready')
   })
 
+  it("#17 : suit aussi l'analyse antivirus, puis l'aperçu qu'elle déclenche", async () => {
+    const scanning: SongFile = { ...file('a', 'Pending'), scan: 'Pending' }
+    const fetchFiles = vi.fn()
+      .mockResolvedValueOnce([{ ...file('a', 'Pending'), scan: 'Clean' }])
+      .mockResolvedValueOnce([{ ...file('a', 'Ready'), scan: 'Clean' }])
+    const { list } = mountPolling([scanning], fetchFiles)
+
+    await vi.advanceTimersByTimeAsync(PREVIEW_POLL_MS)
+    expect(list.value[0]!.scan).toBe('Clean')
+    await vi.advanceTimersByTimeAsync(PREVIEW_POLL_MS)
+    expect(list.value[0]!.preview).toBe('Ready')
+  })
+
+  it("#17 : recopie le nom de la menace d'un fichier bloqué, et s'arrête", async () => {
+    const pdf: SongFile = { ...file('pdf', null), scan: 'Pending' }
+    const fetchFiles = vi.fn().mockResolvedValue([{ ...file('pdf', null), scan: 'Infected', scanThreat: 'Pdf.Exploit' }])
+    const { list } = mountPolling([pdf], fetchFiles)
+
+    await vi.advanceTimersByTimeAsync(PREVIEW_POLL_MS * 3)
+
+    expect(list.value[0]).toMatchObject({ scan: 'Infected', scanThreat: 'Pdf.Exploit' })
+    expect(fetchFiles).toHaveBeenCalledTimes(1)
+  })
+
   it("s'arrête quand la page est quittée", async () => {
     const fetchFiles = vi.fn().mockResolvedValue([file('a', 'Pending')])
     const { wrapper } = mountPolling([file('a', 'Pending')], fetchFiles)

@@ -36,6 +36,7 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) — versions :
 - Formules et quotas : Gratuit (2 Go, un groupe), Groupe (50 Go) et Studio (250 Go) dans la table `Plans` ; stockage de chaque groupe recalculé après chaque envoi et chaque nuit ; envoi refusé (402) au-delà du quota, jamais d'effacement ; second groupe gratuit refusé (ADR 0023).
 - Abonnement d'un groupe par Stripe : page Facturation (propriétaires), Checkout, portail client, webhook signé et idempotent, e-mail aux propriétaires quand un paiement est refusé ; activé par `Billing:Provider=Stripe`.
 - Pages publiques Formules (`/formules`) et Conditions générales de vente ; jauge de stockage sur la liste des morceaux.
+- Analyse antivirus de chaque fichier par ClamAV, en arrière-plan : fichier illisible jusqu'au verdict, fichier infecté bloqué et signalé à son auteur par e-mail, analyse en échec relançable (`POST …/files/{id}/scan`) ; activée par `Antivirus:Provider=ClamAv` : conteneur `clamav` dans Docker Compose et, une fois activé, à côté de l'API dans Azure ; avec `None` (production avant la commercialisation), fichiers lisibles et marqués non analysés, remis en analyse à l'activation (ADR 0024).
 ### Modifié
 - Routes de l'API sous `/api/bands/{bandId}/songs…` et du front sous `/b/{bandId}/songs…`.
 - Renommer un groupe est réservé à ses Owner.

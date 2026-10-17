@@ -38,6 +38,16 @@ internal static class TestFiles
         return bytes;
     }
 
+    /// <summary>
+    /// #17 : ce que TestMalwareScanner prend pour un virus. Pas la chaîne EICAR : l'antivirus du PC de développement
+    /// effacerait le fichier du dossier temporaire des tests avant que l'API ne le lise.
+    /// </summary>
+    public static ReadOnlySpan<byte> VirusMarker => "SONGVAULT-TEST-VIRUS"u8;
+
+    /// <summary>Un .txt qui contient VirusMarker.</summary>
+    public static byte[] InfectedTxt() => [.. "Paroles du refrain\n"u8, .. VirusMarker];
+
+
     public static MultipartFormDataContent Form(byte[] bytes, string fileName)
     {
         var part = new ByteArrayContent(bytes);

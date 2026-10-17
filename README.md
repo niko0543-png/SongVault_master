@@ -124,6 +124,10 @@ docker compose down -v       # supprime aussi la base et les fichiers
   250 Go), une jauge de stockage sur la liste des morceaux, et un refus clair au-delà. Le
   propriétaire paie par Stripe (Checkout et portail client : carte, factures, résiliation),
   activé par `Billing:Provider` ; sans lui, formules et quotas s'appliquent quand même.
+- **Analyse antivirus** : chaque fichier envoyé passe par ClamAV en arrière-plan avant de
+  pouvoir être écouté, téléchargé ou partagé. Un fichier infecté est bloqué, son auteur
+  prévenu par e-mail ; une analyse en échec se relance. Activée par `Antivirus:Provider`
+  (en production, à la commercialisation).
 
 ---
 
@@ -349,6 +353,8 @@ npx playwright test                           # E2E (application lancée sur :80
 - **Fichiers** : liste blanche d'extensions, taille maximale, contrôle de la **signature
   binaire** (un `.exe` renommé en `.mp3` est refusé), nom de stockage généré par le serveur.
   Conteneur privé ; URL signées limitées à un fichier, pour créer (1 h) ou lire (30 min).
+  Analyse **antivirus ClamAV** de chaque fichier avant toute lecture, une fois
+  `Antivirus:Provider=ClamAv` ; un fichier infecté reste bloqué ([ADR 0024](docs/adr/0024-analyse-antivirus.md)).
 - **Clés Data Protection** chiffrées par une clé Key Vault sur Azure.
 - **Limitation de débit** sur l'authentification et l'envoi de fichiers (429).
 - **Liens de partage** : jeton aléatoire dont seule l'empreinte est en base, routes publiques
@@ -366,8 +372,10 @@ npx playwright test                           # E2E (application lancée sur :80
 ## Développer sans Docker
 
 **Prérequis :** SDK .NET 10, Node.js (version indiquée dans `web/songvault-web/.nvmrc`), un SQL Server (LocalDB, ou le
-conteneur `db` de Compose publié sur `localhost,1433`) et [ffmpeg](https://ffmpeg.org/) dans le `PATH`
-(`winget install Gyan.FFmpeg`), qui prépare les aperçus audio et sert aux tests d'intégration.
+conteneur `db` de Compose publié sur `localhost,1433`), [ffmpeg](https://ffmpeg.org/) dans le `PATH`
+(`winget install Gyan.FFmpeg`), qui prépare les aperçus audio et sert aux tests d'intégration, et
+l'antivirus ClamAV de Compose publié sur `localhost:3310` (`docker compose up -d clamav`) : sans lui,
+les fichiers envoyés restent « en cours d'analyse ».
 
 ```powershell
 # 1. Configuration locale de l'API (secrets hors du dépôt)

@@ -5,6 +5,7 @@
 .EXAMPLE   $env:BREVO_API_KEY = '…' ; .\scripts\deploy-azure.ps1 -ImageTag v1.1.0 -EmailProvider Brevo -EmailFrom no-reply@songvault.eu
 .EXAMPLE   $env:STRIPE_SECRET_KEY = '…' ; $env:STRIPE_WEBHOOK_SECRET = '…'
            .\scripts\deploy-azure.ps1 -ImageTag v1.9.0 -BillingProvider Stripe -StripePriceBand price_… -StripePriceStudio price_…
+.EXAMPLE   .\scripts\deploy-azure.ps1 -ImageTag v1.10.0 -AntivirusProvider ClamAv
 .NOTES     Prérequis : Azure CLI connecté (az login) et images publiées par le workflow « images ».
            Secrets lus dans l'environnement, jamais en paramètre :
              SONGVAULT_SQL_PASSWORD  mot de passe de l'administrateur SQL (obligatoire, toujours le même)
@@ -15,6 +16,8 @@
            comprise (#27). Un nouveau groupe de ressources part sur Log : aucun e-mail ne part.
            De même sans -BillingProvider ni prix : les réglages de paiement en place sont gardés ;
            un nouveau groupe part sur None (formules et quotas, sans paiement en ligne).
+           De même sans -AntivirusProvider : le réglage en place est gardé ; un nouveau groupe, ou une API
+           d'avant #17, part sur None (fichiers non analysés, pas de conteneur ClamAV).
 #>
 param(
     [Parameter(Mandatory)][string]$ImageTag,
@@ -27,6 +30,8 @@ param(
     [ValidateSet('None', 'Stripe')][string]$BillingProvider,
     [string]$StripePriceBand,
     [string]$StripePriceStudio,
+    # Sans valeur : celle de l'API déjà déployée (None pour un nouveau groupe) ; ClamAv ajoute le conteneur (#17)
+    [ValidateSet('None', 'ClamAv')][string]$AntivirusProvider,
     # Sans verrous sur la base et le stockage : environnement d'exercice, supprimé ensuite (ADR 0013)
     [switch]$NoDeleteLocks
 )
@@ -76,6 +81,17 @@ function Get-DeployedBilling([string]$Group, [string]$App) {
     return $settings
 }
 
+# Antivirus de l'API en place (#17), même principe : un redéploiement ne le coupe pas sans le dire
+function Get-DeployedAntivirus([string]$Group, [string]$App) {
+    if ((az group exists --name $Group) -ne 'true') { return 'None' }
+    $json = az containerapp list --resource-group $Group `
+        --query "[?name=='$App'] | [0].properties.template.containers[0].env" --output json
+    Assert-LastExit "lecture des réglages de $App"
+    $vars = $json | Out-String | ConvertFrom-Json
+    $provider = ($vars | Where-Object name -eq 'Antivirus__Provider').value
+    if ($provider) { return $provider } else { return 'None' }
+}
+
 if (-not $env:SONGVAULT_SQL_PASSWORD) { throw 'Définir $env:SONGVAULT_SQL_PASSWORD (mot de passe administrateur SQL).' }
 
 $deployed = Get-DeployedEmail $ResourceGroup 'songvault-api'
@@ -105,6 +121,8 @@ if ($BillingProvider -eq 'Stripe') {
     }
 }
 
+if (-not $AntivirusProvider) { $AntivirusProvider = Get-DeployedAntivirus $ResourceGroup 'songvault-api' }
+
 # Les secrets passent par un fichier de paramètres temporaire : jamais dans la ligne de commande
 $secrets = Join-Path ([IO.Path]::GetTempPath()) "songvault-$([guid]::NewGuid()).parameters.json"
 $parameters = @{
@@ -128,12 +146,12 @@ try {
     az group create --name $ResourceGroup --location $Location --output none
     Assert-LastExit 'création du groupe de ressources'
 
-    Write-Host "2/4 Infrastructure (infra/main.bicep), images $ImageTag, e-mails $EmailProvider ($EmailFrom), paiement $BillingProvider"
+    Write-Host "2/4 Infrastructure (infra/main.bicep), images $ImageTag, e-mails $EmailProvider ($EmailFrom), paiement $BillingProvider, antivirus $AntivirusProvider"
 	$locks = if ($NoDeleteLocks) { 'false' } else { 'true' }
     $json = az deployment group create --resource-group $ResourceGroup --name "songvault-$ImageTag" `
         --template-file infra/main.bicep `
         --parameters "@$secrets" imageTag=$ImageTag emailProvider=$EmailProvider emailFrom=$EmailFrom `
-            enableDeleteLocks=$locks billingProvider=$BillingProvider `
+            enableDeleteLocks=$locks billingProvider=$BillingProvider antivirusProvider=$AntivirusProvider `
         --query properties.outputs --output json
     Assert-LastExit 'déploiement Bicep'
     $outputs = $json | Out-String | ConvertFrom-Json
@@ -171,6 +189,9 @@ try {
     }
     if ($BillingProvider -eq 'None') {
         Write-Host 'Paiement : None. Formules et quotas appliqués, paiement en ligne fermé.'
+    }
+    if ($AntivirusProvider -eq 'None') {
+        Write-Host 'Antivirus : None. Fichiers lisibles sans analyse, à activer avant la commercialisation.'
     }
 }
 finally {

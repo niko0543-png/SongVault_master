@@ -594,6 +594,35 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                     b.ToTable("AudioPreviews", (string)null);
                 });
 
+            modelBuilder.Entity("SongVault.Domain.Files.FileScan", b =>
+                {
+                    b.Property<Guid>("SongFileId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<DateTimeOffset>("RequestedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Threat")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("SongFileId");
+
+                    b.ToTable("FileScans", (string)null);
+                });
+
             modelBuilder.Entity("SongVault.Domain.Files.FileUpload", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1270,6 +1299,15 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                     b.HasOne("SongVault.Domain.Files.SongFile", null)
                         .WithOne()
                         .HasForeignKey("SongVault.Domain.Files.AudioPreview", "SongFileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SongVault.Domain.Files.FileScan", b =>
+                {
+                    b.HasOne("SongVault.Domain.Files.SongFile", null)
+                        .WithOne()
+                        .HasForeignKey("SongVault.Domain.Files.FileScan", "SongFileId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

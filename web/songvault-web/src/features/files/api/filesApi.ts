@@ -1,7 +1,7 @@
 import { request } from '@/shared/api/httpClient'
 import { bandPath } from '@/shared/api/bandPath'
 import { putFile } from './putFile'
-import type { AudioPreviewStatus, AudioWaveform, FilePolicy, FileUploadTicket, SongFile } from '../types'
+import type { AudioPreviewStatus, AudioWaveform, FilePolicy, FileScanStatus, FileUploadTicket, SongFile } from '../types'
 
 const base = (songId: string, versionId: string) => bandPath(`/songs/${songId}/versions/${versionId}/files`)
 
@@ -20,6 +20,11 @@ function waveform(songId: string, versionId: string, fileId: string) {
 
 function retryPreview(songId: string, versionId: string, fileId: string) {
   return request<{ status: AudioPreviewStatus }>(`${base(songId, versionId)}/${fileId}/preview`, { method: 'POST' })
+}
+
+/** #17 : relance une analyse antivirus en échec. */
+function retryScan(songId: string, versionId: string, fileId: string) {
+  return request<{ status: FileScanStatus }>(`${base(songId, versionId)}/${fileId}/scan`, { method: 'POST' })
 }
 
 function policy() {
@@ -44,4 +49,4 @@ function remove(songId: string, versionId: string, fileId: string) {
   return request<void>(`${base(songId, versionId)}/${fileId}`, { method: 'DELETE' })
 }
 
-export const filesApi = { contentUrl, listenUrl, waveform, retryPreview, policy, upload, remove }
+export const filesApi = { contentUrl, listenUrl, waveform, retryPreview, retryScan, policy, upload, remove }

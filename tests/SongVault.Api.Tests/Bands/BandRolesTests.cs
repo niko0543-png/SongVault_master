@@ -25,6 +25,7 @@ public sealed class BandRolesTests(SongVaultApiFactory factory)
             .Headers.Location!.ToString();
         var upload = await owner.PostAsync($"{version}/files", TestFiles.Form(TestFiles.Mp3(1024), "a.mp3"));
         var file = (await upload.Content.ReadFromJsonAsync<SongFileResponse>(TestJson.Options))!;
+        await SongVaultApiFactory.RunDueJobsAsync(factory.Services);          // #17 : analyse antivirus
 
         var member = await factory.CreateNewUserClientAsync();
         await factory.AddMemberAsync(bandId, member, role);

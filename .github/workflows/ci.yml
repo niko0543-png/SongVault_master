@@ -22,7 +22,7 @@ jobs:
       - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
-        # #15 : les tests d'intégration lancent le vrai ffmpeg
+        # #15 : les tests d'intégration lancent le vrai ffmpeg ; #17 : ClamAvScannerTests démarre clamav/clamav:1.4 (Testcontainers)
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
       - run: dotnet restore
       - run: dotnet build --no-restore -c Release

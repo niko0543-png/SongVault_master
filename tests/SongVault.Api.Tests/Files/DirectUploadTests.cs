@@ -33,6 +33,7 @@ public sealed class DirectUploadTests(SongVaultApiFactory factory)
         var file = (await complete.Content.ReadFromJsonAsync<SongFileResponse>(TestJson.Options))!;
         Assert.Equal("Prise 3.mp3", file.OriginalFileName);
         Assert.Equal(bytes.Length, file.SizeBytes);
+        await SongVaultApiFactory.RunDueJobsAsync(factory.Services);          // #17 : analyse antivirus
         var downloaded = await client.GetByteArrayAsync(complete.Headers.Location);
         Assert.Equal(SHA256.HashData(bytes), SHA256.HashData(downloaded));
         // Une seconde confirmation ne trouve plus l'envoi

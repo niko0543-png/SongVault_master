@@ -60,7 +60,8 @@ public sealed class ReceiveFileUploadHandler(
 /// <summary>3. Confirmation : taille et signature contrôlées, puis fichier rattaché à la version.</summary>
 public sealed class CompleteFileUploadHandler(
     ISongRepository songs, IFileUploadRepository uploads, IFileStorageService storage, IUnitOfWork unitOfWork,
-        ICurrentUser currentUser, TimeProvider clock, ActivityLog activity, AudioPreviewQueue previews, PlanLimits limits)
+               ICurrentUser currentUser, TimeProvider clock, ActivityLog activity, AudioPreviewQueue previews, FileScanQueue scans,
+        PlanLimits limits)
 {
     public async Task<SongFileDto> HandleAsync(Guid songId, Guid versionId, Guid uploadId, CancellationToken ct)
     {
@@ -102,12 +103,13 @@ public sealed class CompleteFileUploadHandler(
         var file = version.AddFile(upload.FileName, upload.StorageKey, rule.ContentType, length, rule.FileType, now);
         uploads.Remove(upload);
         activity.FileChanged(ActivityType.FileAdded, song, version, file, now);
-        var preview = previews.RequestFor(file, now);                      // #15 : aperçu préparé en tâche de fond
+        var preview = previews.RequestFor(file, now);                      // #15 : aperçu préparé après l'analyse
+        var scan = scans.RequestFor(file, now);                            // #17 : illisible jusqu'au verdict de l'antivirus
         // Le fichier rattaché et l'envoi effacé, ensemble. Si la tâche d'expiration vient d'effacer la ligne,
         // l'effacement ne touche aucune ligne : EF lève un conflit (409) et rien n'est rattaché.
         await unitOfWork.SaveChangesAsync(ct);
         await limits.RefreshStorageAsync(song.BandId, ct);                 // #16 : la jauge suit
-        return SongFileDto.From(file, preview);
+        return SongFileDto.From(file, preview, scan);
     }
 
     private async Task DiscardAsync(FileUpload upload, CancellationToken ct)

@@ -64,6 +64,7 @@ public sealed class AudioPreviewTests(SongVaultApiFactory factory)
     {
         var client = await factory.CreateNewUserClientAsync();
         var (versionUrl, file) = await UploadAsync(client, TestFiles.Mp3(4096), "maquette.mp3");
+        await SongVaultApiFactory.RunDueJobsAsync(factory.Services);          // #17 : analyse, puis premier essai d'aperçu
 
         var listen = await client.GetAsync($"{versionUrl}/files/{file.Id}/listen");
 

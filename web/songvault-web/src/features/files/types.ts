@@ -3,6 +3,12 @@ export type SongFileType = 'Audio' | 'Tablature' | 'Document'
 /** #15 : état de l'aperçu MP3 et de la forme d'onde d'un fichier audio (null pour les autres). */
 export type AudioPreviewStatus = 'Pending' | 'Ready' | 'Failed'
 
+/**
+ * #17 : analyse antivirus. Un fichier Clean, ou NotScanned (antivirus désactivé avant la commercialisation),
+ * s'écoute et se télécharge.
+ */
+export type FileScanStatus = 'Pending' | 'Clean' | 'Infected' | 'Failed' | 'NotScanned'
+
 export interface SongFile {
   id: string
   originalFileName: string
@@ -12,6 +18,16 @@ export interface SongFile {
   uploadedAt: string
   /** Absent des réponses d'avant #15 et des faux des tests : traité comme null. */
   preview?: AudioPreviewStatus | null
+  /** Absent des faux des tests d'avant #17 : traité comme Clean (l'API, elle, refuse tout fichier non déclaré sain). */
+  scan?: FileScanStatus
+  /** Fichier Infected : nom de la menace trouvée. */
+  scanThreat?: string | null
+}
+
+/** #17 : le fichier peut être écouté et téléchargé. */
+export function isReadable(file: SongFile): boolean {
+  const scan = file.scan ?? 'Clean'
+  return scan === 'Clean' || scan === 'NotScanned'
 }
 
 /** #15 : 1000 crêtes de 0 à 255, la plus forte valant 255. */

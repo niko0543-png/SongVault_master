@@ -120,10 +120,12 @@ public sealed class SongFilesController : ControllerBase
     /// <response code="200">Le contenu complet.</response>
     /// <response code="206">Une partie du contenu (requête Range).</response>
     /// <response code="302">Stockage Azure Blob : redirection vers une URL signée, valable 30 minutes.</response>
+    ///  /// <response code="409">Analyse antivirus en cours, en échec, ou fichier bloqué (#17).</response>
     [HttpGet("{fileId:guid}/content")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status206PartialContent)]
     [ProducesResponseType(StatusCodes.Status302Found)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Download(
         Guid songId, Guid versionId, Guid fileId, [FromQuery] bool download,
         [FromServices] DownloadSongFileHandler handler, CancellationToken ct)
@@ -141,10 +143,12 @@ public sealed class SongFilesController : ControllerBase
     /// <response code="200">Le contenu complet.</response>
     /// <response code="206">Une partie du contenu (requête Range).</response>
     /// <response code="302">Stockage Azure Blob : redirection vers une URL signée, valable 30 minutes.</response>
+    ///  /// <response code="409">Analyse antivirus en cours, en échec, ou fichier bloqué (#17).</response>
     [HttpGet("{fileId:guid}/listen")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status206PartialContent)]
     [ProducesResponseType(StatusCodes.Status302Found)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Listen(
         Guid songId, Guid versionId, Guid fileId, [FromServices] ListenSongFileHandler handler, CancellationToken ct)
     {
@@ -174,13 +178,26 @@ public sealed class SongFilesController : ControllerBase
     /// <param name="fileId">Identifiant du fichier.</param>
     /// <response code="202">Aperçu de nouveau en préparation.</response>
     /// <response code="404">Fichier inconnu ou pas audio.</response>
-    /// <response code="409">L'aperçu est déjà prêt, ou déjà en préparation.</response>
+    /// <response code="409">L'aperçu est déjà prêt ou en préparation, ou le fichier n'est pas déclaré sain (#17).</response>
     [HttpPost("{fileId:guid}/preview")]
     [ProducesResponseType<AudioPreviewResponse>(StatusCodes.Status202Accepted)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<AudioPreviewResponse>> RetryPreview(
         Guid songId, Guid versionId, Guid fileId, [FromServices] RetryAudioPreviewHandler handler, CancellationToken ct)
         => Accepted(new AudioPreviewResponse(await handler.HandleAsync(songId, versionId, fileId, ct)));
+
+    /// <summary>Relance l'analyse antivirus d'un fichier en échec (#17).</summary>
+    /// <param name="songId">Identifiant du morceau.</param>
+    /// <param name="versionId">Identifiant de la version.</param>
+    /// <param name="fileId">Identifiant du fichier.</param>
+    /// <response code="202">Analyse de nouveau en cours.</response>
+    /// <response code="409">L'analyse est en cours, ou le fichier est déjà déclaré sain ou infecté.</response>
+    [HttpPost("{fileId:guid}/scan")]
+    [ProducesResponseType<FileScanResponse>(StatusCodes.Status202Accepted)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<FileScanResponse>> RetryScan(
+        Guid songId, Guid versionId, Guid fileId, [FromServices] RetryFileScanHandler handler, CancellationToken ct)
+        => Accepted(new FileScanResponse(await handler.HandleAsync(songId, versionId, fileId, ct)));
 
     /// <summary>Supprime un fichier de la version.</summary>
     /// <param name="songId">Identifiant du morceau.</param>

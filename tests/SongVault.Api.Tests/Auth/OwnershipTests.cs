@@ -14,7 +14,7 @@ public sealed class OwnershipTests(SongVaultApiFactory factory)
     private sealed record ResourcesOfA(Guid BandId, Guid SongId, string Song, string Version, string FileContent);
 
     /// <summary>L'utilisateur A crée, dans son groupe personnel, un morceau, une version et un fichier.</summary>
-    private static async Task<ResourcesOfA> CreateResourcesAsync(HttpClient a)
+    private async Task<ResourcesOfA> CreateResourcesAsync(HttpClient a)
     {
         var bandId = (await a.GetFromJsonAsync<List<BandResponse>>("/api/bands", TestJson.Options))![0].Id;
         var songs = $"/api/bands/{bandId}/songs";
@@ -24,6 +24,7 @@ public sealed class OwnershipTests(SongVaultApiFactory factory)
         var versionUrl = version.Headers.Location!.ToString();
         var upload = await a.PostAsync($"{versionUrl}/files", TestFiles.Form(TestFiles.Mp3(1024), "a.mp3"));
         upload.EnsureSuccessStatusCode();
+        await SongVaultApiFactory.RunDueJobsAsync(factory.Services);          // #17 : A peut lire son fichier
         return new ResourcesOfA(bandId, song.Id, $"{songs}/{song.Id}", versionUrl, upload.Headers.Location!.ToString());
     }
 

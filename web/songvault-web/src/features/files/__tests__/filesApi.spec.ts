@@ -60,4 +60,11 @@ describe('filesApi, aperçus (#15)', () => {
     expect(await filesApi.retryPreview('s1', 'v1', 'f1')).toEqual({ status: 'Pending' })
     expect(request).toHaveBeenCalledWith('/bands/b1/songs/s1/versions/v1/files/f1/preview', { method: 'POST' })
   })
+
+  it("relance l'analyse antivirus par un POST (#17)", async () => {
+    vi.mocked(request).mockResolvedValue({ status: 'Pending' })
+
+    expect(await filesApi.retryScan('s1', 'v1', 'f1')).toEqual({ status: 'Pending' })
+    expect(request).toHaveBeenCalledWith('/bands/b1/songs/s1/versions/v1/files/f1/scan', { method: 'POST' })
+  })
 })

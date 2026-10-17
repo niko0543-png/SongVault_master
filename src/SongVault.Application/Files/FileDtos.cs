@@ -13,13 +13,16 @@ namespace SongVault.Application.Files;
 /// <param name="FileType">Classification du type de fichier (Audio, Video, Document, etc.)</param>
 /// <param name="UploadedAt">Date et heure du téléchargement du fichier</param>
 /// <param name="Preview">Fichier audio : état de son aperçu (ADR 0021) ; null pour les autres fichiers</param>
+/// <param name="Scan">État de l'analyse antivirus (ADR 0024) : seul un fichier Clean se lit et se télécharge</param>
+/// <param name="ScanThreat">Nom de la menace trouvée, pour un fichier Infected</param>
 public sealed record SongFileDto(Guid Id, string OriginalFileName, string ContentType, long SizeBytes,
-    SongFileType FileType, DateTimeOffset UploadedAt, AudioPreviewStatus? Preview = null)
+    SongFileType FileType, DateTimeOffset UploadedAt, AudioPreviewStatus? Preview = null,
+    FileScanStatus Scan = FileScanStatus.Pending, string? ScanThreat = null)
 {
-    public static SongFileDto From(SongFile f) => From(f, null);
+    public static SongFileDto From(SongFile f) => From(f, null, FileScanStatus.Pending);
 
-    public static SongFileDto From(SongFile f, AudioPreviewStatus? preview) =>
-        new(f.Id, f.OriginalFileName, f.ContentType, f.SizeBytes, f.FileType, f.UploadedAt, preview);
+    public static SongFileDto From(SongFile f, AudioPreviewStatus? preview, FileScanStatus scan) =>
+        new(f.Id, f.OriginalFileName, f.ContentType, f.SizeBytes, f.FileType, f.UploadedAt, preview, scan);
 }
 
 /// <summary>Forme d'onde précalculée d'un fichier audio (ADR 0021) : AudioPreview.PeakCount points de 0 à 255.</summary>
@@ -32,7 +35,8 @@ public sealed record AudioWaveformDto(int DurationMs, IReadOnlyList<int> Peaks);
 /// <param name="StorageKey">Clé unique pour accéder au fichier dans le système de stockage</param>
 /// <param name="ContentType">Type MIME du fichier</param>
 /// <param name="OriginalFileName">Nom du fichier d'origine</param>
-public sealed record StoredFileInfo(string StorageKey, string ContentType, string OriginalFileName);
+/// <param name="Scan">Fichier d'une version : état de son analyse antivirus (#17) ; null pour une pochette ou un export</param>
+public sealed record StoredFileInfo(string StorageKey, string ContentType, string OriginalFileName, FileScanStatus? Scan = null);
 
 /// <summary>
 /// Un fichier à rendre au client : son contenu (stockage local), ou une URL signée vers laquelle

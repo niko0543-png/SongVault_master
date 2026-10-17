@@ -31,6 +31,7 @@ public sealed class SongFilesEndpointsTests(SongVaultApiFactory factory)
         var upload = await _client.PostAsync($"{versionUrl}/files", TestFiles.Form(bytes, "maquette.mp3"));
 
         Assert.Equal(HttpStatusCode.Created, upload.StatusCode);
+        await SongVaultApiFactory.RunDueJobsAsync(factory.Services);          // #17 : analyse antivirus
         var downloaded = await _client.GetByteArrayAsync(upload.Headers.Location);
         Assert.Equal(SHA256.HashData(bytes), SHA256.HashData(downloaded));
     }
@@ -40,6 +41,7 @@ public sealed class SongFilesEndpointsTests(SongVaultApiFactory factory)
     {
         var versionUrl = await CreateVersionUrlAsync();
         var upload = await _client.PostAsync($"{versionUrl}/files", TestFiles.Form(TestFiles.Mp3(4096), "a.mp3"));
+        await SongVaultApiFactory.RunDueJobsAsync(factory.Services);          // #17 : analyse antivirus
 
         var request = new HttpRequestMessage(HttpMethod.Get, upload.Headers.Location);
         request.Headers.Range = new RangeHeaderValue(0, 99);

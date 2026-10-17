@@ -155,6 +155,19 @@ async function onRetryPreview(file: SongFile) {
   }
 }
 
+// #17 : analyse antivirus en échec, relancée à la demande
+async function onRetryScan(file: SongFile) {
+  deletingId.value = file.id
+  fileError.value = null
+  try {
+    file.scan = (await filesApi.retryScan(props.songId, props.versionId, file.id)).status
+  } catch (e) {
+    fileError.value = getErrorMessage(e)
+  } finally {
+    deletingId.value = null
+  }
+}
+
 async function onDeleteFile(file: SongFile) {
   if (!version.value) return
   const confirmed = await confirm({
@@ -303,7 +316,8 @@ const commentedFile = computed(() =>
         <p v-if="fileError" class="field-error" role="alert">{{ fileError }}</p>
         <FileList :song-id="songId" :version-id="version.id" :files="version.files" :readonly="!canWrite"
                                     :busy-id="deletingId" :playing="playing"
-                  @play="onPlay" @delete="onDeleteFile" @seek="onSeek" @retry="onRetryPreview" />
+                       @play="onPlay" @delete="onDeleteFile" @seek="onSeek" @retry="onRetryPreview"
+                  @retry-scan="onRetryScan" />
         <FileUploader v-if="canWrite" :song-id="songId" :version-id="version.id" @uploaded="onUploaded" />
       </SectionCard>
       <ShareLinksPanel v-if="canWrite" :target="{ type: 'Version', id: version.id }" />
