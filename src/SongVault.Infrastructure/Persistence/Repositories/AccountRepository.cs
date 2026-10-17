@@ -46,6 +46,16 @@ internal sealed class AccountRepository(SongVaultDbContext db, UserManager<Ident
             .AsSplitQuery()
             .ToListAsync(ct);
 
+        // #17 : seuls les fichiers déclarés sains par l'antivirus (ou non analysés, antivirus désactivé) partent dans l'archive
+        var cleanFileIds = (await (
+                from scan in db.FileScans.AsNoTracking()
+                join f in db.Set<SongFile>() on scan.SongFileId equals f.Id
+                join v in db.Set<SongVersion>() on f.SongVersionId equals v.Id
+                join s in db.Songs.IgnoreQueryFilters([SongVaultDbContext.BandFilter]) on v.SongId equals s.Id
+                where (scan.Status == FileScanStatus.Clean || scan.Status == FileScanStatus.NotScanned) && bandIds.Contains(s.BandId)
+                select f.Id)
+            .ToListAsync(ct)).ToHashSet();
+
         var sent = await db.Invitations.AsNoTracking()
             .Where(i => i.InvitedById == userId)
             .Join(db.Bands, i => i.BandId, b => b.Id, (i, b) => new { Invitation = i, BandName = b.Name })
@@ -80,7 +90,7 @@ internal sealed class AccountRepository(SongVaultDbContext db, UserManager<Ident
                     s.Id, s.Title, s.Artist, s.Description, s.CreatedAt, s.UpdatedAt,
                     s.Versions.OrderBy(v => v.Number).Select(v => new AccountVersionData(
                         v.Id, v.Number, v.Title, v.Status, v.Bpm, v.Key?.Value, v.Notes, v.Lyrics, v.CreatedAt, v.UpdatedAt,
-                        v.Files.OrderBy(f => f.UploadedAt).Select(f => new AccountFileData(
+                         v.Files.Where(f => cleanFileIds.Contains(f.Id)).OrderBy(f => f.UploadedAt).Select(f => new AccountFileData(
                             f.Id, f.OriginalFileName, f.ContentType, f.SizeBytes, f.UploadedAt, f.StorageKey)).ToList()))
                         .ToList()))
                     .ToList()))

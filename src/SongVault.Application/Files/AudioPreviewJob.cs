@@ -5,17 +5,17 @@ using SongVault.Domain.Files;
 namespace SongVault.Application.Files;
 
 /// <summary>Demande l'aperçu d'un fichier qui vient d'être rattaché à une version (ADR 0021).</summary>
-public sealed class AudioPreviewQueue(IAudioPreviewRepository previews, IBackgroundJobs jobs)
+public sealed class AudioPreviewQueue(IAudioPreviewRepository previews)
 {
     /// <summary>
-    /// Fichier audio : ajoute l'aperçu « en préparation » et sa tâche au contexte, sans enregistrer
-    /// (ils partent avec le fichier, au même SaveChangesAsync). Autre fichier : rien, et null.
+    /// Fichier audio : ajoute l'aperçu « en préparation » au contexte, sans enregistrer (il part avec le fichier,
+    /// au même SaveChangesAsync). Sa tâche est programmée par FileScanJob, une fois le fichier déclaré sain (#17).
+    /// Autre fichier : rien, et null.
     /// </summary>
     public AudioPreviewStatus? RequestFor(SongFile file, DateTimeOffset now)
     {
         if (file.FileType != SongFileType.Audio) return null;
         previews.Add(AudioPreview.Request(file.Id, now));
-        jobs.Enqueue(AudioPreviewJob.JobType, file.Id.ToString(), now);
         return AudioPreviewStatus.Pending;
     }
 }
@@ -38,7 +38,7 @@ public sealed class AudioPreviewJob(
         var preview = await previews.GetAsync(fileId, ct);
         if (preview is not { Status: AudioPreviewStatus.Pending }) return;      // fichier supprimé, ou déjà traité
         var sourceKey = await previews.GetSourceKeyAsync(fileId, ct);
-        if (sourceKey is null) return;
+        if (sourceKey is null) return;                                         // supprimé, ou pas encore déclaré sain (#17)
 
         var needsMp3 = !sourceKey.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase);
         var mp3Path = needsMp3 ? Path.Combine(Path.GetTempPath(), $"songvault-{Guid.NewGuid():N}.mp3") : null;

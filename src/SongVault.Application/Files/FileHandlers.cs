@@ -9,7 +9,7 @@ namespace SongVault.Application.Files;
 
 public sealed class UploadSongFileHandler(
     ISongRepository songs, IUnitOfWork unitOfWork, IFileStorageService storage, TimeProvider clock,
-    ActivityLog activity, AudioPreviewQueue previews, PlanLimits limits)
+    ActivityLog activity, AudioPreviewQueue previews, FileScanQueue scans, PlanLimits limits)
 {
     public async Task<SongFileDto> HandleAsync(UploadSongFileCommand command, CancellationToken ct)
     {
@@ -44,9 +44,10 @@ public sealed class UploadSongFileHandler(
             var file = version.AddFile(FileNameSanitizer.Sanitize(command.FileName), storageKey,
                 rule.ContentType, command.Length, rule.FileType, now);
             activity.FileChanged(ActivityType.FileAdded, song, version, file, now);
-            var preview = previews.RequestFor(file, now);                 // #15 : aperçu préparé en tâche de fond
+            var preview = previews.RequestFor(file, now);                 // #15 : aperçu préparé après l'analyse
+            var scan = scans.RequestFor(file, now);                       // #17 : illisible jusqu'au verdict de l'antivirus
             await unitOfWork.SaveChangesAsync(ct);                        // 2. base
-            saved = SongFileDto.From(file, preview);
+            saved = SongFileDto.From(file, preview, scan);
         }
         catch
         {
@@ -65,6 +66,7 @@ public sealed class DownloadSongFileHandler(ISongRepository songs, IFileStorageS
     {
         var info = await songs.GetFileAsync(songId, versionId, fileId, ct)
                    ?? throw new NotFoundException("SongFile", fileId);
+        FileScanGate.EnsureReadable(info.Scan);                       // #17 : 409 tant que l'antivirus n'a pas dit « sain »
 
         // Stockage objet : le navigateur lit le stockage lui-même (ADR 0012)
         var url = storage.CreateDownloadUrl(info.StorageKey, info.ContentType, asAttachment ? info.OriginalFileName : null);

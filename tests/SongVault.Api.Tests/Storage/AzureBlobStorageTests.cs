@@ -124,6 +124,7 @@ public sealed class AzureBlobStorageTests(SongVaultApiFactory factory, AzuriteFi
         Assert.Equal(HttpStatusCode.Created, (await client.PutAsync(upload, bytes)).StatusCode);
         var complete = await client.CompleteAsync(versionUrl, upload.UploadId);
         Assert.Equal(HttpStatusCode.Created, complete.StatusCode);
+        await SongVaultApiFactory.RunDueJobsAsync(host.Services);             // #17 : analyse, lue dans Azurite
 
         // Lecture : l'API vérifie l'accès, puis redirige vers une URL signée
         var noRedirect = host.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, HandleCookies = false });

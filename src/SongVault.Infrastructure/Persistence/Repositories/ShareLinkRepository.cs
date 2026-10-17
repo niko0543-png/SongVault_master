@@ -132,7 +132,8 @@ internal sealed class ShareLinkRepository(SongVaultDbContext db) : IShareLinkRep
     {
         var versionIds = SharedVersionIds(link);
         var file = await db.Set<SongFile>().AsNoTracking()
-            .Where(f => f.Id == fileId && f.FileType == SongFileType.Audio && versionIds.Contains(f.SongVersionId))
+                    .Where(f => f.Id == fileId && f.FileType == SongFileType.Audio && versionIds.Contains(f.SongVersionId)
+                    && db.FileScans.Any(s => s.SongFileId == f.Id && (s.Status == FileScanStatus.Clean || s.Status == FileScanStatus.NotScanned)))     // #17
             .Select(f => new
             {
                 f.StorageKey,
@@ -175,7 +176,9 @@ internal sealed class ShareLinkRepository(SongVaultDbContext db) : IShareLinkRep
     // Fichiers audio de ces versions, dans l'ordre de dépôt. Tri avant la projection : EF ne trie pas un record construit.
     private async Task<ILookup<Guid, SharedFileDto>> AudioFilesAsync(IReadOnlyCollection<Guid> versionIds, CancellationToken ct)
         => (await db.Set<SongFile>().AsNoTracking()
-                .Where(f => versionIds.Contains(f.SongVersionId) && f.FileType == SongFileType.Audio)
+                .Where(f => versionIds.Contains(f.SongVersionId) && f.FileType == SongFileType.Audio
+                    // #17 : le visiteur ne voit que les fichiers déclarés sains (ou non analysés, antivirus désactivé)
+                    && db.FileScans.Any(s => s.SongFileId == f.Id && (s.Status == FileScanStatus.Clean || s.Status == FileScanStatus.NotScanned)))
                 .OrderBy(f => f.UploadedAt)
                 .Select(f => new { f.SongVersionId, File = new SharedFileDto(f.Id, f.OriginalFileName, f.ContentType, f.SizeBytes) })
                 .ToListAsync(ct))

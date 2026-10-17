@@ -138,6 +138,7 @@ public static class DependencyInjection
             services.AddSingleton<IMalwareScanner, ClamAvScanner>();
         else
             services.AddSingleton<IMalwareScanner, DisabledMalwareScanner>();
+        services.AddHostedService<AntivirusActivationWorker>();
         // #16 : formules, quotas et paiement par Stripe (ADR 0023)
         services.AddOptions<BillingOptions>()
             .Bind(configuration.GetSection(BillingOptions.SectionName))

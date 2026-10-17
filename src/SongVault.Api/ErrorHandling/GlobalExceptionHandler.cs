@@ -27,6 +27,7 @@ internal sealed class GlobalExceptionHandler(
             BadHttpRequestException bad => (bad.StatusCode, "Requête invalide"),
             UnsupportedFileException => (StatusCodes.Status400BadRequest, "Fichier refusé"),
             FileTooLargeException => (StatusCodes.Status413PayloadTooLarge, "Fichier trop volumineux"),
+            FileNotReadableException => (StatusCodes.Status409Conflict, "Fichier indisponible"),
             PlanLimitException => (StatusCodes.Status402PaymentRequired, "Limite de la formule atteinte"),
             InvalidPaymentEventException => (StatusCodes.Status400BadRequest, "Événement de paiement refusé"),
             BillingUnavailableException => (StatusCodes.Status503ServiceUnavailable, "Paiement indisponible"),

@@ -18,9 +18,11 @@ public sealed class UploadSongFileHandlerTests
     private readonly FakeAudioPreviewRepository _previews = new();
     private readonly FakeBackgroundJobs _jobs = new();
     private readonly FakeBillingRepository _billing = new();
+    private readonly FakeFileScanRepository _scans = new();
 
     private UploadSongFileHandler Sut() => new(_songs, _uow, _storage, new FixedTimeProvider(Now),
-           new ActivityLog(new FakeActivityRepository(), new FakeCurrentUser()), new AudioPreviewQueue(_previews, _jobs), new PlanLimits(_billing));
+           new ActivityLog(new FakeActivityRepository(), new FakeCurrentUser()), new AudioPreviewQueue(_previews),
+           new FileScanQueue(_scans, _jobs), new PlanLimits(_billing));
 
     private UploadSongFileCommand Command(long length, byte[] content, string fileName = "maquette.mp3")
     {
@@ -92,7 +94,7 @@ public sealed class UploadSongFileHandlerTests
     }
 
     [Fact]
-    public async Task Un_fichier_audio_part_avec_son_apercu_a_preparer()
+    public async Task Un_fichier_audio_part_avec_son_analyse_et_son_apercu_a_preparer()
     {
         byte[] mp3 = [.. "ID3"u8, 0x04, 0x00, .. new byte[100]];
 
@@ -100,18 +102,21 @@ public sealed class UploadSongFileHandlerTests
 
         Assert.Equal(AudioPreviewStatus.Pending, file.Preview);
         Assert.Equal(file.Id, Assert.Single(_previews.Previews).SongFileId);
-        var job = Assert.Single(_jobs.Enqueued);
-        Assert.Equal((AudioPreviewJob.JobType, file.Id.ToString(), Now), job);
-        Assert.Equal(1, _uow.SaveCount);                  // fichier, aperçu et tâche : un seul enregistrement
+        Assert.Equal(FileScanStatus.Pending, file.Scan);
+        Assert.Equal(file.Id, Assert.Single(_scans.Scans).SongFileId);
+        // #17 : seule l'analyse est programmée ; l'aperçu attend que le fichier soit déclaré sain
+        Assert.Equal((FileScanJob.JobType, file.Id.ToString(), Now), Assert.Single(_jobs.Enqueued));
+        Assert.Equal(1, _uow.SaveCount);                  // fichier, aperçu, analyse et tâche : un seul enregistrement
     }
 
     [Fact]
-    public async Task Un_document_n_a_pas_d_apercu()
+    public async Task Un_document_est_analyse_mais_n_a_pas_d_apercu()
     {
         var file = await Sut().HandleAsync(Command(5, "%PDF-"u8.ToArray(), "paroles.pdf"), CancellationToken.None);
 
         Assert.Null(file.Preview);
         Assert.Empty(_previews.Previews);
-        Assert.Empty(_jobs.Enqueued);
+        Assert.Equal(FileScanStatus.Pending, file.Scan);
+        Assert.Equal(FileScanJob.JobType, Assert.Single(_jobs.Enqueued).Type);
     }
 }

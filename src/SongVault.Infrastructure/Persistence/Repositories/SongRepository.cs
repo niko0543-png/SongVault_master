@@ -96,7 +96,11 @@ internal sealed class SongRepository(SongVaultDbContext db, IBandContext bandCon
                 v.CreatedAt, v.UpdatedAt,
                 v.Files.OrderBy(f => f.UploadedAt)
                        .Select(f => new SongFileDto(f.Id, f.OriginalFileName, f.ContentType, f.SizeBytes, f.FileType, f.UploadedAt,
-                           db.AudioPreviews.Where(p => p.SongFileId == f.Id).Select(p => (AudioPreviewStatus?)p.Status).FirstOrDefault()))
+                                                      db.AudioPreviews.Where(p => p.SongFileId == f.Id).Select(p => (AudioPreviewStatus?)p.Status).FirstOrDefault(),
+                           // #17 : sans analyse connue, le fichier reste « en cours d'analyse », donc illisible
+                           db.FileScans.Where(s => s.SongFileId == f.Id).Select(s => (FileScanStatus?)s.Status).FirstOrDefault()
+                               ?? FileScanStatus.Pending,
+                           db.FileScans.Where(s => s.SongFileId == f.Id).Select(s => s.Threat).FirstOrDefault()))
                        .ToList()))
             .FirstOrDefaultAsync(ct);
 
@@ -106,7 +110,8 @@ internal sealed class SongRepository(SongVaultDbContext db, IBandContext bandCon
             .Where(v => v.SongId == songId && v.Id == versionId)
             .SelectMany(v => v.Files)
             .Where(f => f.Id == fileId)
-            .Select(f => new StoredFileInfo(f.StorageKey, f.ContentType, f.OriginalFileName))
+                        .Select(f => new StoredFileInfo(f.StorageKey, f.ContentType, f.OriginalFileName,
+                db.FileScans.Where(s => s.SongFileId == f.Id).Select(s => (FileScanStatus?)s.Status).FirstOrDefault()))
             .FirstOrDefaultAsync(ct);
 
 
@@ -146,12 +151,13 @@ internal sealed class SongRepository(SongVaultDbContext db, IBandContext bandCon
                     .Where(p => p.SongFileId == f.Id && p.Status == AudioPreviewStatus.Ready)
                     .Select(p => p.PreviewStorageKey)
                     .FirstOrDefault(),
+                Scan = db.FileScans.Where(s => s.SongFileId == f.Id).Select(s => (FileScanStatus?)s.Status).FirstOrDefault(),
             })
             .FirstOrDefaultAsync(ct);
         if (file is null) return null;
         return file.PreviewKey is null
-            ? new StoredFileInfo(file.StorageKey, file.ContentType, file.OriginalFileName)
-            : new StoredFileInfo(file.PreviewKey, "audio/mpeg", file.OriginalFileName);
+            ? new StoredFileInfo(file.StorageKey, file.ContentType, file.OriginalFileName, file.Scan)
+            : new StoredFileInfo(file.PreviewKey, "audio/mpeg", file.OriginalFileName, file.Scan);
     }
 
     public async Task<AudioWaveformDto?> GetWaveformAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct)

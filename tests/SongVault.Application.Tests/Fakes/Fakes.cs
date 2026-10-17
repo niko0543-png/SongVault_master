@@ -18,6 +18,8 @@ namespace SongVault.Application.Tests.Fakes;
 internal sealed class FakeSongRepository : ISongRepository
 {
     public List<Song> Songs { get; } = [];
+    /// <summary>#17 : état de l'analyse antivirus de chaque fichier, rendu par GetFileAsync (absent : null).</summary>
+    public Dictionary<Guid, FileScanStatus> Scans { get; } = [];
 
     // Ce que le dernier appel à ListAsync a reçu (utilisé par les tests de pagination et de recherche)
     public (int Page, int PageSize)? LastListRequest { get; private set; }
@@ -85,7 +87,8 @@ internal sealed class FakeSongRepository : ISongRepository
         var file = Songs.SingleOrDefault(s => s.Id == songId)?
             .FindVersion(versionId)?
             .Files.SingleOrDefault(f => f.Id == fileId);
-        return Task.FromResult(file is null ? null : new StoredFileInfo(file.StorageKey, file.ContentType, file.OriginalFileName));
+        return Task.FromResult(file is null ? null : new StoredFileInfo(file.StorageKey, file.ContentType, file.OriginalFileName,
+    Scans.TryGetValue(file.Id, out var scan) ? scan : null));
     }
 
     public Task<SongFileLabel?> GetFileLabelAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct)

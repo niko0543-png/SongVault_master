@@ -29,6 +29,10 @@ public sealed class SongVaultApiFactory : WebApplicationFactory<Program>, IAsync
     /// <summary>E-mails « envoyés » pendant les tests (remplace LogEmailSender).</summary>
     public CapturingEmailSender Emails { get; } = new();
 
+
+    /// <summary>#17 : antivirus des tests (remplace ClamAV), qui reconnaît TestFiles.VirusMarker. Le vrai est testé à part.</summary>
+    public TestMalwareScanner Scanner { get; } = new();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
@@ -44,7 +48,11 @@ public sealed class SongVaultApiFactory : WebApplicationFactory<Program>, IAsync
         builder.UseSetting("Notifications:Enabled", "false");
         // #16 : formules et quotas actifs, paiement fermé (Billing:Provider None) ; le webhook vérifie ce secret
         builder.UseSetting("Billing:Stripe:WebhookSecret", SongVault.Api.Tests.Billing.StripeTestHelpers.WebhookSecret);
-        builder.ConfigureTestServices(services => services.AddSingleton<IEmailSender>(Emails));
+        builder.ConfigureTestServices(services =>
+        {
+            services.AddSingleton<IEmailSender>(Emails);
+            services.AddSingleton<IMalwareScanner>(Scanner);
+        });
         // Masque, dans les tests uniquement, les erreurs SQL attendues du test de concurrence
         builder.UseSetting("Logging:LogLevel:Microsoft.EntityFrameworkCore.Update", "None");
     }

@@ -15,7 +15,8 @@ internal sealed class AudioPreviewRepository(SongVaultDbContext db) : IAudioPrev
     // SongFile n'a pas de filtre de groupe (seul Song en a un) : lisible hors requête HTTP
     public Task<string?> GetSourceKeyAsync(Guid songFileId, CancellationToken ct)
         => db.Set<SongFile>().AsNoTracking()
-            .Where(f => f.Id == songFileId)
+            .Where(f => f.Id == songFileId
+                        && db.FileScans.Any(s => s.SongFileId == f.Id && (s.Status == FileScanStatus.Clean || s.Status == FileScanStatus.NotScanned)))   // #17
             .Select(f => f.StorageKey)
             .FirstOrDefaultAsync(ct);
 }

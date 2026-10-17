@@ -11,6 +11,7 @@ public sealed class ListenSongFileHandler(ISongRepository songs, IFileStorageSer
     {
         var info = await songs.GetListenFileAsync(songId, versionId, fileId, ct)
                    ?? throw new NotFoundException("SongFile", fileId);
+        FileScanGate.EnsureReadable(info.Scan);                       // #17
 
         var url = storage.CreateDownloadUrl(info.StorageKey, info.ContentType, null);
         if (url is not null) return new FileDownload(null, info.ContentType, info.OriginalFileName, url);
@@ -27,13 +28,15 @@ public sealed class GetWaveformHandler(ISongRepository songs)
 
 /// <summary>Relance un aperçu en échec, à la demande d'un membre (« Réessayer »).</summary>
 public sealed class RetryAudioPreviewHandler(
-    ISongRepository songs, IAudioPreviewRepository previews, IBackgroundJobs jobs, IUnitOfWork unitOfWork,
-    TimeProvider clock)
+    ISongRepository songs, IAudioPreviewRepository previews, IFileScanRepository scans, IBackgroundJobs jobs,
+    IUnitOfWork unitOfWork, TimeProvider clock)
 {
     public async Task<AudioPreviewStatus> HandleAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct)
     {
         var file = await songs.GetFileLabelAsync(songId, versionId, fileId, ct);     // dans le groupe actif seulement
         if (file is not { FileType: SongFileType.Audio }) throw new NotFoundException("SongFile", fileId);
+        if (await scans.GetAsync(fileId, ct) is not { IsReadable: true })          // #17 : rien à convertir avant le verdict
+            throw new ConflictException("Le fichier n'a pas été déclaré sain par l'antivirus : pas d'aperçu possible.");
 
         var now = clock.GetUtcNow();
         var preview = await previews.GetAsync(fileId, ct);
