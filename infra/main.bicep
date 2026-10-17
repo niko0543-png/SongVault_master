@@ -41,8 +41,35 @@ param stripeWebhookSecret string = ''
 param stripePriceBand string = ''
 param stripePriceStudio string = ''
 
+@description('Antivirus des fichiers (#17) : None (fichiers non analysés, sans conteneur ClamAV) ou ClamAv (conteneur à côté de l\'API, environ 15 € par mois).')
+@allowed(['None', 'ClamAv'])
+param antivirusProvider string = 'None'
+
 @description('Verrous « suppression impossible » sur la base et le stockage. false seulement pour l\'exercice de restauration, supprimé ensuite.')
 param enableDeleteLocks bool = true
+
+// #17 : antivirus à côté de l'API, joignable sur localhost:3310 seulement (ADR 0024). Ajouté avec antivirusProvider = ClamAv
+var clamavContainer = {
+  name: 'clamav'
+  image: '${imageRegistry}/songvault-clamav:${imageTag}'
+  resources: {
+    cpu: json('0.75')
+    memory: '1.5Gi'                            // signatures chargées : environ 1,2 Go
+  }
+  probes: [
+    {
+      type: 'Startup'                          // chargement des signatures : 5 minutes au plus
+      tcpSocket: { port: 3310 }
+      periodSeconds: 30
+      failureThreshold: 10
+    }
+    {
+      type: 'Liveness'
+      tcpSocket: { port: 3310 }
+      periodSeconds: 60
+    }
+  ]
+}
 
 var suffix = uniqueString(resourceGroup().id)          // 13 caractères, stable pour ce groupe de ressources
 var storageName = take('${prefix}${suffix}', 24)
@@ -247,7 +274,7 @@ resource api 'Microsoft.App/containerApps@2024-03-01' = {
       ]
     }
     template: {
-      containers: [
+      containers: concat([
         {
           name: 'api'
           image: '${imageRegistry}/songvault-api:${imageTag}'
@@ -271,6 +298,8 @@ resource api 'Microsoft.App/containerApps@2024-03-01' = {
             { name: 'Billing__Stripe__Prices__studio', value: stripePriceStudio }
             { name: 'App__PublicUrl', value: publicUrl }
             { name: 'DataProtection__KeyVaultKeyUri', value: dataProtectionKey.properties.keyUri }
+            { name: 'Antivirus__Provider', value: antivirusProvider }
+            { name: 'Antivirus__ClamAv__Host', value: 'localhost' }   // #17 : le conteneur clamav (clamavContainer)
           ]
           probes: [
             {
@@ -283,7 +312,7 @@ resource api 'Microsoft.App/containerApps@2024-03-01' = {
             }
           ]
         }
-      ]
+      ], antivirusProvider == 'ClamAv' ? [ clamavContainer ] : [])   // #17 : ClamAV seulement une fois activé
       scale: {
         minReplicas: 1                                 // au moins une : les tâches de fond tournent dans l'API
         maxReplicas: 2

@@ -225,6 +225,71 @@ La formule change à la réception du webhook, pas au retour sur le site.
 
 Après une fuite, ou une fois par an : « Clés API », « Faire tourner la clé », puis le déploiement de l'étape 7 avec la nouvelle clé seulement (`$env:STRIPE_SECRET_KEY`). Le secret du webhook se change de la même façon, depuis la destination (« Faire tourner le secret »).
 
+## Antivirus (ClamAV)
+
+L'antivirus se règle avec `Antivirus:Provider` ([ADR 0024](adr/0024-analyse-antivirus.md)) :
+
+- `None` (par défaut, avant la commercialisation) : aucun fichier n'est analysé, ils sont lisibles dès leur envoi et marqués « non analysés ». Pas de conteneur `clamav`, rien de plus à payer.
+- `ClamAv` : chaque fichier envoyé est analysé par le conteneur `clamav`, à côté de l'API dans la même Container App (environ 15 € par mois). Tant que l'analyse n'a pas dit « sain », le fichier ne s'écoute, ne se télécharge et ne se partage pas.
+
+Le réglage en place est gardé à chaque déploiement ; le script l'affiche à l'étape 2/4.
+
+### Activer l'antivirus (avant la commercialisation)
+
+1. Vérifier que l'image `songvault-clamav` de la version déployée est publique, comme les deux autres (elle est publiée à chaque version depuis la v1.10.0) : sur GitHub, profil, onglet « Packages », `songvault-clamav`, « Package settings », « Change visibility », « Public ». Sans cela, la Container App ne peut pas la télécharger.
+2. Redéployer la version en place avec l'antivirus :
+
+```powershell
+$tag = (az containerapp show -g songvault-prod -n songvault-api --query "properties.template.containers[0].image" -o tsv).Split(':')[-1]
+$env:SONGVAULT_SQL_PASSWORD = Read-Host 'Mot de passe SQL'
+.\scripts\deploy-azure.ps1 -ImageTag $tag -AntivirusProvider ClamAv
+
+```
+3. Au démarrage, l'API remet en analyse tous les fichiers envoyés sans antivirus (journal « Antivirus activé : N fichiers non analysés remis en analyse »). Ils sont illisibles le temps de leur analyse ; compter une à deux minutes de chargement des signatures, puis quelques secondes par fichier (une à deux minutes pour un WAV de 2 Go). Suivre l'avancement avec la première requête de « Des fichiers restent en cours d'analyse ».
+
+Revenir à `None` (`-AntivirusProvider None`) retire le conteneur. Les fichiers déjà analysés gardent leur verdict ; un fichier bloqué le reste.
+
+### Journaux de ClamAV
+
+Ses journaux (chargement des signatures, mises à jour de freshclam, menaces trouvées) :
+
+```powershell
+az containerapp logs show -g songvault-prod -n songvault-api --container clamav --tail 50
+
+```
+### Des fichiers restent « en cours d'analyse »
+
+Dans l'Éditeur de requêtes de la base (voir « Offrir une formule à un groupe ») :
+
+```sql
+SELECT s.Status, COUNT(*) AS Fichiers, MIN(s.RequestedAt) AS PlusAncien FROM FileScans s GROUP BY s.Status;
+SELECT TOP 20 Type, Status, Attempts, RunAfter, Error FROM BackgroundJobs WHERE Type = N'file.scan' ORDER BY CreatedAt DESC;
+
+```
+`Error` à `MalwareScannerException : ClamAV injoignable` : le conteneur `clamav` ne répond pas. Lire ses journaux ; s'il redémarre en boucle faute de mémoire (`OOMKilled` dans `az containerapp revision show`), passer sa mémoire à `2Gi` et son processeur à `1.0` dans `infra/main.bicep`, puis redéployer. Une fois réparé, les analyses en `Failed` se relancent depuis la version (« Relancer l'analyse »), ou toutes d'un coup :
+
+```sql
+UPDATE FileScans SET Status = N'Pending', Error = NULL, CompletedAt = NULL, RequestedAt = SYSDATETIMEOFFSET() WHERE Status = N'Failed';
+INSERT INTO BackgroundJobs (Id, Type, Payload, Status, Attempts, CreatedAt, RunAfter)
+SELECT NEWID(), N'file.scan', LOWER(CONVERT(nvarchar(36), SongFileId)), N'Pending', 0, SYSDATETIMEOFFSET(), SYSDATETIMEOFFSET()
+FROM FileScans WHERE Status = N'Pending' AND CompletedAt IS NULL
+  AND NOT EXISTS (SELECT 1 FROM BackgroundJobs j WHERE j.Type = N'file.scan' AND j.Status IN (N'Pending', N'Running')
+                  AND j.Payload = LOWER(CONVERT(nvarchar(36), FileScans.SongFileId)));
+
+```
+### Un fichier est bloqué à tort
+
+ClamAV se trompe rarement, mais cela arrive (faux positif). Le fichier reste à sa place dans le stockage : le débloquer, c'est changer son statut. Vérifier d'abord le nom de la menace et le fichier avec la personne qui l'a envoyé.
+
+```sql
+SELECT f.Id, f.OriginalFileName, s.Threat, s.CompletedAt
+FROM FileScans s JOIN SongFiles f ON f.Id = s.SongFileId WHERE s.Status = N'Infected' ORDER BY s.CompletedAt DESC;
+
+DECLARE @file uniqueidentifier = '<Id du fichier>';
+UPDATE FileScans SET Status = N'Clean', Threat = NULL WHERE SongFileId = @file AND Status = N'Infected';
+-- Fichier audio : son aperçu, passé en échec au blocage, se relance depuis la version (« Réessayer »)
+
+```
 ## Changer la clé du compte de stockage
 
 C'est le seul moyen d'invalider d'un coup toutes les URL signées en cours, par exemple après une fuite. Les envois en cours échouent, il suffit de les recommencer.
@@ -239,7 +304,7 @@ Le déploiement relit la clé et met à jour le secret de l'API.
 
 ## Coût et arrêt complet
 
-Pour un usage faible, compter de l'ordre de 10 à 20 € par mois. L'essentiel vient de l'API toujours active et de la base Basic ; le stockage et Key Vault coûtent quelques centimes. Vérifier avec la [calculatrice de prix Azure](https://azure.microsoft.com/fr-fr/pricing/calculator/) et poser une alerte de budget dans « Gestion des coûts ».
+Pour un usage faible, compter de l'ordre de 10 à 20 € par mois, et environ 15 € de plus une fois l'antivirus activé (#17). L'essentiel vient de l'API toujours active, de la base Basic et, s'il est activé, du conteneur antivirus ; le stockage et Key Vault coûtent quelques centimes. Vérifier avec la [calculatrice de prix Azure](https://azure.microsoft.com/fr-fr/pricing/calculator/) et poser une alerte de budget dans « Gestion des coûts ».
 
 Tout supprimer, données comprises (sans retour possible). Les verrous de la base et du stockage bloquent la suppression : les retirer d'abord.
 
