@@ -46,12 +46,21 @@ services:
       Email__Provider: ${EMAIL_PROVIDER:-Log}
       Email__FromAddress: ${EMAIL_FROM:-no-reply@songvault.local}
       Email__Brevo__ApiKey: ${BREVO_API_KEY:-}
+      Antivirus__Provider: ClamAv                         # #17 : activé en local (ADR 0024)
+      Antivirus__ClamAv__Host: clamav                     # #17 (ADR 0024)
       App__PublicUrl: ${PUBLIC_URL:-http://localhost:8080}
     volumes:
       - songvault-files:/var/songvault/files
     depends_on:
       migrator:
         condition: service_completed_successfully
+    restart: unless-stopped
+
+  # #17 : antivirus. Démarre en une à deux minutes (chargement des signatures) ; les analyses attendent et réessaient
+  clamav:
+    build: ./infra/clamav
+    volumes:
+      - clamav-data:/var/lib/clamav       # signatures à jour, gardées d'un redémarrage à l'autre
     restart: unless-stopped
 
   web:
@@ -79,3 +88,4 @@ volumes:
   sqlserver-data:
   songvault-files:
   azurite-data:
+  clamav-data:

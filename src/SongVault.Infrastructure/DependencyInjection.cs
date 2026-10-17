@@ -14,6 +14,7 @@ using SongVault.Infrastructure.Notifications;
 using SongVault.Infrastructure.Sharing;
 using SongVault.Infrastructure.Audio;
 using SongVault.Infrastructure.Billing;
+using SongVault.Infrastructure.Antivirus;
 
 namespace SongVault.Infrastructure;
 
@@ -121,6 +122,22 @@ public static class DependencyInjection
             .Validate(o => o.Mp3BitrateKbps is >= 32 and <= 320, "AudioPreview:Mp3BitrateKbps va de 32 à 320.")
             .ValidateOnStart();
         services.AddSingleton<IAudioProcessor, FfmpegAudioProcessor>();
+        // #17 : analyse antivirus par ClamAV, en tâche de fond, ou désactivée avant la commercialisation (ADR 0024)
+        services.AddOptions<AntivirusOptions>()
+            .Bind(configuration.GetSection(AntivirusOptions.SectionName))
+            .Validate(o => o.Provider is AntivirusOptions.NoneProvider or AntivirusOptions.ClamAvProvider,
+                "Antivirus:Provider doit valoir None ou ClamAv.")
+            .ValidateOnStart();
+        services.AddOptions<ClamAvOptions>()
+            .Bind(configuration.GetSection(ClamAvOptions.SectionName))
+            .Validate(o => !string.IsNullOrWhiteSpace(o.Host), "Antivirus:ClamAv:Host est obligatoire.")
+            .Validate(o => o.Port is > 0 and <= 65535, "Antivirus:ClamAv:Port va de 1 à 65535.")
+            .Validate(o => o.Timeout > TimeSpan.Zero, "Antivirus:ClamAv:Timeout doit être positif.")
+            .ValidateOnStart();
+        if (configuration[$"{AntivirusOptions.SectionName}:Provider"] == AntivirusOptions.ClamAvProvider)
+            services.AddSingleton<IMalwareScanner, ClamAvScanner>();
+        else
+            services.AddSingleton<IMalwareScanner, DisabledMalwareScanner>();
         // #16 : formules, quotas et paiement par Stripe (ADR 0023)
         services.AddOptions<BillingOptions>()
             .Bind(configuration.GetSection(BillingOptions.SectionName))
