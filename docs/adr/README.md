@@ -29,3 +29,4 @@ l'ancien, qui passe au statut « remplacé par ADR NNNN ».
 | [0021](0021-forme-d-onde-et-apercu-audio.md) | Forme d'onde et aperçu audio : ffmpeg dans une tâche de fond, dessin SVG sans bibliothèque | accepté |
 | [0022](0022-e-mails-en-production-avec-brevo.md) | E-mails en production : Brevo, domaine authentifié, réglage gardé d'un déploiement à l'autre | accepté |
 | [0023](0023-abonnements-et-quotas.md) | Abonnements et quotas : formules en base, abonnement porté par le groupe, Stripe sans SDK | accepté |
+| [0024](0024-analyse-antivirus.md) | Analyse antivirus : ClamAV partout, dans une tâche de fond, fichier illisible avant le verdict, activée en production à la commercialisation | accepté |
