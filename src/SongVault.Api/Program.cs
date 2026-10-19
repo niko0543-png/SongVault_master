@@ -12,6 +12,7 @@ using SongVault.Application.Abstractions;
 using SongVault.Application.Common;
 using SongVault.Infrastructure;
 using SongVault.Infrastructure.Persistence;
+using SongVault.Api.Observability;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,6 +33,9 @@ builder.Services.AddOptions<AppOptions>()
 
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<SongVaultDbContext>("database", tags: ["ready"]);
+
+// --- Supervision (#18) : Application Insights si APPLICATIONINSIGHTS_CONNECTION_STRING est définie (ADR 0025) ---
+builder.AddSongVaultTelemetry();
 
 // --- Derrière nginx (J31) ---
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
