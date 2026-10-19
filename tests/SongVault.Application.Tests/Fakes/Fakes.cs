@@ -3,6 +3,7 @@ using SongVault.Application.Activity;
 using SongVault.Application.Common;
 using SongVault.Application.Common.Exceptions;
 using SongVault.Application.Files;
+using SongVault.Application.Files.Stems;
 using SongVault.Application.Releases;
 using SongVault.Application.Songs;
 using SongVault.Application.Versions;
@@ -26,6 +27,8 @@ internal sealed class FakeSongRepository : ISongRepository
         => Live.SingleOrDefault(s => s.Id == songId)?.Versions.SingleOrDefault(v => v.Id == versionId && !v.IsDeleted);
     /// <summary>#17 : état de l'analyse antivirus de chaque fichier, rendu par GetFileAsync (absent : null).</summary>
     public Dictionary<Guid, FileScanStatus> Scans { get; } = [];
+    /// <summary>#23 : durée de l'aperçu prêt de chaque fichier, rendue par ListStemsAsync (absent : aperçu pas prêt).</summary>
+    public Dictionary<Guid, int> PreviewDurations { get; } = [];
 
     // Ce que le dernier appel à ListAsync a reçu (utilisé par les tests de pagination et de recherche)
     public (int Page, int PageSize)? LastListRequest { get; private set; }
@@ -125,6 +128,18 @@ internal sealed class FakeSongRepository : ISongRepository
 
     public Task<IReadOnlyList<Song>> ListWithRightsAsync(IReadOnlyCollection<Guid> songIds, CancellationToken ct)
         => Task.FromResult<IReadOnlyList<Song>>([.. Live.Where(s => songIds.Contains(s.Id))]);
+
+    public Task<IReadOnlyList<StemDto>?> ListStemsAsync(Guid songId, Guid versionId, CancellationToken ct)
+    {
+        var version = LiveVersion(songId, versionId);
+        IReadOnlyList<StemDto>? stems = version is null ? null : [.. version.Files
+            .Where(f => !f.IsDeleted && f.IsStem)
+            .OrderBy(f => f.StemPosition).ThenBy(f => f.UploadedAt)
+            .Select((f, i) => StemDto.Create(f.Id, f.StemName!, i, f.OriginalFileName,
+                Scans.TryGetValue(f.Id, out var scan) ? scan : null,
+                PreviewDurations.TryGetValue(f.Id, out var ms) ? ms : null))];
+        return Task.FromResult(stems);
+    }
 }
 /// <summary>Sorties en mémoire ; les titres et versions des pistes viennent du FakeSongRepository donné.</summary>
 internal sealed class FakeReleaseRepository(FakeSongRepository? songs = null) : IReleaseRepository
