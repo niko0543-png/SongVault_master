@@ -135,6 +135,9 @@ docker compose down -v       # supprime aussi la base et les fichiers
   de passe, codes de secours, historique de connexion dans « Mon compte » ; chaque groupe a un
   journal d'audit (qui a supprimé quoi, qui a invité ou retiré qui) que ses Owner consultent
   et que personne ne peut modifier ([ADR 0026](docs/adr/0026-double-authentification-et-journal-d-audit.md)).
+- **Corbeille** : un morceau, une version ou un fichier supprimé se restaure pendant 30 jours,
+  avec ce qui est parti avec lui ; ensuite, la purge quotidienne l'efface, fichiers compris, et
+  libère la place. Un Owner peut vider la corbeille avant ([ADR 0027](docs/adr/0027-corbeille.md)).
 
 ---
 

@@ -22,4 +22,13 @@ public enum AuditAction
     BandRenamed,
     /// <summary>Fichier bloqué par l'antivirus (#17) : écrit par SongVault, sans auteur.</summary>
     FileQuarantined,
+    // #20 : SongDeleted et FileDeleted veulent dire « mis à la corbeille » ; la suite, restauration et purge
+    VersionDeleted,
+    SongRestored,
+    VersionRestored,
+    FileRestored,
+    /// <summary>Supprimé définitivement : par un Owner depuis la corbeille, ou par la purge à J+30 (sans auteur).</summary>
+    SongPurged,
+    VersionPurged,
+    FilePurged,
 }

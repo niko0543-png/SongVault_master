@@ -20,10 +20,21 @@ export function describe(item: AuditItem, myId: string | null): string {
   const subject = item.subject ?? ''
   const target = targetLabel(item, myId)
   const did = (text: string) => `${actor} ${has} ${text}`
+    const purged = (what: string) => item.actorId === null
+    ? `La corbeille a effacé ${what} (30 jours écoulés)`
+    : did(`supprimé définitivement ${what}`)
 
-  switch (item.action) {
+   switch (item.action) {
+    // #20 : « supprimé » = mis à la corbeille ; « définitivement » = purgé (par la purge à J+30 : SongVault)
     case 'SongDeleted': return did(`supprimé le morceau ${subject}`)
     case 'FileDeleted': return did(`supprimé le fichier ${subject}`)
+    case 'VersionDeleted': return did(`supprimé la version ${subject}`)
+    case 'SongRestored': return did(`restauré le morceau ${subject}`)
+    case 'VersionRestored': return did(`restauré la version ${subject}`)
+    case 'FileRestored': return did(`restauré le fichier ${subject}`)
+    case 'SongPurged': return purged(`le morceau ${subject}`)
+    case 'VersionPurged': return purged(`la version ${subject}`)
+    case 'FilePurged': return purged(`le fichier ${subject}`)
     case 'CommentDeleted':
       return did(`supprimé ${subject === 'Réponse' ? 'une réponse' : 'un commentaire'} de ${target}`)
     case 'ReleaseDeleted': return did(`supprimé la sortie ${subject}`)

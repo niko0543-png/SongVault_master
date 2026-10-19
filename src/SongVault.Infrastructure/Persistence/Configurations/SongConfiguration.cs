@@ -26,5 +26,8 @@ internal sealed class SongConfiguration : IEntityTypeConfiguration<Song>
        .OnDelete(DeleteBehavior.Cascade);
         builder.Navigation(s => s.Versions).UsePropertyAccessMode(PropertyAccessMode.Field);
         builder.Property<byte[]>("RowVersion").IsRowVersion();
+        // #20 : corbeille. Index filtré : la purge quotidienne ne lit que ce qui est à la corbeille
+        builder.Property(s => s.DeletedById).HasMaxLength(450);
+        builder.HasIndex(s => s.DeletedAt).HasFilter("[DeletedAt] IS NOT NULL");
     }
 }

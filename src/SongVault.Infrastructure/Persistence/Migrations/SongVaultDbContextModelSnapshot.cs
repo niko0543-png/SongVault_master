@@ -763,6 +763,13 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("DeletedById")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<string>("FileType")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -788,6 +795,9 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                         .HasColumnType("datetimeoffset");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("DeletedAt")
+                        .HasFilter("[DeletedAt] IS NOT NULL");
 
                     b.HasIndex("SongVersionId");
 
@@ -1107,6 +1117,13 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("DeletedById")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<string>("Description")
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
@@ -1129,6 +1146,9 @@ namespace SongVault.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("DeletedAt")
+                        .HasFilter("[DeletedAt] IS NOT NULL");
+
                     b.HasIndex("BandId", "Title");
 
                     b.ToTable("Songs", (string)null);
@@ -1144,6 +1164,13 @@ namespace SongVault.Infrastructure.Persistence.Migrations
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("DeletedById")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("Key")
                         .HasMaxLength(4)
@@ -1176,6 +1203,9 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                         .HasColumnType("datetimeoffset");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("DeletedAt")
+                        .HasFilter("[DeletedAt] IS NOT NULL");
 
                     b.HasIndex("SongId", "Number")
                         .IsUnique();

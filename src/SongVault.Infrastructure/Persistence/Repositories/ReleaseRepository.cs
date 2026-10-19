@@ -68,4 +68,11 @@ internal sealed class ReleaseRepository(SongVaultDbContext db, IBandContext band
             .OrderBy(r => r.Title)
             .Select(r => r.Title)
             .ToListAsync(ct);
+
+    public async Task<IReadOnlyList<string>> ListTitlesWithVersionAsync(Guid versionId, CancellationToken ct)
+        => await BandReleases.AsNoTracking()
+            .Where(r => r.Tracks.Any(t => t.VersionId == versionId))
+            .OrderBy(r => r.Title)
+            .Select(r => r.Title)
+            .ToListAsync(ct);
 }

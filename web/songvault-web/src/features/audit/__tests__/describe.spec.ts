@@ -32,4 +32,12 @@ suite('describe (journal d’audit)', () => {
     expect(describe(item({ action: 'FileQuarantined', actorId: null, subject: 'Nocturne — v2 — mix.wav' }), 'u-moi'))
       .toBe('L\'antivirus a bloqué le fichier Nocturne — v2 — mix.wav')
   })
+   it('distingue la corbeille, la restauration et la suppression définitive (#20)', () => {
+    expect(describe(item({ action: 'VersionDeleted', subject: 'Nocturne — v2' }), 'u-moi'))
+      .toBe('ana@test.local a supprimé la version Nocturne — v2')
+    expect(describe(item({ action: 'SongRestored', actorId: 'u-moi' }), 'u-moi')).toBe('Vous avez restauré le morceau Nocturne')
+    expect(describe(item({ action: 'SongPurged' }), 'u-moi')).toBe('ana@test.local a supprimé définitivement le morceau Nocturne')
+    expect(describe(item({ action: 'FilePurged', actorId: null, subject: 'Nocturne — v2 — mix.wav' }), 'u-moi'))
+      .toBe('La corbeille a effacé le fichier Nocturne — v2 — mix.wav (30 jours écoulés)')
+  })
 })

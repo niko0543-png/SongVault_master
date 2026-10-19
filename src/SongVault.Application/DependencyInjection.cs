@@ -17,6 +17,7 @@ using SongVault.Application.Versions;
 using SongVault.Application.Sharing;
 using SongVault.Application.Billing;
 using SongVault.Application.Audit;
+using SongVault.Application.Trash;
 
 namespace SongVault.Application;
 
@@ -132,6 +133,13 @@ public static class DependencyInjection
         services.AddScoped<ListAuditHandler>();
         services.AddScoped<AccountSecurityLog>();
         services.AddScoped<ListAccountEventsHandler>();
+        // #20 : corbeille (ADR 0027)
+        services.AddScoped<DeleteSongVersionHandler>();
+        services.AddScoped<ListTrashHandler>();
+        services.AddScoped<RestoreFromTrashHandler>();
+        services.AddScoped<DeleteFromTrashHandler>();
+        services.AddScoped<PurgeExpiredTrashHandler>();
+        services.AddScoped<TrashPurger>();
 
         return services;
     }

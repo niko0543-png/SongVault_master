@@ -70,10 +70,14 @@ public sealed class QuotaTests(SongVaultApiFactory factory)
         var file = (await upload.Content.ReadFromJsonAsync<SongFileResponse>(TestJson.Options))!;
         var after = await factory.StorageUsedAsync(bandId);
         var deleted = await client.DeleteAsync($"{versionUrl}/files/{file.Id}");   // Location mène au contenu, pas au fichier
+        var trashed = await factory.StorageUsedAsync(bandId);
+        var purged = await client.DeleteAsync($"/api/bands/{bandId}/trash/file/{file.Id}");
 
         Assert.Equal(HttpStatusCode.NoContent, deleted.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, purged.StatusCode);
 
         Assert.Equal(4096, after);
+        Assert.Equal(4096, trashed);                                     // #20 : comptée jusqu'à la suppression définitive
         Assert.Equal(0, await factory.StorageUsedAsync(bandId));
     }
 }

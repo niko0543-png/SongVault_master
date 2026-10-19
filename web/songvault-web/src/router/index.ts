@@ -183,6 +183,13 @@ const router = createRouter({
       meta: { title: 'Membres' },
     },
     {
+      // #20 : corbeille ; un Guest n'y a pas accès (l'API répond 403), il retourne à la liste
+      path: '/b/:bandId/trash',
+      name: 'trash',
+      component: () => import('@/features/trash/pages/TrashPage.vue'),
+      meta: { title: 'Corbeille', write: true },
+    },
+    {
       // #19 : journal d'audit, réservé aux Owner (l'API répond 403 aux autres)
       path: '/b/:bandId/audit',
       name: 'audit',

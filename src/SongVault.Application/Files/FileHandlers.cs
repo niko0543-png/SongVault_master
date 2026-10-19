@@ -79,24 +79,20 @@ public sealed class DownloadSongFileHandler(ISongRepository songs, IFileStorageS
     }
 }
 
+/// <summary>Met le fichier à la corbeille (#20) : il reste dans le stockage, et compté, jusqu'à la purge.</summary>
 public sealed class DeleteSongFileHandler(
-    ISongRepository songs, IUnitOfWork unitOfWork, IFileStorageService storage, TimeProvider clock,
-    ActivityLog activity, PlanLimits limits, AuditLog audit)
+    ISongRepository songs, IUnitOfWork unitOfWork, ICurrentUser user, TimeProvider clock,
+    ActivityLog activity, AuditLog audit)
 {
     public async Task HandleAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct)
     {
         var song = await songs.GetWithVersionAsync(songId, versionId, ct) ?? throw new NotFoundException("Song", songId);
         var version = song.FindVersion(versionId) ?? throw new NotFoundException("SongVersion", versionId);
-        var file = version.RemoveFile(fileId) ?? throw new NotFoundException("SongFile", fileId);
         var now = clock.GetUtcNow();
+        var file = version.TrashFile(fileId, user.UserId, now) ?? throw new NotFoundException("SongFile", fileId);
         activity.FileChanged(ActivityType.FileRemoved, song, version, file, now);
         audit.Record(song.BandId, AuditAction.FileDeleted, FileSubject(song.Title, version.Number, file.OriginalFileName), now);
-
-        await unitOfWork.SaveChangesAsync(ct);                       // 1. base (l'aperçu part en cascade)
-        await limits.RefreshStorageAsync(song.BandId, ct);           //    et la jauge (#16)
-        await storage.DeleteAsync(file.StorageKey, CancellationToken.None);  // 2. fichier
-        if (file.FileType == SongFileType.Audio)                     // 3. son MP3 d'aperçu (#15), s'il existe
-            await storage.DeleteAsync(AudioPreview.StorageKeyFor(file.Id), CancellationToken.None);
+        await unitOfWork.SaveChangesAsync(ct);
     }
 
     /// <summary>« Nocturne — v2 — mix.wav » : le fichier tel qu'il s'appelait, pour le journal d'audit (#19).</summary>

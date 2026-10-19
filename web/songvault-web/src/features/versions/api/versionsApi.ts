@@ -37,4 +37,9 @@ async function changeStatus(songId: string, versionId: string, status: SongVersi
   return get(songId, versionId)
 }
 
-export const versionsApi = { list, get, create, update, changeStatus }
+/** Met la version et ses fichiers à la corbeille (#20) ; 409 si une sortie l'utilise. */
+function remove(songId: string, versionId: string) {
+  return request<void>(`${base(songId)}/${versionId}`, { method: 'DELETE' })
+}
+
+export const versionsApi = { list, get, create, update, changeStatus, remove }

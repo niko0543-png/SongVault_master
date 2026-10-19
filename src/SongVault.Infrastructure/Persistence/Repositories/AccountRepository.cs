@@ -39,8 +39,9 @@ internal sealed class AccountRepository(SongVaultDbContext db, UserManager<Ident
         var bandIds = memberships.Select(m => m.Id).ToList();
 
         // Pas de groupe actif hors requête HTTP : on ôte le filtre et on choisit les groupes nous-mêmes
+        // #20 : la corbeille aussi, ce sont encore ses données
         var songs = await db.Songs.AsNoTracking()
-            .IgnoreQueryFilters([SongVaultDbContext.BandFilter])
+            .IgnoreQueryFilters([SongVaultDbContext.BandFilter, SongVaultDbContext.SoftDeleteFilter])
             .Where(s => bandIds.Contains(s.BandId))
             .Include(s => s.Versions).ThenInclude(v => v.Files)
             .AsSplitQuery()
@@ -51,7 +52,7 @@ internal sealed class AccountRepository(SongVaultDbContext db, UserManager<Ident
                 from scan in db.FileScans.AsNoTracking()
                 join f in db.Set<SongFile>() on scan.SongFileId equals f.Id
                 join v in db.Set<SongVersion>() on f.SongVersionId equals v.Id
-                join s in db.Songs.IgnoreQueryFilters([SongVaultDbContext.BandFilter]) on v.SongId equals s.Id
+                join s in db.Songs.IgnoreQueryFilters([SongVaultDbContext.BandFilter, SongVaultDbContext.SoftDeleteFilter]) on v.SongId equals s.Id
                 where (scan.Status == FileScanStatus.Clean || scan.Status == FileScanStatus.NotScanned) && bandIds.Contains(s.BandId)
                 select f.Id)
             .ToListAsync(ct)).ToHashSet();
@@ -71,7 +72,7 @@ internal sealed class AccountRepository(SongVaultDbContext db, UserManager<Ident
                 from c in db.Comments.AsNoTracking()
                 join f in db.Set<SongFile>() on c.SongFileId equals f.Id
                 join v in db.Set<SongVersion>() on f.SongVersionId equals v.Id
-                join s in db.Songs.IgnoreQueryFilters([SongVaultDbContext.BandFilter]) on v.SongId equals s.Id
+                join s in db.Songs.IgnoreQueryFilters([SongVaultDbContext.BandFilter, SongVaultDbContext.SoftDeleteFilter]) on v.SongId equals s.Id
                 join b in db.Bands on s.BandId equals b.Id
                 where c.AuthorId == userId
                 orderby c.CreatedAt
@@ -131,7 +132,8 @@ internal sealed class AccountRepository(SongVaultDbContext db, UserManager<Ident
             .Select(m => m.BandId)
             .ToListAsync(ct);
 
-        var songs = db.Songs.IgnoreQueryFilters([SongVaultDbContext.BandFilter])
+        // #20 : corbeille comprise, sinon ses fichiers resteraient dans le stockage et ses morceaux bloqueraient le groupe
+        var songs = db.Songs.IgnoreQueryFilters([SongVaultDbContext.BandFilter, SongVaultDbContext.SoftDeleteFilter])
             .Where(s => soloBandIds.Contains(s.BandId));
         var files = songs.SelectMany(s => s.Versions).SelectMany(v => v.Files);
         var keys = await files.Select(f => f.StorageKey).ToListAsync(ct);

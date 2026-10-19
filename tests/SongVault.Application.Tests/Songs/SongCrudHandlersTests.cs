@@ -7,7 +7,6 @@ using SongVault.Domain.Common;
 using SongVault.Domain.Songs;
 using SongVault.Domain.Releases;
 using SongVault.Application.Activity;
-using SongVault.Application.Billing;
 using SongVault.Application.Audit;
 using SongVault.Domain.Audit;
 
@@ -25,7 +24,6 @@ public sealed class SongCrudHandlersTests
     private readonly FakeAuditRepository _audit = new();
     private AuditLog Audit() => new(_audit, new FakeCurrentUser());
     private readonly FakeReleaseRepository _releases = new();
-    private readonly FakeBillingRepository _billing = new();
 
     private Song ExistingSong()
     {
@@ -68,15 +66,20 @@ public sealed class SongCrudHandlersTests
     }
 
     [Fact]
-    public async Task Delete_supprime_et_enregistre()
+    public async Task Delete_met_a_la_corbeille_et_enregistre()
     {
         var song = ExistingSong();
+        var file = song.AddVersion("v1", SongVersionStatus.Demo, null, null, Now)
+            .AddFile("prise.wav", "k.wav", "audio/wav", 10, SongVault.Domain.Files.SongFileType.Audio, Now);
+        _storage.Files["k.wav"] = [1];
 
-        await new DeleteSongHandler(_songs, _releases, _uow, _storage, _clock, Log(), new PlanLimits(_billing), Audit()).HandleAsync(song.Id, CancellationToken.None);
+        await new DeleteSongHandler(_songs, _releases, _uow, new FakeCurrentUser(), _clock, Log(), Audit()).HandleAsync(song.Id, CancellationToken.None);
 
-        Assert.Empty(_songs.Songs);
+        Assert.Equal((Now.AddHours(1), "owner-1"), (song.DeletedAt, song.DeletedById));   // #20 : à la corbeille
+        Assert.Equal(Now.AddHours(1), file.DeletedAt);
+        Assert.Single(_songs.Songs);
+        Assert.Single(_storage.Files);                                   // rien ne part du stockage avant la purge (la place reste comptée)
         Assert.Equal(1, _uow.SaveCount);
-        Assert.Equal(song.BandId, Assert.Single(_billing.Refreshed));   // la jauge suit la suppression
         var entry = Assert.Single(_audit.Entries);                       // #19 : qui a supprimé quoi
         Assert.Equal((song.BandId, "owner-1", AuditAction.SongDeleted, song.Title),
             (entry.BandId, entry.ActorId, entry.Action, entry.Subject));
@@ -92,7 +95,7 @@ public sealed class SongCrudHandlersTests
         _releases.Releases.Add(release);
 
         var error = await Assert.ThrowsAsync<ConflictException>(
-            () => new DeleteSongHandler(_songs, _releases, _uow, _storage, _clock, Log(), new PlanLimits(_billing), Audit()).HandleAsync(song.Id, CancellationToken.None));
+            () => new DeleteSongHandler(_songs, _releases, _uow, new FakeCurrentUser(), _clock, Log(), Audit()).HandleAsync(song.Id, CancellationToken.None));
 
         Assert.Contains("« Nuits blanches »", error.Message);
         Assert.Single(_songs.Songs);
@@ -105,7 +108,7 @@ public sealed class SongCrudHandlersTests
     public async Task Delete_morceau_absent_leve_NotFound()
     {
         await Assert.ThrowsAsync<NotFoundException>(
-            () => new DeleteSongHandler(_songs, _releases, _uow, _storage, _clock, Log(), new PlanLimits(_billing), Audit()).HandleAsync(Guid.NewGuid(), CancellationToken.None));
+            () => new DeleteSongHandler(_songs, _releases, _uow, new FakeCurrentUser(), _clock, Log(), Audit()).HandleAsync(Guid.NewGuid(), CancellationToken.None));
     }
 
     [Theory]

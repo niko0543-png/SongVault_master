@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import { onBeforeRouteLeave, onBeforeRouteUpdate, RouterLink } from 'vue-router'
+import { onBeforeRouteLeave, onBeforeRouteUpdate, RouterLink, useRouter } from 'vue-router'
 import { useVersion } from '../composables/useVersion'
 import StatusBadge from '../components/StatusBadge.vue'
 import StatusSelect from '../components/StatusSelect.vue'
@@ -40,6 +40,7 @@ const canWrite = computed(() => bands.can('write'))
 const isNotFound = computed(() => error.value instanceof ApiError && error.value.status === 404)
 const { confirm } = useConfirm()
 const toast = useToast()
+const router = useRouter()
 // ================= Formulaire =================
 interface VersionForm {
   title: string
@@ -172,7 +173,7 @@ async function onDeleteFile(file: SongFile) {
   if (!version.value) return
   const confirmed = await confirm({
     title: 'Supprimer ce fichier ?',
-       message: `« ${file.originalFileName} » sera supprimé définitivement, avec ses commentaires.`,
+           message: `« ${file.originalFileName} » va à la corbeille, avec ses commentaires : on pourra le restaurer pendant 30 jours.`,
     confirmLabel: 'Supprimer',
     danger: true,
   })
@@ -182,11 +183,39 @@ async function onDeleteFile(file: SongFile) {
   try {
     await filesApi.remove(props.songId, version.value.id, file.id)
     version.value.files = version.value.files.filter((f) => f.id !== file.id)
-    toast.success('Fichier supprimé.')
+    toast.success('Fichier mis à la corbeille.')
   } catch (e) {
     fileError.value = getErrorMessage(e)
   } finally {
     deletingId.value = null
+  }
+}
+
+// ================= Suppression de la version (#20) =================
+const isDeletingVersion = ref(false)
+const versionError = ref<string | null>(null)
+
+async function onDeleteVersion() {
+  const v = version.value
+  if (!v) return
+  const confirmed = await confirm({
+    title: 'Supprimer cette version ?',
+    message: `La version ${v.number} « ${v.title} » et ses fichiers vont à la corbeille du groupe : on pourra les restaurer pendant 30 jours.`,
+    confirmLabel: 'Supprimer',
+    danger: true,
+  })
+  if (!confirmed) return
+  isDeletingVersion.value = true
+  versionError.value = null
+  try {
+    await versionsApi.remove(props.songId, v.id)
+    resetForm()                     // plus rien à enregistrer : « Quitter sans enregistrer ? » ne se pose pas
+    toast.success(`La version ${v.number} est dans la corbeille.`)
+    await router.push({ name: 'song-detail', params: { songId: props.songId } })
+  } catch (e) {
+    versionError.value = getErrorMessage(e)     // 409 : une sortie l'utilise
+  } finally {
+    isDeletingVersion.value = false
   }
 }
 
@@ -237,7 +266,11 @@ const commentedFile = computed(() =>
       <header class="page-header">
         <h1>v{{ version.number }} — {{ version.title }}</h1>
         <StatusBadge :status="version.status" />
+        <button v-if="canWrite" type="button" class="danger" :disabled="isDeletingVersion" @click="onDeleteVersion">
+          Supprimer la version
+        </button>
       </header>
+      <p v-if="versionError" class="field-error" role="alert">{{ versionError }}</p>
       <p class="muted">
         <small>
           Créée le {{ formatDate(version.createdAt) }} · modifiée le {{ formatDate(version.updatedAt) }}
@@ -316,7 +349,7 @@ const commentedFile = computed(() =>
         <p v-if="fileError" class="field-error" role="alert">{{ fileError }}</p>
         <FileList :song-id="songId" :version-id="version.id" :files="version.files" :readonly="!canWrite"
                                     :busy-id="deletingId" :playing="playing"
-                       @play="onPlay" @delete="onDeleteFile" @seek="onSeek" @retry="onRetryPreview"
+                  @play="onPlay" @delete="onDeleteFile" @seek="onSeek" @retry="onRetryPreview"
                   @retry-scan="onRetryScan" />
         <FileUploader v-if="canWrite" :song-id="songId" :version-id="version.id" @uploaded="onUploaded" />
       </SectionCard>

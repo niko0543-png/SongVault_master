@@ -3,6 +3,9 @@ using SongVault.Application.Activity;
 using SongVault.Application.Common.Exceptions;
 using SongVault.Domain.Activity;
 using SongVault.Domain.Songs;
+using SongVault.Application.Audit;
+using SongVault.Application.Trash;
+using SongVault.Domain.Audit;
 
 namespace SongVault.Application.Versions;
 
@@ -70,6 +73,28 @@ public sealed class UpdateSongVersionHandler(
         var now = clock.GetUtcNow();
         version.Update(command.Title, command.Status, command.Notes, command.Lyrics, now, command.Bpm, key);
         activity.VersionChanged(ActivityType.VersionUpdated, song, version, now);
+        await unitOfWork.SaveChangesAsync(ct);
+    }
+}
+
+/// <summary>Met une version et ses fichiers à la corbeille (#20) ; refusé si une sortie l'utilise.</summary>
+public sealed class DeleteSongVersionHandler(
+    ISongRepository songs, IReleaseRepository releases, IUnitOfWork unitOfWork, ICurrentUser user,
+    TimeProvider clock, AuditLog audit)
+{
+    public async Task HandleAsync(Guid songId, Guid versionId, CancellationToken ct)
+    {
+        var song = await songs.GetWithVersionAsync(songId, versionId, ct) ?? throw new NotFoundException("Song", songId);
+        if (song.FindVersion(versionId) is null) throw new NotFoundException("SongVersion", versionId);
+
+        var onReleases = await releases.ListTitlesWithVersionAsync(versionId, ct);
+        if (onReleases.Count > 0)
+            throw new ConflictException(
+                $"Cette version figure sur {string.Join(", ", onReleases.Select(t => $"« {t} »"))}. Choisissez-en une autre pour ces sorties avant de la supprimer.");
+
+        var now = clock.GetUtcNow();
+        var version = song.TrashVersion(versionId, user.UserId, now) ?? throw new NotFoundException("SongVersion", versionId);
+        audit.Record(song.BandId, AuditAction.VersionDeleted, TrashPurger.VersionSubject(song.Title, version.Number), now);
         await unitOfWork.SaveChangesAsync(ct);
     }
 }

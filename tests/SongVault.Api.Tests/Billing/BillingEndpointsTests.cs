@@ -39,9 +39,12 @@ public sealed class BillingEndpointsTests(SongVaultApiFactory factory)
         var file = (await upload.Content.ReadFromJsonAsync<SongFileResponse>(TestJson.Options))!;
         var after = await client.GetFromJsonAsync<UsageResponse>($"/api/bands/{bandId}/usage", TestJson.Options);
         Assert.Equal(HttpStatusCode.NoContent, (await client.DeleteAsync($"{versionUrl}/files/{file.Id}")).StatusCode);
+        var trashed = await client.GetFromJsonAsync<UsageResponse>($"/api/bands/{bandId}/usage", TestJson.Options);
+        Assert.Equal(HttpStatusCode.NoContent, (await client.DeleteAsync($"/api/bands/{bandId}/trash/file/{file.Id}")).StatusCode);
         var deleted = await client.GetFromJsonAsync<UsageResponse>($"/api/bands/{bandId}/usage", TestJson.Options);
 
         Assert.Equal(("free", 4096L), (after!.PlanId, after.UsedBytes));
+        Assert.Equal(4096, trashed!.UsedBytes);                          // #20 : la corbeille compte jusqu'à la purge
         Assert.Equal(0, deleted!.UsedBytes);
     }
 

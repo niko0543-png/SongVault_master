@@ -21,7 +21,6 @@ internal sealed class SongRepository(SongVaultDbContext db, IBandContext bandCon
 
     // ---------- Écriture ----------
     public void Add(Song song) => db.Songs.Add(song);
-    public void Remove(Song song) => db.Songs.Remove(song);
 
     // ---------- Morceaux ----------
     public Task<Song?> GetByIdAsync(Guid id, CancellationToken ct)
@@ -80,6 +79,12 @@ internal sealed class SongRepository(SongVaultDbContext db, IBandContext bandCon
                 .ThenInclude(v => v.Files)
             .FirstOrDefaultAsync(s => s.Id == songId, ct);
 
+    public Task<Song?> GetWithAllVersionsAsync(Guid songId, CancellationToken ct)
+     => BandSongs
+         .Include(s => s.Versions).ThenInclude(v => v.Files)
+         .AsSplitQuery()
+         .FirstOrDefaultAsync(s => s.Id == songId, ct);
+
     public async Task<IReadOnlyList<SongVersionSummaryDto>> ListVersionsAsync(Guid songId, CancellationToken ct)
         => await BandVersions.AsNoTracking()
             .Where(v => v.SongId == songId)
@@ -123,17 +128,6 @@ internal sealed class SongRepository(SongVaultDbContext db, IBandContext bandCon
             select new SongFileLabel(s.Id, s.Title, v.Id, v.Number, v.Title, f.Id, f.OriginalFileName, f.FileType))
             .FirstOrDefaultAsync(ct);
 
-    public async Task<IReadOnlyList<string>> ListStorageKeysAsync(Guid songId, CancellationToken ct)
-    {
-        var files = BandVersions.AsNoTracking().Where(v => v.SongId == songId).SelectMany(v => v.Files);
-        var keys = await files.Select(f => f.StorageKey).ToListAsync(ct);
-        // #15 : et les MP3 d'aperçu de ces fichiers
-        keys.AddRange(await db.AudioPreviews.AsNoTracking()
-            .Where(p => p.PreviewStorageKey != null && files.Any(f => f.Id == p.SongFileId))
-            .Select(p => p.PreviewStorageKey!)
-            .ToListAsync(ct));
-        return keys;
-    }
 
     // ---------- Aperçus audio (#15) ----------
     public async Task<StoredFileInfo?> GetListenFileAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct)

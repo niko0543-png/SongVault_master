@@ -14,10 +14,16 @@ using SongVault.Domain.Activity;
 
 namespace SongVault.Application.Tests.Fakes;
 
-/// <summary>Repository en mémoire : aucune base de données, juste une liste.</summary>
+/// <summary>
+/// Repository en mémoire : aucune base de données, juste une liste. Comme le filtre SoftDelete (#20), les lectures
+/// ne voient pas la corbeille ; Songs, lui, garde tout.
+/// </summary>
 internal sealed class FakeSongRepository : ISongRepository
 {
     public List<Song> Songs { get; } = [];
+    private IEnumerable<Song> Live => Songs.Where(s => !s.IsDeleted);
+    private SongVersion? LiveVersion(Guid songId, Guid versionId)
+        => Live.SingleOrDefault(s => s.Id == songId)?.Versions.SingleOrDefault(v => v.Id == versionId && !v.IsDeleted);
     /// <summary>#17 : état de l'analyse antivirus de chaque fichier, rendu par GetFileAsync (absent : null).</summary>
     public Dictionary<Guid, FileScanStatus> Scans { get; } = [];
 
@@ -28,10 +34,8 @@ internal sealed class FakeSongRepository : ISongRepository
 
     public void Add(Song song) => Songs.Add(song);
 
-    public void Remove(Song song) => Songs.Remove(song);
-
     public Task<Song?> GetByIdAsync(Guid id, CancellationToken ct)
-        => Task.FromResult(Songs.SingleOrDefault(s => s.Id == id));
+        => Task.FromResult(Live.SingleOrDefault(s => s.Id == id));
 
     public Task<PagedResult<SongDto>> ListAsync(
         int page, int pageSize, string? search, SongVersionStatus? status, CancellationToken ct)
@@ -41,14 +45,14 @@ internal sealed class FakeSongRepository : ISongRepository
         LastStatus = status;
 
         // Même logique que le vrai repository, mais en LINQ to Objects
-        IEnumerable<Song> query = Songs;
+        IEnumerable<Song> query = Live;
         if (search is not null)
             query = query.Where(s =>
                 s.Title.Contains(search, StringComparison.OrdinalIgnoreCase) ||
                 (s.Artist?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false));
         if (status is not null)
             query = query.Where(s =>
-                s.Versions.OrderByDescending(v => v.Number).Select(v => (SongVersionStatus?)v.Status).FirstOrDefault() == status);
+                s.Versions.Where(v => !v.IsDeleted).OrderByDescending(v => v.Number).Select(v => (SongVersionStatus?)v.Status).FirstOrDefault() == status);
 
         var filtered = query.ToList();
         IReadOnlyList<SongDto> items = [.. filtered
@@ -63,51 +67,41 @@ internal sealed class FakeSongRepository : ISongRepository
     public Task<Song?> GetWithVersionAsync(Guid songId, Guid versionId, CancellationToken ct)
         => GetByIdAsync(songId, ct);     // en mémoire, toutes les versions sont déjà « chargées »
 
+    public Task<Song?> GetWithAllVersionsAsync(Guid songId, CancellationToken ct) => GetByIdAsync(songId, ct);
+
     public Task<bool> ExistsAsync(Guid songId, CancellationToken ct)
-        => Task.FromResult(Songs.Any(s => s.Id == songId));
+        => Task.FromResult(Live.Any(s => s.Id == songId));
 
     public Task<IReadOnlyList<SongVersionSummaryDto>> ListVersionsAsync(Guid songId, CancellationToken ct)
     {
-        var song = Songs.SingleOrDefault(s => s.Id == songId);
+        var song = Live.SingleOrDefault(s => s.Id == songId);
         IReadOnlyList<SongVersionSummaryDto> result = song is null
             ? []
-            : [.. song.Versions.OrderBy(v => v.Number)
+            : [.. song.Versions.Where(v => !v.IsDeleted).OrderBy(v => v.Number)
                   .Select(v => new SongVersionSummaryDto(v.Id, v.Number, v.Title, v.Status, v.CreatedAt))];
         return Task.FromResult(result);
     }
 
     public Task<SongVersionDto?> GetVersionAsync(Guid songId, Guid versionId, CancellationToken ct)
     {
-        var version = Songs.SingleOrDefault(s => s.Id == songId)?.FindVersion(versionId);
+        var version = LiveVersion(songId, versionId);
         return Task.FromResult(version is null ? null : SongVersionDto.From(version));
     }
 
     public Task<StoredFileInfo?> GetFileAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct)
     {
-        var file = Songs.SingleOrDefault(s => s.Id == songId)?
-            .FindVersion(versionId)?
-            .Files.SingleOrDefault(f => f.Id == fileId);
+        var file = LiveVersion(songId, versionId)?.Files.SingleOrDefault(f => f.Id == fileId && !f.IsDeleted);
         return Task.FromResult(file is null ? null : new StoredFileInfo(file.StorageKey, file.ContentType, file.OriginalFileName,
-    Scans.TryGetValue(file.Id, out var scan) ? scan : null));
+            Scans.TryGetValue(file.Id, out var scan) ? scan : null));
     }
 
     public Task<SongFileLabel?> GetFileLabelAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct)
     {
-        var song = Songs.SingleOrDefault(s => s.Id == songId);
-        var version = song?.FindVersion(versionId);
-        var file = version?.Files.SingleOrDefault(f => f.Id == fileId);
+        var song = Live.SingleOrDefault(s => s.Id == songId);
+        var version = LiveVersion(songId, versionId);
+        var file = version?.Files.SingleOrDefault(f => f.Id == fileId && !f.IsDeleted);
         return Task.FromResult(file is null ? null : new SongFileLabel(
             song!.Id, song.Title, version!.Id, version.Number, version.Title, file.Id, file.OriginalFileName, file.FileType));
-    }
-
-    public Task<IReadOnlyList<string>> ListStorageKeysAsync(Guid songId, CancellationToken ct)
-    {
-        IReadOnlyList<string> keys = [.. Songs
-            .Where(s => s.Id == songId)
-            .SelectMany(s => s.Versions)
-            .SelectMany(v => v.Files)
-            .Select(f => f.StorageKey)];
-        return Task.FromResult(keys);
     }
 
     public Task<StoredFileInfo?> GetListenFileAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct)
@@ -118,8 +112,8 @@ internal sealed class FakeSongRepository : ISongRepository
 
     public Task<IReadOnlyDictionary<Guid, Guid>> GetVersionSongIdsAsync(IReadOnlyCollection<Guid> versionIds, CancellationToken ct)
     {
-        IReadOnlyDictionary<Guid, Guid> result = Songs.SelectMany(s => s.Versions)
-            .Where(v => versionIds.Contains(v.Id))
+        IReadOnlyDictionary<Guid, Guid> result = Live.SelectMany(s => s.Versions)
+            .Where(v => !v.IsDeleted && versionIds.Contains(v.Id))
             .ToDictionary(v => v.Id, v => v.SongId);
         return Task.FromResult(result);
     }
@@ -164,6 +158,13 @@ internal sealed class FakeReleaseRepository(FakeSongRepository? songs = null) : 
     public Task<IReadOnlyList<string>> ListTitlesWithSongAsync(Guid songId, CancellationToken ct)
     {
         IReadOnlyList<string> titles = [.. Releases.Where(r => r.Tracks.Any(t => t.SongId == songId))
+            .Select(r => r.Title).Order()];
+        return Task.FromResult(titles);
+    }
+
+    public Task<IReadOnlyList<string>> ListTitlesWithVersionAsync(Guid versionId, CancellationToken ct)
+    {
+        IReadOnlyList<string> titles = [.. Releases.Where(r => r.Tracks.Any(t => t.VersionId == versionId))
             .Select(r => r.Title).Order()];
         return Task.FromResult(titles);
     }

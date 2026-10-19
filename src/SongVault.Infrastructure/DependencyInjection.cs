@@ -16,6 +16,7 @@ using SongVault.Infrastructure.Audio;
 using SongVault.Infrastructure.Billing;
 using SongVault.Infrastructure.Antivirus;
 using SongVault.Infrastructure.Audit;
+using SongVault.Infrastructure.Trash;
 
 namespace SongVault.Infrastructure;
 
@@ -55,6 +56,7 @@ public static class DependencyInjection
         services.AddScoped<IBillingRepository, BillingRepository>();
         services.AddScoped<IAuditRepository, AuditRepository>();
         services.AddScoped<IAccountEventRepository, AccountEventRepository>();
+        services.AddScoped<ITrashRepository, TrashRepository>();
 
         services.AddOptions<FileStorageOptions>()
          .Bind(configuration.GetSection(FileStorageOptions.SectionName))
@@ -166,6 +168,8 @@ public static class DependencyInjection
         services.AddHostedService<StorageRecountWorker>();
         // #19 : journal d'audit gardé un an, historique de connexion 90 jours (ADR 0026)
         services.AddHostedService<RetentionWorker>();
+        // #20 : la corbeille se vide de ce qui y est depuis 30 jours (ADR 0027)
+        services.AddHostedService<TrashPurgeWorker>();
 
         // #13 : liens de partage externes (ADR 0019)
         services.AddSingleton<ISharePasswordHasher, SharePasswordHasher>();

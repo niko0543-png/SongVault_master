@@ -1,8 +1,9 @@
 ﻿using SongVault.Domain.Common;
+using SongVault.Domain.Trash;
 
 namespace SongVault.Domain.Songs;
 
-public sealed class Song
+public sealed class Song : ISoftDeletable
 {
     private readonly List<SongVersion> _versions = [];
     public const int TitleMaxLength = 200;
@@ -20,6 +21,9 @@ public sealed class Song
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
     public Guid BandId { get; private set; }
+    public DateTimeOffset? DeletedAt { get; private set; }
+    public string? DeletedById { get; private set; }
+    public bool IsDeleted => DeletedAt is not null;
 
     public static Song Create(Guid bandId, string title, string? artist, string? description, DateTimeOffset now)
     {
@@ -59,4 +63,48 @@ public sealed class Song
     }
 
     public SongVersion? FindVersion(Guid versionId) => _versions.SingleOrDefault(v => v.Id == versionId);
+
+    /// <summary>
+    /// Met le morceau à la corbeille (#20) avec ses versions et leurs fichiers encore en place, tous avec la même date.
+    /// Les versions et fichiers à charger : tous ceux qui sont en place.
+    /// </summary>
+    public void MoveToTrash(string userId, DateTimeOffset now)
+    {
+        if (IsDeleted) throw new DomainException("Ce morceau est déjà dans la corbeille.");
+        DeletedAt = now;
+        DeletedById = userId;
+        foreach (var version in _versions.Where(v => !v.IsDeleted))
+            version.MoveToTrash(userId, now);
+    }
+
+    /// <summary>
+    /// Remet le morceau en place avec exactement ce qui est parti avec lui. Une version ou un fichier mis à la
+    /// corbeille avant lui y reste. Les versions et fichiers à charger : tous, corbeille comprise.
+    /// </summary>
+    public void Restore()
+    {
+        if (!IsDeleted) throw new DomainException("Ce morceau n'est pas dans la corbeille.");
+        foreach (var version in _versions.Where(v => v.DeletedAt == DeletedAt))
+            version.Restore();
+        DeletedAt = null;
+        DeletedById = null;
+    }
+
+    /// <summary>Met une version et ses fichiers à la corbeille ; null si elle n'est pas en place.</summary>
+    public SongVersion? TrashVersion(Guid versionId, string userId, DateTimeOffset now)
+    {
+        if (IsDeleted) return null;
+        var version = _versions.SingleOrDefault(v => v.Id == versionId && !v.IsDeleted);
+        version?.MoveToTrash(userId, now);
+        return version;
+    }
+
+    /// <summary>Remet en place une version mise seule à la corbeille ; null si elle n'y est pas. Le morceau doit être en place.</summary>
+    public SongVersion? RestoreVersion(Guid versionId)
+    {
+        if (IsDeleted) throw new DomainException("Restaurez d'abord le morceau de cette version.");
+        var version = _versions.SingleOrDefault(v => v.Id == versionId && v.IsDeleted);
+        version?.Restore();
+        return version;
+    }
 }

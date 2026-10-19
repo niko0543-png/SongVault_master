@@ -41,9 +41,12 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) — versions :
 - Double authentification par application (TOTP) dans « Mon compte » : clé à recopier ou lien `otpauth://`, 10 codes de secours, désactivation et nouveaux codes contre le mot de passe ; code demandé à la connexion, navigateur reconnu 14 jours (ADR 0026).
 - Historique de connexion dans « Mon compte » (90 jours) : connexions, échecs, verrouillages et changements de sécurité, avec le réseau masqué et le navigateur.
 - Journal d'audit de chaque groupe, page « Journal » des Owner : suppressions, liens de partage, invitations, rôles, départs, renommage et fichiers bloqués, gardé un an ; impossible à modifier depuis l'application (déclencheur SQL).
+- Corbeille du groupe (page « Corbeille », `/api/bands/{id}/trash`) : morceaux, versions et fichiers supprimés se restaurent pendant 30 jours, avec exactement ce qui est parti avec eux ; suppression définitive par un Owner ; purge quotidienne ensuite, fichiers du stockage compris (ADR 0027).
+- Suppression d'une version (`DELETE …/versions/{id}`), refusée si une sortie l'utilise.
 ### Modifié
 - Les journaux de l'API ne nomment plus le destinataire d'un e-mail non parti, et une erreur 500 y est écrite avec un chemin sans jeton.
 - Le mot de passe se change par `POST /api/me/password`, sans reconnexion ; `/api/auth/manage/2fa` et `POST /api/auth/manage/info` d'Identity sont fermés (404).
+- Supprimer un morceau ou un fichier le met à la corbeille : il reste compté dans le stockage du groupe jusqu'à sa suppression définitive.
 - Renommer un groupe est réservé à ses Owner.
 - La connexion exige une adresse confirmée ; les comptes existants sont marqués confirmés par la migration `ConfirmExistingEmails`.
 - L'inscription ne connecte plus directement : elle mène à « Vérifiez votre boîte mail ».
