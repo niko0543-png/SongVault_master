@@ -37,8 +37,9 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) — versions :
 - Abonnement d'un groupe par Stripe : page Facturation (propriétaires), Checkout, portail client, webhook signé et idempotent, e-mail aux propriétaires quand un paiement est refusé ; activé par `Billing:Provider=Stripe`.
 - Pages publiques Formules (`/formules`) et Conditions générales de vente ; jauge de stockage sur la liste des morceaux.
 - Analyse antivirus de chaque fichier par ClamAV, en arrière-plan : fichier illisible jusqu'au verdict, fichier infecté bloqué et signalé à son auteur par e-mail, analyse en échec relançable (`POST …/files/{id}/scan`) ; activée par `Antivirus:Provider=ClamAv` : conteneur `clamav` dans Docker Compose et, une fois activé, à côté de l'API dans Azure ; avec `None` (production avant la commercialisation), fichiers lisibles et marqués non analysés, remis en analyse à l'activation (ADR 0024).
+- Supervision de la production : traces, erreurs et métriques OpenTelemetry vers Application Insights, sans donnée personnelle (e-mails, jetons des liens et valeurs des URL retirés avant l'envoi) ; alertes par e-mail sur le taux d'erreurs 5xx et sur les erreurs enregistrées (`-AlertEmail`) ; référence de l'erreur affichée à l'utilisateur sur une erreur 500 ; page publique `/statut` (`GET /api/status`) et vérification de disponibilité toutes les 15 minutes par le workflow `uptime` (ADR 0025).
 ### Modifié
-- Routes de l'API sous `/api/bands/{bandId}/songs…` et du front sous `/b/{bandId}/songs…`.
+- Les journaux de l'API ne nomment plus le destinataire d'un e-mail non parti, et une erreur 500 y est écrite avec un chemin sans jeton.
 - Renommer un groupe est réservé à ses Owner.
 - La connexion exige une adresse confirmée ; les comptes existants sont marqués confirmés par la migration `ConfirmExistingEmails`.
 - L'inscription ne connecte plus directement : elle mène à « Vérifiez votre boîte mail ».
