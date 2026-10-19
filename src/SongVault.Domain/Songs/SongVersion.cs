@@ -1,9 +1,10 @@
 ﻿using SongVault.Domain.Common;
 using SongVault.Domain.Files;
+using SongVault.Domain.Trash;
 
 namespace SongVault.Domain.Songs;
 
-public sealed class SongVersion
+public sealed class SongVersion : ISoftDeletable
 {
     public const int TitleMaxLength = 200;
     public const int NotesMaxLength = 4000;
@@ -26,6 +27,9 @@ public sealed class SongVersion
     public MusicalKey? Key { get; private set; }          // NOUVEAU
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
+    public DateTimeOffset? DeletedAt { get; private set; }
+    public string? DeletedById { get; private set; }
+    public bool IsDeleted => DeletedAt is not null;
     public IReadOnlyCollection<SongFile> Files => _files.AsReadOnly();
 
     internal static SongVersion Create(Guid songId, int number, string title, SongVersionStatus status,
@@ -70,10 +74,38 @@ public sealed class SongVersion
         return file;
     }
 
-    public SongFile? RemoveFile(Guid fileId)
+    /// <summary>Met un fichier de cette version à la corbeille (#20) ; null s'il n'y est pas, ou plus.</summary>
+    public SongFile? TrashFile(Guid fileId, string userId, DateTimeOffset now)
     {
-        var file = _files.SingleOrDefault(f => f.Id == fileId);
-        if (file is not null) _files.Remove(file);
+        var file = _files.SingleOrDefault(f => f.Id == fileId && !f.IsDeleted);
+        file?.MoveToTrash(userId, now);
         return file;
+    }
+
+    /// <summary>Remet en place un fichier mis seul à la corbeille ; null s'il n'y est pas. La version doit être en place.</summary>
+    public SongFile? RestoreFile(Guid fileId)
+    {
+        if (IsDeleted) throw new DomainException("Restaurez d'abord la version de ce fichier.");
+        var file = _files.SingleOrDefault(f => f.Id == fileId && f.IsDeleted);
+        file?.Restore();
+        return file;
+    }
+
+    // La version et ses fichiers en place partent avec la même date : la restauration retrouve exactement cet ensemble
+    internal void MoveToTrash(string userId, DateTimeOffset now)
+    {
+        DeletedAt = now;
+        DeletedById = userId;
+        foreach (var file in _files.Where(f => !f.IsDeleted))
+            file.MoveToTrash(userId, now);
+    }
+
+    // Un fichier mis à la corbeille avant elle, à une autre date, y reste
+    internal void Restore()
+    {
+        foreach (var file in _files.Where(f => f.DeletedAt == DeletedAt))
+            file.Restore();
+        DeletedAt = null;
+        DeletedById = null;
     }
 }

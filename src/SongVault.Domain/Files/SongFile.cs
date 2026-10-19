@@ -1,8 +1,9 @@
 ﻿using SongVault.Domain.Common;
+using SongVault.Domain.Trash;
 
 namespace SongVault.Domain.Files;
 
-public sealed class SongFile
+public sealed class SongFile : ISoftDeletable
 {
     public const int OriginalFileNameMaxLength = 255;
 
@@ -16,6 +17,9 @@ public sealed class SongFile
     public long SizeBytes { get; private set; }
     public SongFileType FileType { get; private set; }
     public DateTimeOffset UploadedAt { get; private set; }
+    public DateTimeOffset? DeletedAt { get; private set; }
+    public string? DeletedById { get; private set; }
+    public bool IsDeleted => DeletedAt is not null;
 
     internal static SongFile Create(Guid versionId, string originalFileName, string storageKey,
         string contentType, long sizeBytes, SongFileType fileType, DateTimeOffset now)
@@ -34,5 +38,18 @@ public sealed class SongFile
             FileType = fileType,
             UploadedAt = now,
         };
+    }
+
+    // #20 : la corbeille passe par la version ou le morceau, qui marquent tout avec la même date
+    internal void MoveToTrash(string userId, DateTimeOffset now)
+    {
+        DeletedAt = now;
+        DeletedById = userId;
+    }
+
+    internal void Restore()
+    {
+        DeletedAt = null;
+        DeletedById = null;
     }
 }
