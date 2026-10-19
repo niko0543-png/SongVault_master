@@ -77,8 +77,8 @@ public sealed class ActivityHandlersTests
     {
         var song = ExistingSong();
 
-        await new DeleteSongHandler(_songs, new FakeReleaseRepository(), _uow, new FakeCurrentUser("ana"), _clock, Log(),
-         new SongVault.Application.Audit.AuditLog(new FakeAuditRepository(), new FakeCurrentUser("ana")))
+        await new DeleteSongHandler(_songs, new FakeReleaseRepository(), new FakeSetlistRepository(), _uow, new FakeCurrentUser("ana"), _clock, Log(),
+        new SongVault.Application.Audit.AuditLog(new FakeAuditRepository(), new FakeCurrentUser("ana")))
             .HandleAsync(song.Id, CancellationToken.None);
 
         var e = Assert.Single(_activity.Events);

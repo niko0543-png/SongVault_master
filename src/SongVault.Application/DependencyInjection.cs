@@ -18,6 +18,7 @@ using SongVault.Application.Sharing;
 using SongVault.Application.Billing;
 using SongVault.Application.Audit;
 using SongVault.Application.Trash;
+using SongVault.Application.Setlists;
 
 namespace SongVault.Application;
 
@@ -94,6 +95,13 @@ public static class DependencyInjection
         services.AddScoped<UploadReleaseCoverHandler>();
         services.AddScoped<DownloadReleaseCoverHandler>();
         services.AddScoped<DeleteReleaseCoverHandler>();
+        // #21 : setlists (ADR 0028)
+        services.AddScoped<ListSetlistsHandler>();
+        services.AddScoped<GetSetlistHandler>();
+        services.AddScoped<CreateSetlistHandler>();
+        services.AddScoped<UpdateSetlistHandler>();
+        services.AddScoped<DeleteSetlistHandler>();
+        services.AddScoped<SetSetlistItemsHandler>();
         // #11 : fil d'activité et badges (ADR 0017)
         services.AddScoped<ActivityLog>();
         services.AddScoped<ListActivityHandler>();
