@@ -38,8 +38,12 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) — versions :
 - Pages publiques Formules (`/formules`) et Conditions générales de vente ; jauge de stockage sur la liste des morceaux.
 - Analyse antivirus de chaque fichier par ClamAV, en arrière-plan : fichier illisible jusqu'au verdict, fichier infecté bloqué et signalé à son auteur par e-mail, analyse en échec relançable (`POST …/files/{id}/scan`) ; activée par `Antivirus:Provider=ClamAv` : conteneur `clamav` dans Docker Compose et, une fois activé, à côté de l'API dans Azure ; avec `None` (production avant la commercialisation), fichiers lisibles et marqués non analysés, remis en analyse à l'activation (ADR 0024).
 - Supervision de la production : traces, erreurs et métriques OpenTelemetry vers Application Insights, sans donnée personnelle (e-mails, jetons des liens et valeurs des URL retirés avant l'envoi) ; alertes par e-mail sur le taux d'erreurs 5xx et sur les erreurs enregistrées (`-AlertEmail`) ; référence de l'erreur affichée à l'utilisateur sur une erreur 500 ; page publique `/statut` (`GET /api/status`) et vérification de disponibilité toutes les 15 minutes par le workflow `uptime` (ADR 0025).
+- Double authentification par application (TOTP) dans « Mon compte » : clé à recopier ou lien `otpauth://`, 10 codes de secours, désactivation et nouveaux codes contre le mot de passe ; code demandé à la connexion, navigateur reconnu 14 jours (ADR 0026).
+- Historique de connexion dans « Mon compte » (90 jours) : connexions, échecs, verrouillages et changements de sécurité, avec le réseau masqué et le navigateur.
+- Journal d'audit de chaque groupe, page « Journal » des Owner : suppressions, liens de partage, invitations, rôles, départs, renommage et fichiers bloqués, gardé un an ; impossible à modifier depuis l'application (déclencheur SQL).
 ### Modifié
 - Les journaux de l'API ne nomment plus le destinataire d'un e-mail non parti, et une erreur 500 y est écrite avec un chemin sans jeton.
+- Le mot de passe se change par `POST /api/me/password`, sans reconnexion ; `/api/auth/manage/2fa` et `POST /api/auth/manage/info` d'Identity sont fermés (404).
 - Renommer un groupe est réservé à ses Owner.
 - La connexion exige une adresse confirmée ; les comptes existants sont marqués confirmés par la migration `ConfirmExistingEmails`.
 - L'inscription ne connecte plus directement : elle mène à « Vérifiez votre boîte mail ».
@@ -57,6 +61,7 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) — versions :
 - `Song.OwnerId`, remplacé par `Song.BandId`. Les morceaux sans propriétaire valide sont supprimés par la migration `BackfillBands`.
 ### Corrigé
 - Un délai dépassé chez le fournisseur d'e-mails n'arrête plus l'API.
+- La page Facturation avait perdu sa route : le lien « Facturation » des Owner y mène de nouveau.
 - Sur Azure, les pochettes des sorties s'affichent : la CSP du front autorise les images du stockage objet.
 - Le bouton « Supprimer » d'un fichier, sur la page d'une version, supprime vraiment le fichier.
 
