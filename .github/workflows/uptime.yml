@@ -1,0 +1,35 @@
+name: uptime
+
+# #18 : la production répond-elle ? (ADR 0025, runbook Azure « Supervision »)
+# Toutes les 15 minutes, lit /api/status à travers le front, comme un visiteur. En panne : le run échoue
+# et GitHub l'écrit par e-mail à qui a modifié ce fichier en dernier. Sans la variable PROD_URL, rien n'est fait.
+on:
+  schedule:
+    - cron: '7,22,37,52 * * * *'      # pas à l'heure pile, où GitHub retarde les tâches programmées
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  check:
+    if: vars.PROD_URL != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Lire la page de statut
+        env:
+          PROD_URL: ${{ vars.PROD_URL }}
+        run: |
+          # Trois essais à 30 s d'écart : un redémarrage de l'API pendant un déploiement n'est pas une panne
+          for attempt in 1 2 3; do
+            if curl --fail --silent --show-error --max-time 20 "$PROD_URL/api/status" --output status.json; then
+              cat status.json; echo
+              if [ "$(jq -r .status status.json)" = "degraded" ]; then
+                echo "::warning::SongVault fonctionne avec du retard : $PROD_URL/statut"
+              fi
+              exit 0
+            fi
+            sleep 30
+          done
+          echo "::error::SongVault ne répond pas ou est en panne : $PROD_URL/statut"
+          exit 1

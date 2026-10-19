@@ -45,6 +45,9 @@ param stripePriceStudio string = ''
 @allowed(['None', 'ClamAv'])
 param antivirusProvider string = 'None'
 
+@description('Adresse qui reçoit les alertes de la production (#18). Vide : ni alerte ni groupe d\'actions (environnement d\'exercice).')
+param alertEmail string = ''
+
 @description('Verrous « suppression impossible » sur la base et le stockage. false seulement pour l\'exercice de restauration, supprimé ensuite.')
 param enableDeleteLocks bool = true
 
@@ -87,9 +90,97 @@ resource logs 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   properties: {
     sku: { name: 'PerGB2018' }
     retentionInDays: 30
+    // #18 : au plus 0,3 Go par jour (journaux des conteneurs et Application Insights), soit 9 Go par mois au pire ;
+    // les 5 premiers Go du mois sont gratuits. Plafond atteint : plus rien n'est collecté jusqu'au lendemain.
+    workspaceCapping: { dailyQuotaGb: json('0.3') }
   }
 }
 
+// #18 : traces, erreurs et métriques de l'API (OpenTelemetry), rangées dans l'espace de journaux (ADR 0025)
+resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
+  name: '${prefix}-insights'
+  location: location
+  kind: 'web'
+  properties: {
+    Application_Type: 'web'
+    WorkspaceResourceId: logs.id
+    IngestionMode: 'LogAnalytics'
+    DisableIpMasking: false                            // aucune adresse IP gardée
+  }
+}
+
+// ---------- Alertes (#18), envoyées par e-mail à alertEmail ----------
+resource alertGroup 'Microsoft.Insights/actionGroups@2023-01-01' = if (!empty(alertEmail)) {
+  name: '${prefix}-alertes'
+  location: 'global'
+  properties: {
+    groupShortName: 'SongVault'                        // 12 caractères au plus, en tête des e-mails
+    enabled: true
+    emailReceivers: [
+      { name: 'exploitation', emailAddress: alertEmail, useCommonAlertSchema: true }
+    ]
+  }
+}
+var alertActions = { actionGroups: [ resourceId('Microsoft.Insights/actionGroups', '${prefix}-alertes') ] }
+
+// Taux d'erreurs 5xx : plus de 5 % des requêtes sur 15 minutes, dès 10 requêtes (une erreur isolée la nuit ne réveille personne)
+resource alertServerErrors 'Microsoft.Insights/scheduledQueryRules@2023-12-01' = if (!empty(alertEmail)) {
+  name: '${prefix}-taux-5xx'
+  location: location
+  dependsOn: [ alertGroup ]
+  properties: {
+    displayName: 'SongVault : taux d\'erreurs 5xx'
+    description: 'Plus de 5 % des requêtes de l\'API en erreur 5xx sur 15 minutes. Runbook Azure, « Supervision ».'
+    severity: 1
+    enabled: true
+    scopes: [ appInsights.id ]
+    evaluationFrequency: 'PT5M'
+    windowSize: 'PT15M'
+    criteria: {
+      allOf: [
+        {
+          // itemCount : une requête retenue par l'échantillonnage en représente plusieurs
+          query: 'requests | summarize total = sum(itemCount), errors = sumif(itemCount, toint(resultCode) >= 500) | where total >= 10 and errors * 100.0 / total > 5'
+          timeAggregation: 'Count'
+          operator: 'GreaterThan'
+          threshold: 0
+          failingPeriods: { numberOfEvaluationPeriods: 1, minFailingPeriodsToAlert: 1 }
+        }
+      ]
+    }
+    autoMitigate: true                                 // second e-mail quand c'est rentré dans l'ordre
+    actions: alertActions
+  }
+}
+
+// Erreurs enregistrées : erreur 500 isolée, tâche de fond en échec, e-mail non parti…
+resource alertExceptions 'Microsoft.Insights/scheduledQueryRules@2023-12-01' = if (!empty(alertEmail)) {
+  name: '${prefix}-erreurs'
+  location: location
+  dependsOn: [ alertGroup ]
+  properties: {
+    displayName: 'SongVault : erreurs enregistrées'
+    description: 'Au moins une erreur enregistrée par l\'API dans le dernier quart d\'heure. Runbook Azure, « Supervision ».'
+    severity: 2
+    enabled: true
+    scopes: [ appInsights.id ]
+    evaluationFrequency: 'PT15M'
+    windowSize: 'PT15M'
+    criteria: {
+      allOf: [
+        {
+          query: 'exceptions'
+          timeAggregation: 'Count'
+          operator: 'GreaterThan'
+          threshold: 0
+          failingPeriods: { numberOfEvaluationPeriods: 1, minFailingPeriodsToAlert: 1 }
+        }
+      ]
+    }
+    autoMitigate: true
+    actions: alertActions
+  }
+}
 resource env 'Microsoft.App/managedEnvironments@2024-03-01' = {
   name: '${prefix}-env'
   location: location
@@ -271,6 +362,7 @@ resource api 'Microsoft.App/containerApps@2024-03-01' = {
         { name: 'brevo-api-key', value: empty(brevoApiKey) ? 'aucune' : brevoApiKey }   // un secret vide est refusé
         { name: 'stripe-secret-key', value: empty(stripeSecretKey) ? 'aucune' : stripeSecretKey }
         { name: 'stripe-webhook-secret', value: empty(stripeWebhookSecret) ? 'aucune' : stripeWebhookSecret }
+        { name: 'appinsights-connection', value: appInsights.properties.ConnectionString }		
       ]
     }
     template: {
@@ -300,6 +392,7 @@ resource api 'Microsoft.App/containerApps@2024-03-01' = {
             { name: 'DataProtection__KeyVaultKeyUri', value: dataProtectionKey.properties.keyUri }
             { name: 'Antivirus__Provider', value: antivirusProvider }
             { name: 'Antivirus__ClamAv__Host', value: 'localhost' }   // #17 : le conteneur clamav (clamavContainer)
+            { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', secretRef: 'appinsights-connection' }   // #18			
           ]
           probes: [
             {
@@ -411,3 +504,4 @@ output publicUrl string = publicUrl
 output apiName string = api.name
 output migratorName string = migrator.name
 output storageAccountName string = storage.name
+output appInsightsName string = appInsights.name

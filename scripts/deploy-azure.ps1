@@ -6,6 +6,7 @@
 .EXAMPLE   $env:STRIPE_SECRET_KEY = '…' ; $env:STRIPE_WEBHOOK_SECRET = '…'
            .\scripts\deploy-azure.ps1 -ImageTag v1.9.0 -BillingProvider Stripe -StripePriceBand price_… -StripePriceStudio price_…
 .EXAMPLE   .\scripts\deploy-azure.ps1 -ImageTag v1.10.0 -AntivirusProvider ClamAv
+.EXAMPLE   .\scripts\deploy-azure.ps1 -ImageTag v1.11.0 -AlertEmail contact@songvault.eu
 .NOTES     Prérequis : Azure CLI connecté (az login) et images publiées par le workflow « images ».
            Secrets lus dans l'environnement, jamais en paramètre :
              SONGVAULT_SQL_PASSWORD  mot de passe de l'administrateur SQL (obligatoire, toujours le même)
@@ -18,6 +19,8 @@
            un nouveau groupe part sur None (formules et quotas, sans paiement en ligne).
            De même sans -AntivirusProvider : le réglage en place est gardé ; un nouveau groupe, ou une API
            d'avant #17, part sur None (fichiers non analysés, pas de conteneur ClamAV).
+           De même sans -AlertEmail : l'adresse des alertes en place est gardée (#18) ; sans aucune adresse,
+           pas d'alerte (environnement d'exercice).
 #>
 param(
     [Parameter(Mandatory)][string]$ImageTag,
@@ -32,6 +35,8 @@ param(
     [string]$StripePriceStudio,
     # Sans valeur : celle de l'API déjà déployée (None pour un nouveau groupe) ; ClamAv ajoute le conteneur (#17)
     [ValidateSet('None', 'ClamAv')][string]$AntivirusProvider,
+    # Sans valeur : celle des alertes déjà déployées (aucune alerte pour un nouveau groupe) (#18)
+    [string]$AlertEmail,
     # Sans verrous sur la base et le stockage : environnement d'exercice, supprimé ensuite (ADR 0013)
     [switch]$NoDeleteLocks
 )
@@ -92,6 +97,15 @@ function Get-DeployedAntivirus([string]$Group, [string]$App) {
     if ($provider) { return $provider } else { return 'None' }
 }
 
+# Adresse des alertes en place (#18), même principe : un redéploiement ne coupe pas les alertes sans le dire
+function Get-DeployedAlertEmail([string]$Group) {
+    if ((az group exists --name $Group) -ne 'true') { return '' }
+    $email = az monitor action-group list --resource-group $Group `
+        --query "[?name=='songvault-alertes'] | [0].emailReceivers[0].emailAddress" --output tsv
+    Assert-LastExit 'lecture du groupe d''actions des alertes'
+    return "$email"
+}
+
 if (-not $env:SONGVAULT_SQL_PASSWORD) { throw 'Définir $env:SONGVAULT_SQL_PASSWORD (mot de passe administrateur SQL).' }
 
 $deployed = Get-DeployedEmail $ResourceGroup 'songvault-api'
@@ -123,6 +137,8 @@ if ($BillingProvider -eq 'Stripe') {
 
 if (-not $AntivirusProvider) { $AntivirusProvider = Get-DeployedAntivirus $ResourceGroup 'songvault-api' }
 
+if (-not $AlertEmail) { $AlertEmail = Get-DeployedAlertEmail $ResourceGroup }
+
 # Les secrets passent par un fichier de paramètres temporaire : jamais dans la ligne de commande
 $secrets = Join-Path ([IO.Path]::GetTempPath()) "songvault-$([guid]::NewGuid()).parameters.json"
 $parameters = @{
@@ -136,6 +152,7 @@ $parameters = @{
         # Pas des secrets, mais peut-être vides : un fichier de paramètres les passe tels quels
         stripePriceBand     = @{ value = "$StripePriceBand" }
         stripePriceStudio   = @{ value = "$StripePriceStudio" }
+        alertEmail          = @{ value = "$AlertEmail" }
     }
 }
 [IO.File]::WriteAllText($secrets, ($parameters | ConvertTo-Json -Depth 5))     # UTF-8 sans BOM
@@ -146,7 +163,7 @@ try {
     az group create --name $ResourceGroup --location $Location --output none
     Assert-LastExit 'création du groupe de ressources'
 
-    Write-Host "2/4 Infrastructure (infra/main.bicep), images $ImageTag, e-mails $EmailProvider ($EmailFrom), paiement $BillingProvider, antivirus $AntivirusProvider"
+    Write-Host "2/4 Infrastructure (infra/main.bicep), images $ImageTag, e-mails $EmailProvider ($EmailFrom), paiement $BillingProvider, antivirus $AntivirusProvider, alertes $(if ($AlertEmail) { $AlertEmail } else { 'aucune' })"
 	$locks = if ($NoDeleteLocks) { 'false' } else { 'true' }
     $json = az deployment group create --resource-group $ResourceGroup --name "songvault-$ImageTag" `
         --template-file infra/main.bicep `
@@ -192,6 +209,10 @@ try {
     }
     if ($AntivirusProvider -eq 'None') {
         Write-Host 'Antivirus : None. Fichiers lisibles sans analyse, à activer avant la commercialisation.'
+    }
+    Write-Host "Supervision : Application Insights $($outputs.appInsightsName.value), page $($outputs.publicUrl.value)/statut"
+    if (-not $AlertEmail) {
+        Write-Warning 'Alertes : aucune. Passer -AlertEmail avec l''adresse qui doit les recevoir.'
     }
 }
 finally {
