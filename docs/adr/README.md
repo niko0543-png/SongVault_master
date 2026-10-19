@@ -33,3 +33,4 @@ l'ancien, qui passe au statut « remplacé par ADR NNNN ».
 | [0025](0025-supervision-en-production.md) | Supervision en production : OpenTelemetry vers Application Insights, alertes par e-mail, page de statut publique | accepté |
 | [0026](0026-double-authentification-et-journal-d-audit.md) | Double authentification et journal d'audit : TOTP d'Identity, historique de connexion, journal en ajout seul | accepté |
 | [0027](0027-corbeille.md) | Corbeille : suppression en deux temps, restauration 30 jours, purge quotidienne | accepté |
+| [0028](0028-setlists.md) | Setlists : liste ordonnée des sorties, durée totale calculée par l'API, feuille imprimée sans bibliothèque | accepté |

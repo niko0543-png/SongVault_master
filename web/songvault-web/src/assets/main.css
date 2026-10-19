@@ -117,3 +117,17 @@ select {
     min-height: 44px;
   }
 }
+
+/* #21 : impression. Une page qui contient une feuille imprimable (.print-sheet) n'imprime qu'elle :
+   ni en-tête, ni pied de page, ni lecteur audio, ni ce que la page marque .print-hide */
+@media print {
+  @page { size: A4 portrait; margin: 12mm; }
+  body:has(.print-sheet) #app > :not(.app-main),
+  body:has(.print-sheet) .print-hide {
+    display: none !important;
+  }
+  body:has(.print-sheet) .app-main {
+    max-width: none;
+    padding: 0;
+  }
+}

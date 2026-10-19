@@ -77,10 +77,10 @@ public sealed class UpdateSongVersionHandler(
     }
 }
 
-/// <summary>Met une version et ses fichiers à la corbeille (#20) ; refusé si une sortie l'utilise.</summary>
+/// <summary>Met une version et ses fichiers à la corbeille (#20) ; refusé si une sortie ou une setlist (#21) l'utilise.</summary>
 public sealed class DeleteSongVersionHandler(
-    ISongRepository songs, IReleaseRepository releases, IUnitOfWork unitOfWork, ICurrentUser user,
-    TimeProvider clock, AuditLog audit)
+    ISongRepository songs, IReleaseRepository releases, ISetlistRepository setlists, IUnitOfWork unitOfWork,
+    ICurrentUser user, TimeProvider clock, AuditLog audit)
 {
     public async Task HandleAsync(Guid songId, Guid versionId, CancellationToken ct)
     {
@@ -91,7 +91,10 @@ public sealed class DeleteSongVersionHandler(
         if (onReleases.Count > 0)
             throw new ConflictException(
                 $"Cette version figure sur {string.Join(", ", onReleases.Select(t => $"« {t} »"))}. Choisissez-en une autre pour ces sorties avant de la supprimer.");
-
+        var onSetlists = await setlists.ListNamesWithVersionAsync(versionId, ct);
+        if (onSetlists.Count > 0)
+            throw new ConflictException(
+                $"Cette version est choisie dans les setlists {string.Join(", ", onSetlists.Select(n => $"« {n} »"))}. Choisissez-en une autre (ou « dernière version ») avant de la supprimer.");
         var now = clock.GetUtcNow();
         var version = song.TrashVersion(versionId, user.UserId, now) ?? throw new NotFoundException("SongVersion", versionId);
         audit.Record(song.BandId, AuditAction.VersionDeleted, TrashPurger.VersionSubject(song.Title, version.Number), now);

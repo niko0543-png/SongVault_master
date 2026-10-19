@@ -156,6 +156,10 @@ internal sealed class AccountRepository(SongVaultDbContext db, UserManager<Ident
 
         var email = (user.Email ?? "").ToLowerInvariant();     // Invitations.Email est en minuscules
         await releases.ExecuteDeleteAsync(ct);                 // pistes en cascade
+        // Setlists (#21) : avant les morceaux que citent leurs lignes (lignes en cascade)
+        await db.Setlists.IgnoreQueryFilters([SongVaultDbContext.BandFilter])
+            .Where(s => soloBandIds.Contains(s.BandId))
+            .ExecuteDeleteAsync(ct);
         await songs.ExecuteDeleteAsync(ct);
         await db.Bands.Where(b => soloBandIds.Contains(b.Id)).ExecuteDeleteAsync(ct);
         await db.Invitations.Where(i => i.Email == email).ExecuteDeleteAsync(ct);

@@ -73,7 +73,7 @@ public sealed class SongCrudHandlersTests
             .AddFile("prise.wav", "k.wav", "audio/wav", 10, SongVault.Domain.Files.SongFileType.Audio, Now);
         _storage.Files["k.wav"] = [1];
 
-        await new DeleteSongHandler(_songs, _releases, _uow, new FakeCurrentUser(), _clock, Log(), Audit()).HandleAsync(song.Id, CancellationToken.None);
+        await new DeleteSongHandler(_songs, _releases, new FakeSetlistRepository(), _uow, new FakeCurrentUser(), _clock, Log(), Audit()).HandleAsync(song.Id, CancellationToken.None);
 
         Assert.Equal((Now.AddHours(1), "owner-1"), (song.DeletedAt, song.DeletedById));   // #20 : à la corbeille
         Assert.Equal(Now.AddHours(1), file.DeletedAt);
@@ -95,7 +95,7 @@ public sealed class SongCrudHandlersTests
         _releases.Releases.Add(release);
 
         var error = await Assert.ThrowsAsync<ConflictException>(
-            () => new DeleteSongHandler(_songs, _releases, _uow, new FakeCurrentUser(), _clock, Log(), Audit()).HandleAsync(song.Id, CancellationToken.None));
+            () => new DeleteSongHandler(_songs, _releases, new FakeSetlistRepository(), _uow, new FakeCurrentUser(), _clock, Log(), Audit()).HandleAsync(song.Id, CancellationToken.None));
 
         Assert.Contains("« Nuits blanches »", error.Message);
         Assert.Single(_songs.Songs);
@@ -108,7 +108,7 @@ public sealed class SongCrudHandlersTests
     public async Task Delete_morceau_absent_leve_NotFound()
     {
         await Assert.ThrowsAsync<NotFoundException>(
-            () => new DeleteSongHandler(_songs, _releases, _uow, new FakeCurrentUser(), _clock, Log(), Audit()).HandleAsync(Guid.NewGuid(), CancellationToken.None));
+            () => new DeleteSongHandler(_songs, _releases, new FakeSetlistRepository(), _uow, new FakeCurrentUser(), _clock, Log(), Audit()).HandleAsync(Guid.NewGuid(), CancellationToken.None));
     }
 
     [Theory]

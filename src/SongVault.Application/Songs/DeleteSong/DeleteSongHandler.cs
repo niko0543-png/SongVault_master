@@ -12,8 +12,8 @@ namespace SongVault.Application.Songs.DeleteSong;
 /// et la place reste comptée jusqu'à la purge. Restaurable 30 jours.
 /// </summary>
 public sealed class DeleteSongHandler(
-    ISongRepository songs, IReleaseRepository releases, IUnitOfWork unitOfWork, ICurrentUser user,
-    TimeProvider clock, ActivityLog activity, AuditLog audit)
+    ISongRepository songs, IReleaseRepository releases, ISetlistRepository setlists, IUnitOfWork unitOfWork,
+    ICurrentUser user, TimeProvider clock, ActivityLog activity, AuditLog audit)
 {
     public async Task HandleAsync(Guid id, CancellationToken ct)
     {
@@ -24,6 +24,11 @@ public sealed class DeleteSongHandler(
         if (onReleases.Count > 0)
             throw new ConflictException(
                 $"Ce morceau figure sur {string.Join(", ", onReleases.Select(t => $"« {t} »"))}. Retirez-le de ces sorties avant de le supprimer.");
+        // Ni d'une setlist (#21) : la feuille d'un concert ne change pas sans qu'on le voie
+        var onSetlists = await setlists.ListNamesWithSongAsync(id, ct);
+        if (onSetlists.Count > 0)
+            throw new ConflictException(
+                $"Ce morceau figure dans les setlists {string.Join(", ", onSetlists.Select(n => $"« {n} »"))}. Retirez-le de ces setlists avant de le supprimer.");
 
         var now = clock.GetUtcNow();
         song.MoveToTrash(user.UserId, now);

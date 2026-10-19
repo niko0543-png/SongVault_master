@@ -27,4 +27,6 @@ public interface ISongRepository
     Task<AudioWaveformDto?> GetWaveformAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct);
     /// <summary>Pour chaque version trouvée dans le groupe actif, l'identifiant de son morceau (#10). Les autres sont absentes.</summary>
     Task<IReadOnlyDictionary<Guid, Guid>> GetVersionSongIdsAsync(IReadOnlyCollection<Guid> versionIds, CancellationToken ct);
+    /// <summary>Ceux de ces morceaux qui sont dans le groupe actif, hors corbeille (#21).</summary>
+    Task<IReadOnlySet<Guid>> ListExistingIdsAsync(IReadOnlyCollection<Guid> songIds, CancellationToken ct);
 }

@@ -63,8 +63,8 @@ public sealed class TrashHandlersTests
     {
         var (song, version, file) = Existing();
 
-        await new DeleteSongVersionHandler(_songs, _releases, _uow, new FakeCurrentUser("ana"), new FixedTimeProvider(Now), Audit())
-            .HandleAsync(song.Id, version.Id, CancellationToken.None);
+        await new DeleteSongVersionHandler(_songs, _releases, new FakeSetlistRepository(), _uow, new FakeCurrentUser("ana"), new FixedTimeProvider(Now), Audit())
+           .HandleAsync(song.Id, version.Id, CancellationToken.None);
 
         Assert.True(version.IsDeleted);
         Assert.True(file.IsDeleted);
@@ -83,7 +83,7 @@ public sealed class TrashHandlersTests
         _releases.Releases.Add(release);
 
         var error = await Assert.ThrowsAsync<ConflictException>(() => new DeleteSongVersionHandler(
-            _songs, _releases, _uow, new FakeCurrentUser("ana"), new FixedTimeProvider(Now), Audit())
+            _songs, _releases, new FakeSetlistRepository(), _uow, new FakeCurrentUser("ana"), new FixedTimeProvider(Now), Audit())
             .HandleAsync(song.Id, version.Id, CancellationToken.None));
 
         Assert.Contains("« Nuits blanches »", error.Message);
