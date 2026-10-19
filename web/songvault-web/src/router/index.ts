@@ -86,12 +86,19 @@ const router = createRouter({
       component: () => import('@/features/legal/pages/TermsOfSalePage.vue'),
       meta: { public: true, title: 'Conditions générales de vente' },
     },
-     {
+    {
       // Lien des e-mails de notification (#12) : sans connexion, le jeton suffit
       path: '/unsubscribe',
       name: 'unsubscribe',
       component: () => import('@/features/notifications/pages/UnsubscribePage.vue'),
       meta: { public: true, title: 'Se désinscrire' },
+    },
+    {
+      // #18 : état du service, lisible même quand l'API ne répond plus
+      path: '/statut',
+      name: 'status',
+      component: () => import('@/features/status/pages/StatusPage.vue'),
+      meta: { public: true, title: 'État du service' },
     },
     {
       // Lien de partage externe (#13) : écoute seule, sans compte
@@ -175,7 +182,13 @@ const router = createRouter({
       component: () => import('@/features/bands/pages/MembersPage.vue'),
       meta: { title: 'Membres' },
     },
-
+    {
+      // #16 : retour de Stripe Checkout sur ?checkout=success
+      path: '/b/:bandId/billing',
+      name: 'billing',
+      component: () => import('@/features/billing/pages/BillingPage.vue'),
+      meta: { title: 'Facturation', owner: true },
+    },
     {
       path: '/:pathMatch(.*)*',
       name: 'not-found',
@@ -207,6 +220,7 @@ router.beforeEach(async (to) => {
  bands.setActive(bandId)
   // Page d'écriture ouverte par un Guest (lien partagé, favori) : retour à la liste
   if (to.meta.write && !bands.can('write')) return { name: 'songs', params: { bandId } }
+    if (to.meta.owner && !bands.can('admin')) return { name: 'songs', params: { bandId } }
   return true
 })
 
