@@ -9,6 +9,7 @@ import {
 import { formatReleaseDate } from '../format'
 import ReleaseForm from '../components/ReleaseForm.vue'
 import ShareLinksPanel from '@/features/sharing/components/ShareLinksPanel.vue'
+import { rightsApi } from '@/features/rights/api/rightsApi'
 import { songsApi } from '@/features/songs/api/songsApi'
 import type { Song } from '@/features/songs/types'
 import { versionsApi } from '@/features/versions/api/versionsApi'
@@ -251,6 +252,9 @@ async function onRemoveCover() {
         </SectionCard>
 
         <SectionCard :title="`Pistes (${release.tracks.length})`">
+          <template v-if="release.tracks.length" #actions>
+            <a :href="rightsApi.releaseCsvUrl(release.id)" download>Exporter les crédits (CSV)</a>
+          </template>
           <p v-if="tracksError" class="field-error" role="alert">{{ tracksError }}</p>
           <p v-if="release.tracks.length === 0" class="muted">Aucune piste pour l'instant.</p>
           <ReorderableList v-else :items="release.tracks" :item-key="(t) => t.songId" :item-label="(t) => t.songTitle"

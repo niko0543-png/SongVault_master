@@ -38,6 +38,9 @@ export function describe(item: AuditItem, myId: string | null): string {
     case 'CommentDeleted':
       return did(`supprimé ${subject === 'Réponse' ? 'une réponse' : 'un commentaire'} de ${target}`)
     case 'ReleaseDeleted': return did(`supprimé la sortie ${subject}`)
+        // #22 : details résume ce qui a été enregistré (« 3 crédits, ISWC T-034.524.680-1 »)
+    case 'CreditsChanged':
+      return did(`modifié les crédits du morceau ${subject}${item.details ? ` (${item.details})` : ''}`)
     case 'ShareLinkCreated': return did(`créé le lien de partage ${subject}`)
     case 'ShareLinkRevoked': return did(`coupé le lien de partage ${subject}`)
     case 'ShareLinkDeleted': return did(`supprimé le lien de partage ${subject}`)

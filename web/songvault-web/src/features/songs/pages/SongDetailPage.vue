@@ -9,6 +9,7 @@ import { versionsApi } from '@/features/versions/api/versionsApi'
 import type { SongVersionInput, SongVersionStatus, SongVersionSummary } from '@/features/versions/types'
 import VersionTimeline from '@/features/versions/components/VersionTimeline.vue'
 import CreateVersionForm from '@/features/versions/components/CreateVersionForm.vue'
+import SongRightsSection from '@/features/rights/components/SongRightsSection.vue'
 import LoadingState from '@/shared/components/LoadingState.vue'
 import ErrorState from '@/shared/components/ErrorState.vue'
 import { ApiError, getErrorMessage } from '@/shared/api/ApiError'
@@ -152,6 +153,8 @@ async function onDelete() {
         :server-errors="creationErrors"
         @submit="onCreateVersion"
       />
+
+      <SongRightsSection :song-id="song.id" :readonly="!bands.can('write')" :version-count="versions.length" />
     </template>
   </section>
 </template>
