@@ -146,6 +146,9 @@ docker compose down -v       # supprime aussi la base et les fichiers
   éditeur) et leur part, qui doit faire 100 % ; l'ISWC du morceau et l'ISRC de chaque version ;
   export CSV d'un morceau ou d'une sortie, qui s'ouvre tel quel dans Excel
   ([ADR 0029](docs/adr/0029-credits-et-repartition-des-droits.md)).
+- **Pistes séparées** : jusqu'à 8 fichiers audio d'une version (voix, guitare, batterie…) lus
+  ensemble, calés à l'échantillon près, avec muet, solo et volume pour chacun
+  ([ADR 0030](docs/adr/0030-pistes-separees-et-melangeur.md)).  
 
 ---
 
@@ -331,7 +334,7 @@ volumineux, 422 règle métier, 429 trop de requêtes.
 | Application | xUnit, faux repositories | … | cas d'usage |
 | Intégration API | xUnit, WebApplicationFactory, **Testcontainers SQL Server** | … | HTTP de bout en bout contre un vrai SQL Server : codes d'erreur, concurrence, isolation par utilisateur, sécurité des fichiers |
 | Front | Vitest, Vue Test Utils | … | stores Pinia, composables, garde de navigation |
-| Bout en bout | Playwright | 5 | inscription → morceau → version → fichier → lecture → déconnexion ; à 360 px : aucun défilement horizontal, lecteur et menu ; application installable |
+| Bout en bout | Playwright | 7 | inscription → morceau → version → fichier → lecture → déconnexion ; à 360 px : aucun défilement horizontal, lecteur et menu ; application installable ; dérive du mélangeur après 3 minutes et après un saut |
 
 <!-- Remplacez les … par les chiffres de `dotnet test` et `npm run test:unit -- --run`. -->
 
@@ -351,6 +354,7 @@ cd web/songvault-web
 npm ci
 npm run test:unit -- --run                    # front
 npx playwright test                           # E2E (application lancée sur :8080)
+npx playwright test e2e/stems-drift.spec.ts   # dérive du mélangeur, sans l'application
 ```
 
 ---
