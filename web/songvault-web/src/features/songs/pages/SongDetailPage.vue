@@ -98,7 +98,7 @@ async function onDelete() {
   const { id, title } = song.value
   const confirmed = await confirm({
     title: 'Supprimer ce morceau ?',
-    message: `« ${title} », ses versions et ses fichiers seront supprimés définitivement.`,
+        message: `« ${title} », ses versions et ses fichiers vont à la corbeille du groupe : on pourra les restaurer pendant 30 jours.`,
     confirmLabel: 'Supprimer',
     danger: true,
   })
@@ -107,7 +107,7 @@ async function onDelete() {
   await deletion.run(id)
   if (!deletion.error.value) {
     store.remove(id)
-    toast.success(`« ${title} » a été supprimé.`)
+    toast.success(`« ${title} » est dans la corbeille.`)
     await router.push({ name: 'songs' })
   }
 }
@@ -157,5 +157,5 @@ async function onDelete() {
 </template>
 
 <style scoped>
-.actions { display: flex; gap: .75rem; align-items: center; }
+.actions { display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; }
 </style>

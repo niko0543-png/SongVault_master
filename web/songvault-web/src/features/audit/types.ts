@@ -5,6 +5,8 @@ export type AuditAction =
   | 'InvitationCreated' | 'InvitationRevoked' | 'InvitationAccepted'
   | 'MemberRoleChanged' | 'MemberRemoved' | 'MemberLeft'
   | 'BandRenamed' | 'FileQuarantined'
+  | 'VersionDeleted' | 'SongRestored' | 'VersionRestored' | 'FileRestored'
+  | 'SongPurged' | 'VersionPurged' | 'FilePurged'
 
 /** Une ligne du journal d'audit (GET /api/bands/{id}/audit, Owner seulement). */
 export interface AuditItem {
