@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.Options;
-
 using SongVault.Application.Common;
 using SongVault.Application.Common.Exceptions;
 using SongVault.Application.Files;
@@ -8,6 +7,8 @@ using SongVault.Application.Sharing;
 using SongVault.Application.Tests.Fakes;
 using SongVault.Domain.Common;
 using SongVault.Domain.Sharing;
+using SongVault.Application.Audit;
+using SongVault.Domain.Audit;
 
 namespace SongVault.Application.Tests.Sharing;
 
@@ -28,7 +29,10 @@ public sealed class ShareLinkHandlersTests
     public ShareLinkHandlersTests() => _links.Targets.Add((BandId, VersionId));
 
     private CreateShareLinkHandler CreateHandler() => new(_links, _uow, new FakeBandContext(BandId), new FakeCurrentUser(),
-        _passwords, Options.Create(new AppOptions { PublicUrl = "https://songvault.example/" }), _clock);
+        _passwords, Options.Create(new AppOptions { PublicUrl = "https://songvault.example/" }), _clock, Audit());
+
+    private readonly FakeAuditRepository _audit = new();
+    private AuditLog Audit() => new(_audit, new FakeCurrentUser());
 
     private ShareLinkGate Gate() => new(_links, _unlocks, _clock);
 
@@ -54,6 +58,20 @@ public sealed class ShareLinkHandlersTests
     }
 
     [Fact]
+    public async Task Creer_puis_couper_deux_fois_ecrit_deux_lignes_au_journal_sans_le_jeton()
+    {
+        var created = await CreateAsync(password: "écoute-v3");
+        var revoke = new RevokeShareLinkHandler(_links, _uow, new FakeBandContext(BandId), _clock, Audit());
+        await revoke.HandleAsync(_links.Links[0].Id, CancellationToken.None);
+        await revoke.HandleAsync(_links.Links[0].Id, CancellationToken.None);      // recommencer ne change rien
+
+        Assert.Equal([AuditAction.ShareLinkCreated, AuditAction.ShareLinkRevoked], _audit.Entries.Select(e => e.Action));
+        Assert.All(_audit.Entries, e => Assert.Equal("Studio Delta (version)", e.Subject));
+        Assert.Equal("30 jours, avec mot de passe", _audit.Entries[0].Details);
+        Assert.DoesNotContain(_audit.Entries, e => created.Url.Contains(e.Subject!) || (e.Details ?? "").Contains(TokenOf(created)));
+    }
+
+    [Fact]
     public async Task Create_refuse_une_cible_d_un_autre_groupe()
         => await Assert.ThrowsAsync<NotFoundException>(() => CreateAsync(versionId: Guid.CreateVersion7()));
 
@@ -72,8 +90,8 @@ public sealed class ShareLinkHandlersTests
     public async Task Un_lien_revoque_ou_expire_est_introuvable()
     {
         var revoked = TokenOf(await CreateAsync());
-        await new RevokeShareLinkHandler(_links, _uow, new FakeBandContext(BandId), _clock)
-            .HandleAsync(_links.Links[0].Id, CancellationToken.None);
+        await new RevokeShareLinkHandler(_links, _uow, new FakeBandContext(BandId), _clock, Audit())
+    .HandleAsync(_links.Links[0].Id, CancellationToken.None);
         var expiring = TokenOf(await CreateAsync(days: 1));
 
         await Assert.ThrowsAsync<NotFoundException>(() => Gate().OpenAsync(revoked, null, CancellationToken.None));

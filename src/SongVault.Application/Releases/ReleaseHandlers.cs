@@ -3,6 +3,8 @@ using SongVault.Application.Common.Exceptions;
 using SongVault.Application.Files;
 using SongVault.Domain.Common;
 using SongVault.Domain.Releases;
+using SongVault.Application.Audit;
+using SongVault.Domain.Audit;
 
 namespace SongVault.Application.Releases;
 
@@ -41,7 +43,8 @@ public sealed class UpdateReleaseHandler(IReleaseRepository releases, IUnitOfWor
     }
 }
 
-public sealed class DeleteReleaseHandler(IReleaseRepository releases, IUnitOfWork unitOfWork, IFileStorageService storage)
+public sealed class DeleteReleaseHandler(
+    IReleaseRepository releases, IUnitOfWork unitOfWork, IFileStorageService storage, AuditLog audit, TimeProvider clock)
 {
     /// <summary>Supprime la sortie et ses pistes. Les morceaux et leurs versions restent.</summary>
     public async Task HandleAsync(Guid id, CancellationToken ct)
@@ -50,6 +53,7 @@ public sealed class DeleteReleaseHandler(IReleaseRepository releases, IUnitOfWor
         var cover = release.CoverStorageKey;
 
         releases.Remove(release);
+        audit.Record(release.BandId, AuditAction.ReleaseDeleted, release.Title, clock.GetUtcNow());   // #19
         await unitOfWork.SaveChangesAsync(ct);                        // 1. base (pistes en cascade)
         if (cover is not null)
             await storage.DeleteAsync(cover, CancellationToken.None); // 2. pochette

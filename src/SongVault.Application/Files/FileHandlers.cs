@@ -4,6 +4,8 @@ using SongVault.Application.Common.Exceptions;
 using SongVault.Domain.Activity;
 using SongVault.Domain.Files;
 using SongVault.Application.Billing;
+using SongVault.Application.Audit;
+using SongVault.Domain.Audit;
 
 namespace SongVault.Application.Files;
 
@@ -79,14 +81,16 @@ public sealed class DownloadSongFileHandler(ISongRepository songs, IFileStorageS
 
 public sealed class DeleteSongFileHandler(
     ISongRepository songs, IUnitOfWork unitOfWork, IFileStorageService storage, TimeProvider clock,
-    ActivityLog activity, PlanLimits limits)
+    ActivityLog activity, PlanLimits limits, AuditLog audit)
 {
     public async Task HandleAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct)
     {
         var song = await songs.GetWithVersionAsync(songId, versionId, ct) ?? throw new NotFoundException("Song", songId);
         var version = song.FindVersion(versionId) ?? throw new NotFoundException("SongVersion", versionId);
         var file = version.RemoveFile(fileId) ?? throw new NotFoundException("SongFile", fileId);
-        activity.FileChanged(ActivityType.FileRemoved, song, version, file, clock.GetUtcNow());
+        var now = clock.GetUtcNow();
+        activity.FileChanged(ActivityType.FileRemoved, song, version, file, now);
+        audit.Record(song.BandId, AuditAction.FileDeleted, FileSubject(song.Title, version.Number, file.OriginalFileName), now);
 
         await unitOfWork.SaveChangesAsync(ct);                       // 1. base (l'aperçu part en cascade)
         await limits.RefreshStorageAsync(song.BandId, ct);           //    et la jauge (#16)
@@ -94,4 +98,8 @@ public sealed class DeleteSongFileHandler(
         if (file.FileType == SongFileType.Audio)                     // 3. son MP3 d'aperçu (#15), s'il existe
             await storage.DeleteAsync(AudioPreview.StorageKeyFor(file.Id), CancellationToken.None);
     }
+
+    /// <summary>« Nocturne — v2 — mix.wav » : le fichier tel qu'il s'appelait, pour le journal d'audit (#19).</summary>
+    public static string FileSubject(string songTitle, int versionNumber, string fileName)
+        => $"{songTitle} — v{versionNumber} — {fileName}";
 }

@@ -2,6 +2,7 @@
 using SongVault.Application.Files;
 using SongVault.Application.Tests.Fakes;
 using SongVault.Domain.Files;
+using SongVault.Domain.Audit;
 
 namespace SongVault.Application.Tests.Files;
 
@@ -16,14 +17,16 @@ public sealed class FileScanJobTests
     private readonly FakeBackgroundJobs _jobs = new();
     private readonly FakeUnitOfWork _uow = new();
 
-    private FileScanJob Sut() => new(_scans, _previews, _storage, _scanner, _jobs, _uow, new FixedTimeProvider(Now));
+    private static readonly Guid BandId = Guid.NewGuid();
+    private readonly FakeAuditRepository _audit = new();
+    private FileScanJob Sut() => new(_scans, _previews, _storage, _scanner, _jobs, _uow, new FixedTimeProvider(Now), _audit);
 
     /// <summary>Un fichier envoyé : son original dans le stockage, son analyse en attente et, s'il est audio, son aperçu.</summary>
     private Guid Uploaded(SongFileType type = SongFileType.Audio)
     {
         var fileId = Guid.NewGuid();
         _storage.Files["k.wav"] = [1, 2, 3];
-        _scans.Targets[fileId] = new FileScanTarget("k.wav", type);
+        _scans.Targets[fileId] = new FileScanTarget("k.wav", type, BandId, "Nocturne — v1 — mix.wav");
         _scans.Add(FileScan.Request(fileId, Now));
         if (type == SongFileType.Audio) _previews.Add(AudioPreview.Request(fileId, Now));
         return fileId;
@@ -40,6 +43,7 @@ public sealed class FileScanJobTests
         await Sut().RunAsync(Job(fileId), CancellationToken.None);
 
         Assert.Equal(FileScanStatus.Clean, Assert.Single(_scans.Scans).Status);
+        Assert.Empty(_audit.Entries);                            // #19 : un fichier sain n'entre pas au journal
         Assert.Equal((AudioPreviewJob.JobType, fileId.ToString(), Now), Assert.Single(_jobs.Enqueued));
         Assert.Equal(1, _scanner.Calls);
         Assert.Equal(1, _uow.SaveCount);
@@ -70,6 +74,11 @@ public sealed class FileScanJobTests
         Assert.Equal(AudioPreviewStatus.Failed, Assert.Single(_previews.Previews).Status);    // jamais converti
         Assert.Equal((InfectedFileNoticeJob.JobType, fileId.ToString(), Now), Assert.Single(_jobs.Enqueued));
         Assert.Equal([1, 2, 3], _storage.Files["k.wav"]);        // quarantaine : l'original n'est ni déplacé ni effacé
+                                                                 // #19 : au journal d'audit du groupe, sans auteur
+        var entry = Assert.Single(_audit.Entries);
+        Assert.Equal((BandId, (string?)null, AuditAction.FileQuarantined), (entry.BandId, entry.ActorId, entry.Action));
+        Assert.Equal("Nocturne — v1 — mix.wav", entry.Subject);
+        Assert.Equal("menace : Win.Test.EICAR_HDB-1", entry.Details);
     }
 
     [Fact]

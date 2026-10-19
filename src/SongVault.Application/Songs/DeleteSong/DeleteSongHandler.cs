@@ -3,12 +3,14 @@ using SongVault.Application.Activity;
 using SongVault.Application.Common.Exceptions;
 using SongVault.Domain.Activity;
 using SongVault.Application.Billing;
+using SongVault.Application.Audit;
+using SongVault.Domain.Audit;
 
 namespace SongVault.Application.Songs.DeleteSong;
 
 public sealed class DeleteSongHandler(
     ISongRepository songs, IReleaseRepository releases, IUnitOfWork unitOfWork, IFileStorageService storage,
-    TimeProvider clock, ActivityLog activity, PlanLimits limits)
+    TimeProvider clock, ActivityLog activity, PlanLimits limits, AuditLog audit)
 {
     public async Task HandleAsync(Guid id, CancellationToken ct)
     {
@@ -22,8 +24,10 @@ public sealed class DeleteSongHandler(
 
         var keys = await songs.ListStorageKeysAsync(id, ct);    // AVANT la suppression en cascade
 
+        var now = clock.GetUtcNow();
         songs.Remove(song);
-        activity.SongChanged(ActivityType.SongDeleted, song, clock.GetUtcNow());    // le titre reste dans le fil
+        activity.SongChanged(ActivityType.SongDeleted, song, now);    // le titre reste dans le fil
+        audit.Record(song.BandId, AuditAction.SongDeleted, song.Title, now);   // #19 : et au journal d'audit
         await unitOfWork.SaveChangesAsync(ct);                  // la base supprime versions et fichiers en cascade
         await limits.RefreshStorageAsync(song.BandId, ct);      // #16 : la place libérée se voit tout de suite
 

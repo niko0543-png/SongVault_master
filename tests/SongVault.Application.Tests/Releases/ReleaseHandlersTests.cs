@@ -163,9 +163,14 @@ public sealed class ReleaseHandlersTests
         await new UploadReleaseCoverHandler(_releases, _uow, _storage, _clock)
             .HandleAsync(new UploadReleaseCoverCommand(release.Id, "recto.png", Png.Length, new MemoryStream(Png)), CancellationToken.None);
 
-        await new DeleteReleaseHandler(_releases, _uow, _storage).HandleAsync(release.Id, CancellationToken.None);
+        var audit = new FakeAuditRepository();
+        await new DeleteReleaseHandler(_releases, _uow, _storage, new SongVault.Application.Audit.AuditLog(audit, new FakeCurrentUser()), _clock)
+            .HandleAsync(release.Id, CancellationToken.None);
 
         Assert.Empty(_releases.Releases);
         Assert.Empty(_storage.Files);
+        var entry = Assert.Single(audit.Entries);               // #19
+        Assert.Equal((SongVault.Domain.Audit.AuditAction.ReleaseDeleted, release.Title), (entry.Action, entry.Subject));
+
     }
 }

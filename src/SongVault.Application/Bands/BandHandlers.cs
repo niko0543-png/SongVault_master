@@ -2,6 +2,8 @@
 using SongVault.Application.Common.Exceptions;
 using SongVault.Domain.Bands;
 using SongVault.Application.Billing;
+using SongVault.Application.Audit;
+using SongVault.Domain.Audit;
 
 namespace SongVault.Application.Bands;
 
@@ -36,14 +38,18 @@ public sealed class CreateBandHandler(
     }
 }
 
-public sealed class RenameBandHandler(IBandRepository bands, IUnitOfWork unitOfWork, IBandContext bandContext)
+public sealed class RenameBandHandler(
+    IBandRepository bands, IUnitOfWork unitOfWork, IBandContext bandContext, AuditLog audit, TimeProvider clock)
 {
     /// <summary>Renomme le groupe actif (adhésion déjà vérifiée par [BandScoped]).</summary>
     public async Task HandleAsync(string name, CancellationToken ct)
     {
         var band = await bands.GetByIdAsync(bandContext.RequiredBandId, ct)
                    ?? throw new NotFoundException("Band", bandContext.RequiredBandId);
+        var previous = band.Name;
         band.Rename(name);
+        if (band.Name != previous)
+            audit.Record(band.Id, AuditAction.BandRenamed, band.Name, clock.GetUtcNow(), details: $"ancien nom : {previous}");
         await unitOfWork.SaveChangesAsync(ct);
     }
 }
