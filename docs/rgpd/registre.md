@@ -33,7 +33,7 @@ fonctionnalité qui collecte, conserve ou transmet des données personnelles.
 | Destinataires | Les autres membres du groupe, selon leur rôle (ADR 0008) |
 | Sous-traitants | Hébergeur (base et stockage des fichiers) |
 | Transferts hors UE | Aucun |
-| Durée | Tant que le groupe existe ; un groupe dont le compte supprimé était le seul membre est effacé avec lui |
+| Durée | Tant que le groupe existe ; un groupe dont le compte supprimé était le seul membre est effacé avec lui. Un morceau, une version ou un fichier supprimé reste 30 jours dans la corbeille du groupe, puis il est effacé, fichiers compris (ADR 0027) |
 | Sécurité | Isolation par groupe vérifiée à chaque requête ; fichiers hors base, signature binaire contrôlée |
 
 ## 3. Invitations
@@ -57,7 +57,7 @@ fonctionnalité qui collecte, conserve ou transmet des données personnelles.
 | Finalité | Remettre ses données à l'utilisateur ; effacer son compte |
 | Base légale | Obligation légale (art. 6.1.c, articles 15, 17 et 20) |
 | Personnes | Utilisateurs inscrits |
-| Données | Archive ZIP de l'export ; date de la demande de suppression (tâche de purge) |
+| Données | Archive ZIP de l'export, corbeille des groupes comprise (ADR 0027) ; date de la demande de suppression (tâche de purge) |
 | Destinataires | L'utilisateur lui-même, connecté |
 | Sous-traitants | Hébergeur ; Brevo (e-mail « vos données sont prêtes », sans lien de téléchargement) |
 | Transferts hors UE | Aucun |
@@ -192,6 +192,9 @@ fonctionnalité qui collecte, conserve ou transmet des données personnelles.
   et restent actifs, sans auteur, jusqu'à leur expiration ou leur révocation.
 - Ses lignes du journal d'audit des groupes partagés : gardées un an, sans nom (« Compte
   supprimé ») ; l'identifiant de l'auteur ne renvoie plus à personne.
+- La corbeille ne retarde pas la purge d'un compte : ses groupes effacés partent avec ce
+  qu'ils ont à la corbeille. Dans les groupes partagés, ce qu'il a supprimé reste à la
+  corbeille jusqu'à sa date de purge, sans nom (« un compte supprimé »).
 - Les sauvegardes, jusqu'à leur rotation : 7 jours pour la base (restauration à un instant
   donné), 14 jours pour les fichiers (suppression réversible), voir
   `docs/runbook-sauvegardes.md`.
