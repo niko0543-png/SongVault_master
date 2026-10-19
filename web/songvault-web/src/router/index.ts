@@ -170,7 +170,20 @@ const router = createRouter({
       props: true,
       meta: { title: 'Sortie' },
     },
-       {
+    {
+      path: '/b/:bandId/setlists',
+      name: 'setlists',
+      component: () => import('@/features/setlists/pages/SetlistListPage.vue'),
+      meta: { title: 'Setlists' },
+    },
+    {
+      path: '/b/:bandId/setlists/:setlistId',
+      name: 'setlist-detail',
+      component: () => import('@/features/setlists/pages/SetlistDetailPage.vue'),
+      props: true,
+      meta: { title: 'Setlist' },
+    },
+    {
       path: '/b/:bandId/activity',
       name: 'activity',
       component: () => import('@/features/activity/pages/ActivityFeedPage.vue'),

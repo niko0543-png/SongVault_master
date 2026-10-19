@@ -47,6 +47,7 @@ async function onLogout() {
     <nav v-if="isAuthenticated" id="app-nav" class="session" :class="{ open: isMenuOpen }" aria-label="Navigation principale">
       <BandSwitcher v-if="bands.isLoaded" />
       <RouterLink v-if="bands.activeId" :to="{ name: 'releases', params: { bandId: bands.activeId } }">Sorties</RouterLink>
+      <RouterLink v-if="bands.activeId" :to="{ name: 'setlists', params: { bandId: bands.activeId } }">Setlists</RouterLink>      
       <RouterLink v-if="bands.activeId" :to="{ name: 'activity', params: { bandId: bands.activeId } }">Activité</RouterLink>
       <RouterLink v-if="bands.activeId" :to="{ name: 'band-members', params: { bandId: bands.activeId } }">Membres</RouterLink>
       <RouterLink v-if="bands.activeId && bands.can('write')" :to="{ name: 'trash', params: { bandId: bands.activeId } }">Corbeille</RouterLink>
