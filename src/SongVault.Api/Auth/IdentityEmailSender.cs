@@ -46,6 +46,6 @@ public sealed class IdentityEmailSender(IEmailQueue queue, IOptions<AppOptions> 
     private void Enqueue(EmailMessage message)
     {
         if (!queue.TryEnqueue(message))
-            logger.LogError("File d'e-mails pleine : « {Subject} » pour {To} n'est pas parti.", message.Subject, message.To);
+            logger.LogError("File d'e-mails pleine : « {Subject} » n'est pas parti.", message.Subject);   // sans l'adresse (#18)
     }
 }

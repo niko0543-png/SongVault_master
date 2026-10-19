@@ -1,6 +1,9 @@
-﻿using Microsoft.AspNetCore.Diagnostics;
+﻿using System.Diagnostics;
+
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 
+using SongVault.Api.Observability;
 using SongVault.Application.Common.Exceptions;
 using SongVault.Domain.Bands;
 using SongVault.Domain.Common;
@@ -35,22 +38,28 @@ internal sealed class GlobalExceptionHandler(
         };
 
         if (status >= 500)
+            // #18 : chemin sans jeton (lien de partage, invitation), aussi dans les journaux de la console
             logger.LogError(exception, "Erreur non gérée sur {Method} {Path}",
-                httpContext.Request.Method, httpContext.Request.Path);
+                httpContext.Request.Method, TelemetryRedactor.Redact(httpContext.Request.Path.ToString()));
+
+        var problem = new ProblemDetails
+        {
+            Status = status,
+            Title = title,
+            // Jamais le message brut d'une exception inattendue : il peut contenir SQL, chemins, secrets…
+            // Paiement indisponible (503) : message écrit pour l'utilisateur, sans détail de Stripe
+            Detail = status >= 500 && exception is not BillingUnavailableException ? null : exception.Message,
+        };
+        // #18 : la référence que l'utilisateur peut donner ; c'est l'identifiant de la trace (operation_Id) dans Application Insights
+        if (status >= 500 && Activity.Current is { } activity)
+            problem.Extensions["reference"] = activity.TraceId.ToHexString();
 
         httpContext.Response.StatusCode = status;
         return await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
         {
             HttpContext = httpContext,
             Exception = exception,
-            ProblemDetails = new ProblemDetails
-            {
-                Status = status,
-                Title = title,
-                // Jamais le message brut d'une exception inattendue : il peut contenir SQL, chemins, secrets…
-                // Paiement indisponible (503) : message écrit pour l'utilisateur, sans détail de Stripe
-                Detail = status >= 500 && exception is not BillingUnavailableException ? null : exception.Message,
-            },
+            ProblemDetails = problem,
         });
     }
 }

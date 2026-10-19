@@ -22,7 +22,8 @@ internal sealed class EmailQueueWorker(EmailQueue queue, IServiceScopeFactory sc
             catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
             {
                 // Un délai dépassé côté HttpClient lève aussi une OperationCanceledException : seul l'arrêt de l'API la laisse passer.
-                logger.LogError(ex, "E-mail « {Subject} » non envoyé à {To}.", message.Subject, message.To);
+                // #18 : jamais l'adresse du destinataire dans les journaux (ADR 0025)
+                logger.LogError(ex, "E-mail « {Subject} » non envoyé.", message.Subject);
             }
         }
     }

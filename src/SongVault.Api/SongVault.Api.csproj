@@ -25,7 +25,10 @@
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" />
     <PackageReference Include="Scalar.AspNetCore" />
   </ItemGroup>
-
+  <ItemGroup>
+    <!-- #18 : les tests appellent GlobalExceptionHandler (interne) directement -->
+    <InternalsVisibleTo Include="SongVault.Api.Tests" />
+  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SongVault.Application\SongVault.Application.csproj" />
     <ProjectReference Include="..\SongVault.Infrastructure\SongVault.Infrastructure.csproj" />
