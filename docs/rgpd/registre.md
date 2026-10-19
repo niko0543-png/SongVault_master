@@ -6,7 +6,7 @@ fonctionnalité qui collecte, conserve ou transmet des données personnelles.
 - **Responsable du traitement** : [Nom ou raison sociale], [adresse], [e-mail de contact]
 - **Délégué à la protection des données** : aucun (non obligatoire à cette taille) ;
   contact pour les demandes : [e-mail de contact]
-- **Dernière mise à jour** : 2026-10-14
+- **Dernière mise à jour** : 2026-10-19
 
 ## 1. Comptes utilisateurs
 
@@ -28,8 +28,8 @@ fonctionnalité qui collecte, conserve ou transmet des données personnelles.
 |---|---|
 | Finalité | Fournir le service : morceaux, versions, paroles, notes, fichiers audio et partitions, partagés entre les membres d'un groupe |
 | Base légale | Exécution du contrat (art. 6.1.b) |
-| Personnes | Membres des groupes ; personnes éventuellement citées dans les paroles ou les notes |
-| Données | Nom du groupe, rôles et dates d'adhésion, contenus saisis et fichiers déposés |
+| Personnes | Membres des groupes ; personnes éventuellement citées dans les paroles ou les notes ; ayants droit nommés dans les crédits, inscrits ou non (ADR 0029) |
+| Données | Nom du groupe, rôles et dates d'adhésion, contenus saisis et fichiers déposés ; crédits : nom, rôle et part des droits de chaque ayant droit, codes ISWC et ISRC |
 | Destinataires | Les autres membres du groupe, selon leur rôle (ADR 0008) |
 | Sous-traitants | Hébergeur (base et stockage des fichiers) |
 | Transferts hors UE | Aucun |
