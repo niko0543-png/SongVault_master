@@ -25,7 +25,10 @@ internal sealed class SongVersionConfiguration : IEntityTypeConfiguration<SongVe
                .HasConversion(k => k!.Value, s => MusicalKey.Parse(s))
                .HasMaxLength(MusicalKey.MaxLength);
         // Bpm (int?) : rien à configurer, EF crée une colonne int NULL
-
+        // #22 : ISRC, gardé en 12 caractères sans tiret (FRZ032600001)
+        builder.Property(v => v.Isrc)
+               .HasConversion(i => i!.Value, s => Isrc.Parse(s))
+               .HasMaxLength(Isrc.MaxLength);
         builder.HasIndex(v => new { v.SongId, v.Number }).IsUnique();
 
         builder.HasMany(v => v.Files)
