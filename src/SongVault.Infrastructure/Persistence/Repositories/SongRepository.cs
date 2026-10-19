@@ -128,17 +128,6 @@ internal sealed class SongRepository(SongVaultDbContext db, IBandContext bandCon
             select new SongFileLabel(s.Id, s.Title, v.Id, v.Number, v.Title, f.Id, f.OriginalFileName, f.FileType))
             .FirstOrDefaultAsync(ct);
 
-    public async Task<IReadOnlyList<string>> ListStorageKeysAsync(Guid songId, CancellationToken ct)
-    {
-        var files = BandVersions.AsNoTracking().Where(v => v.SongId == songId).SelectMany(v => v.Files);
-        var keys = await files.Select(f => f.StorageKey).ToListAsync(ct);
-        // #15 : et les MP3 d'aperçu de ces fichiers
-        keys.AddRange(await db.AudioPreviews.AsNoTracking()
-            .Where(p => p.PreviewStorageKey != null && files.Any(f => f.Id == p.SongFileId))
-            .Select(p => p.PreviewStorageKey!)
-            .ToListAsync(ct));
-        return keys;
-    }
 
     // ---------- Aperçus audio (#15) ----------
     public async Task<StoredFileInfo?> GetListenFileAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct)
