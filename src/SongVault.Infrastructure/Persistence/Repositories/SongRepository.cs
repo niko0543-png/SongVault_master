@@ -2,6 +2,7 @@
 using SongVault.Application.Abstractions;
 using SongVault.Application.Common;
 using SongVault.Application.Files;
+using SongVault.Application.Files.Stems;
 using SongVault.Application.Songs;
 using SongVault.Application.Versions;
 using SongVault.Domain.Songs;
@@ -189,6 +190,30 @@ internal sealed class SongRepository(SongVaultDbContext db, IBandContext bandCon
     => await BandVersions.AsNoTracking()
         .Where(v => versionIds.Contains(v.Id))
         .ToDictionaryAsync(v => v.Id, v => v.SongId, ct);
+
+    public async Task<IReadOnlyList<StemDto>?> ListStemsAsync(Guid songId, Guid versionId, CancellationToken ct)
+    {
+        var version = BandVersions.AsNoTracking().Where(v => v.SongId == songId && v.Id == versionId);
+        if (!await version.AnyAsync(ct)) return null;
+
+        var rows = await version
+            .SelectMany(v => v.Files)
+            .Where(f => f.StemPosition != null)
+            .OrderBy(f => f.StemPosition).ThenBy(f => f.UploadedAt)
+            .Select(f => new
+            {
+                f.Id,
+                f.StemName,
+                f.OriginalFileName,
+                Scan = db.FileScans.Where(s => s.SongFileId == f.Id).Select(s => (FileScanStatus?)s.Status).FirstOrDefault(),
+                DurationMs = db.AudioPreviews
+                    .Where(p => p.SongFileId == f.Id && p.Status == AudioPreviewStatus.Ready)
+                    .Select(p => p.DurationMs)
+                    .FirstOrDefault(),
+            })
+            .ToListAsync(ct);
+        return [.. rows.Select((r, i) => StemDto.Create(r.Id, r.StemName!, i, r.OriginalFileName, r.Scan, r.DurationMs))];
+    }
 
     public async Task<IReadOnlySet<Guid>> ListExistingIdsAsync(IReadOnlyCollection<Guid> songIds, CancellationToken ct)
         => (await BandSongs.AsNoTracking()

@@ -786,6 +786,13 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("SongVersionId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("StemName")
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<int?>("StemPosition")
+                        .HasColumnType("int");
+
                     b.Property<string>("StorageKey")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -804,7 +811,10 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                     b.HasIndex("StorageKey")
                         .IsUnique();
 
-                    b.ToTable("SongFiles", (string)null);
+                    b.ToTable("SongFiles", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_SongFiles_Stem", "([StemName] IS NULL AND [StemPosition] IS NULL) OR ([StemName] IS NOT NULL AND [StemPosition] >= 0)");
+                        });
                 });
 
             modelBuilder.Entity("SongVault.Domain.Invitations.Invitation", b =>

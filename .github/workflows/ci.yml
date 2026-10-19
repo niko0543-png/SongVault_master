@@ -52,6 +52,9 @@ jobs:
       - run: npm run type-check
       - run: npm run test:unit -- --run
       - run: npm run build
+      # #23 : dérive du mélangeur, mesurée dans le vrai Chromium (sans la pile Docker)
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test e2e/stems-drift.spec.ts
 
   docker:
     name: docker

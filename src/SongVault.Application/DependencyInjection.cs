@@ -20,6 +20,7 @@ using SongVault.Application.Audit;
 using SongVault.Application.Trash;
 using SongVault.Application.Setlists;
 using SongVault.Application.Songs.Rights;
+using SongVault.Application.Files.Stems;
 
 namespace SongVault.Application;
 
@@ -109,6 +110,9 @@ public static class DependencyInjection
         services.AddScoped<SetVersionIsrcHandler>();
         services.AddScoped<ExportSongCreditsHandler>();
         services.AddScoped<ExportReleaseCreditsHandler>();
+        // #23 : pistes séparées et mélangeur (ADR 0030)
+        services.AddScoped<GetStemsHandler>();
+        services.AddScoped<SetStemsHandler>();
         // #11 : fil d'activité et badges (ADR 0017)
         services.AddScoped<ActivityLog>();
         services.AddScoped<ListActivityHandler>();

@@ -1,5 +1,6 @@
 ﻿using SongVault.Application.Common;
 using SongVault.Application.Files;
+using SongVault.Application.Files.Stems;
 using SongVault.Application.Songs;
 using SongVault.Application.Versions;
 using SongVault.Domain.Songs;
@@ -33,4 +34,6 @@ public interface ISongRepository
     Task<Song?> GetWithRightsAsync(Guid songId, CancellationToken ct);
     /// <summary>Ceux de ces morceaux qui sont dans le groupe actif, avec crédits et versions, en lecture seule (#22).</summary>
     Task<IReadOnlyList<Song>> ListWithRightsAsync(IReadOnlyCollection<Guid> songIds, CancellationToken ct);
+    /// <summary>Les pistes du mélangeur de cette version (#23), dans l'ordre ; null si la version n'est pas dans le groupe actif.</summary>
+    Task<IReadOnlyList<StemDto>?> ListStemsAsync(Guid songId, Guid versionId, CancellationToken ct);
 }

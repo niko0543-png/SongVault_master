@@ -20,5 +20,9 @@ internal sealed class SongFileConfiguration : IEntityTypeConfiguration<SongFile>
         // #20 : corbeille. Index filtré : la purge quotidienne ne lit que ce qui est à la corbeille
         builder.Property(f => f.DeletedById).HasMaxLength(450);
         builder.HasIndex(f => f.DeletedAt).HasFilter("[DeletedAt] IS NOT NULL");
+        // #23 : piste du mélangeur, portée par le fichier (ADR 0030) ; les deux colonnes sont nulles ensemble
+        builder.Property(f => f.StemName).HasMaxLength(SongFile.StemNameMaxLength);
+        builder.ToTable(t => t.HasCheckConstraint("CK_SongFiles_Stem",
+            "([StemName] IS NULL AND [StemPosition] IS NULL) OR ([StemName] IS NOT NULL AND [StemPosition] >= 0)"));
     }
 }

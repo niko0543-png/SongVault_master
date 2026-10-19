@@ -18,6 +18,7 @@ import { usePreviewPolling } from '@/features/files/composables/usePreviewPollin
 import { versionsApi } from '../api/versionsApi'
 import CommentsPanel from '@/features/comments/components/CommentsPanel.vue'
 import ShareLinksPanel from '@/features/sharing/components/ShareLinksPanel.vue'
+import StemsSection from '@/features/stems/components/StemsSection.vue'
 import { usePlayerStore } from '@/features/player/stores/playerStore'
 import { toTrack, type Track } from '@/features/player/track'
 import { useBandStore } from '@/features/bands/stores/bandStore'
@@ -353,6 +354,8 @@ const commentedFile = computed(() =>
                   @retry-scan="onRetryScan" />
         <FileUploader v-if="canWrite" :song-id="songId" :version-id="version.id" @uploaded="onUploaded" />
       </SectionCard>
+      <StemsSection v-if="audioFiles.length > 0" :song-id="songId" :version-id="version.id" :files="version.files"
+                    :readonly="!canWrite" />
       <ShareLinksPanel v-if="canWrite" :target="{ type: 'Version', id: version.id }" />
       <SectionCard v-if="commentedFile" title="Commentaires">
         <template v-if="audioFiles.length > 1" #actions>
