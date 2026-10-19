@@ -1173,6 +1173,41 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                     b.ToTable("ShareLinkAccesses", (string)null);
                 });
 
+            modelBuilder.Entity("SongVault.Domain.Songs.Credit", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<decimal>("SharePercent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<Guid>("SongId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SongId", "Position");
+
+                    b.ToTable("Credits", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Credits_SharePercent", "[SharePercent] > 0 AND [SharePercent] <= 100");
+                        });
+                });
+
             modelBuilder.Entity("SongVault.Domain.Songs.Song", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1198,6 +1233,10 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                     b.Property<string>("Description")
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("Iswc")
+                        .HasMaxLength(15)
+                        .HasColumnType("nvarchar(15)");
 
                     b.Property<int>("LastVersionNumber")
                         .HasColumnType("int");
@@ -1242,6 +1281,10 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                     b.Property<string>("DeletedById")
                         .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Isrc")
+                        .HasMaxLength(12)
+                        .HasColumnType("nvarchar(12)");
 
                     b.Property<string>("Key")
                         .HasMaxLength(4)
@@ -1652,6 +1695,15 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("SongVault.Domain.Songs.Credit", b =>
+                {
+                    b.HasOne("SongVault.Domain.Songs.Song", null)
+                        .WithMany("Credits")
+                        .HasForeignKey("SongId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("SongVault.Domain.Songs.Song", b =>
                 {
                     b.HasOne("SongVault.Domain.Bands.Band", null)
@@ -1687,6 +1739,8 @@ namespace SongVault.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("SongVault.Domain.Songs.Song", b =>
                 {
+                    b.Navigation("Credits");
+
                     b.Navigation("Versions");
                 });
 

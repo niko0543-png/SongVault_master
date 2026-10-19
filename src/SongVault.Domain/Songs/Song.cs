@@ -1,4 +1,6 @@
-﻿using SongVault.Domain.Common;
+﻿using System.Globalization;
+
+using SongVault.Domain.Common;
 using SongVault.Domain.Trash;
 
 namespace SongVault.Domain.Songs;
@@ -6,18 +8,24 @@ namespace SongVault.Domain.Songs;
 public sealed class Song : ISoftDeletable
 {
     private readonly List<SongVersion> _versions = [];
+    private readonly List<Credit> _credits = [];
     public const int TitleMaxLength = 200;
     public const int ArtistMaxLength = 200;
     public const int DescriptionMaxLength = 2000;
+    public const int MaxCredits = 30;
 
     public int LastVersionNumber { get; private set; }
     public IReadOnlyCollection<SongVersion> Versions => _versions.AsReadOnly();
+    /// <summary>Les ayants droit (#22), dans l'ordre de la liste enregistrée.</summary>
+    public IReadOnlyList<Credit> Credits => _credits.OrderBy(c => c.Position).ToList();
     private Song() { } // réservé à EF Core (jeudi) ; le reste du code passe par Create
 
     public Guid Id { get; private set; }
     public string Title { get; private set; } = default!;
     public string? Artist { get; private set; }
     public string? Description { get; private set; }
+    /// <summary>Code de l'œuvre (#22) ; l'enregistrement a le sien, l'ISRC, sur chaque version.</summary>
+    public Iswc? Iswc { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
     public Guid BandId { get; private set; }
@@ -63,6 +71,43 @@ public sealed class Song : ISoftDeletable
     }
 
     public SongVersion? FindVersion(Guid versionId) => _versions.SingleOrDefault(v => v.Id == versionId);
+
+    /// <summary>
+    /// Enregistre l'ISWC et l'ensemble des crédits (#22), qui remplace l'ancien. Règle des 100 % : une liste vide
+    /// est permise (droits pas encore renseignés) ; sinon les parts font exactement 100 %. Tout est validé avant
+    /// de toucher au morceau. Les crédits à charger : tous.
+    /// </summary>
+    public void SetRights(Iswc? iswc, IReadOnlyList<CreditChoice> credits, DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(credits);
+        if (credits.Count > MaxCredits)
+            throw new DomainException($"Un morceau a au plus {MaxCredits} crédits.");
+
+        var clean = new List<(string Name, CreditRole Role, decimal Share)>(credits.Count);
+        foreach (var credit in credits)
+        {
+            var name = Text.Required(credit.Name, Credit.NameMaxLength, "nom de l'ayant droit");
+            if (!Enum.IsDefined(credit.Role))
+                throw new DomainException($"Rôle inconnu : {credit.Role}.");
+            if (credit.SharePercent is <= 0 or > 100)
+                throw new DomainException($"La part de {name} doit être comprise entre 0,01 et 100 %.");
+            if (decimal.Round(credit.SharePercent, 2) != credit.SharePercent)
+                throw new DomainException($"La part de {name} a au plus deux décimales.");
+            if (clean.Any(c => c.Role == credit.Role && string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase)))
+                throw new DomainException($"{name} apparaît deux fois avec le même rôle : regroupez ses parts.");
+            clean.Add((name, credit.Role, credit.SharePercent));
+        }
+
+        var total = clean.Sum(c => c.Share);
+        if (clean.Count > 0 && total != 100m)
+            throw new DomainException($"Le total des parts doit faire 100 % ; il fait {total.ToString("0.##", CultureInfo.InvariantCulture).Replace('.', ',')} %.");
+
+        _credits.Clear();
+        for (var i = 0; i < clean.Count; i++)
+            _credits.Add(Credit.Create(Id, i + 1, clean[i].Name, clean[i].Role, clean[i].Share));
+        Iswc = iswc;
+        UpdatedAt = now;
+    }
 
     /// <summary>
     /// Met le morceau à la corbeille (#20) avec ses versions et leurs fichiers encore en place, tous avec la même date.

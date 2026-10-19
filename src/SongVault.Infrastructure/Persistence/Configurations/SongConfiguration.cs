@@ -25,6 +25,15 @@ internal sealed class SongConfiguration : IEntityTypeConfiguration<Song>
        .HasForeignKey(v => v.SongId)
        .OnDelete(DeleteBehavior.Cascade);
         builder.Navigation(s => s.Versions).UsePropertyAccessMode(PropertyAccessMode.Field);
+        // #22 : crédits et ISWC (ADR 0029). Credits est calculée (triée par Position) : EF passe par le champ _credits
+        builder.HasMany(s => s.Credits)
+               .WithOne()
+               .HasForeignKey(c => c.SongId)
+               .OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(s => s.Credits).HasField("_credits").UsePropertyAccessMode(PropertyAccessMode.Field);
+        builder.Property(s => s.Iswc)
+               .HasConversion(i => i!.Value, s => Iswc.Parse(s))
+               .HasMaxLength(Iswc.MaxLength);
         builder.Property<byte[]>("RowVersion").IsRowVersion();
         // #20 : corbeille. Index filtré : la purge quotidienne ne lit que ce qui est à la corbeille
         builder.Property(s => s.DeletedById).HasMaxLength(450);

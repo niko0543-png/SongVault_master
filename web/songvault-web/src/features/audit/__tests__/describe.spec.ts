@@ -38,6 +38,13 @@ suite('describe (journal d’audit)', () => {
     expect(describe(item({ action: 'SongRestored', actorId: 'u-moi' }), 'u-moi')).toBe('Vous avez restauré le morceau Nocturne')
     expect(describe(item({ action: 'SongPurged' }), 'u-moi')).toBe('ana@test.local a supprimé définitivement le morceau Nocturne')
     expect(describe(item({ action: 'FilePurged', actorId: null, subject: 'Nocturne — v2 — mix.wav' }), 'u-moi'))
-      .toBe('La corbeille a effacé le fichier Nocturne — v2 — mix.wav (30 jours écoulés)')
+  .toBe('La corbeille a effacé le fichier Nocturne — v2 — mix.wav (30 jours écoulés)')
+  })
+
+  it('décrit la modification des crédits avec son résumé (#22)', () => {
+    expect(describe(item({ action: 'CreditsChanged', details: '3 crédits, ISWC T-034.524.680-1' }), 'u-moi'))
+      .toBe('ana@test.local a modifié les crédits du morceau Nocturne (3 crédits, ISWC T-034.524.680-1)')
+    expect(describe(item({ action: 'CreditsChanged', actorId: 'u-moi' }), 'u-moi'))
+      .toBe('Vous avez modifié les crédits du morceau Nocturne')
   })
 })

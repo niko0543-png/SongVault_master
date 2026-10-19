@@ -31,4 +31,6 @@ public enum AuditAction
     SongPurged,
     VersionPurged,
     FilePurged,
+    /// <summary>Crédits ou ISWC d'un morceau enregistrés (#22) : qui touche aux parts des droits doit se voir.</summary>
+    CreditsChanged,
 }

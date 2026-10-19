@@ -29,4 +29,8 @@ public interface ISongRepository
     Task<IReadOnlyDictionary<Guid, Guid>> GetVersionSongIdsAsync(IReadOnlyCollection<Guid> versionIds, CancellationToken ct);
     /// <summary>Ceux de ces morceaux qui sont dans le groupe actif, hors corbeille (#21).</summary>
     Task<IReadOnlySet<Guid>> ListExistingIdsAsync(IReadOnlyCollection<Guid> songIds, CancellationToken ct);
+    /// <summary>Le morceau suivi par EF avec ses crédits et ses versions en place (#22), s'il est dans le groupe actif.</summary>
+    Task<Song?> GetWithRightsAsync(Guid songId, CancellationToken ct);
+    /// <summary>Ceux de ces morceaux qui sont dans le groupe actif, avec crédits et versions, en lecture seule (#22).</summary>
+    Task<IReadOnlyList<Song>> ListWithRightsAsync(IReadOnlyCollection<Guid> songIds, CancellationToken ct);
 }

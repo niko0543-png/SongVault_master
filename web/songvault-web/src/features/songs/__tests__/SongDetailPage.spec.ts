@@ -34,7 +34,7 @@ async function mountPage() {
         createSpy: vi.fn,
         initialState: { band: { bands: [{ id: 'b1', name: 'Les Rats', role: 'Guest' }], activeId: 'b1', isLoaded: true } },
       })],
-      stubs: { VersionTimeline: true },
+          stubs: { VersionTimeline: true, SongRightsSection: true },
     },
   })
   await flushPromises()

@@ -142,6 +142,10 @@ docker compose down -v       # supprime aussi la base et les fichiers
   clavier, avec tonalité, BPM, notes de scène et durée (celle du fichier audio, ou saisie) ;
   l'API calcule la durée totale, et la feuille imprimée tient sur une page
   ([ADR 0028](docs/adr/0028-setlists.md)).
+- **Crédits et droits** : les ayants droit d'un morceau (auteur, compositeur, arrangeur,
+  éditeur) et leur part, qui doit faire 100 % ; l'ISWC du morceau et l'ISRC de chaque version ;
+  export CSV d'un morceau ou d'une sortie, qui s'ouvre tel quel dans Excel
+  ([ADR 0029](docs/adr/0029-credits-et-repartition-des-droits.md)).
 
 ---
 

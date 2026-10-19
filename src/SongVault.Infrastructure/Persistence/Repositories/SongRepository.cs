@@ -85,6 +85,22 @@ internal sealed class SongRepository(SongVaultDbContext db, IBandContext bandCon
          .AsSplitQuery()
          .FirstOrDefaultAsync(s => s.Id == songId, ct);
 
+    public Task<Song?> GetWithRightsAsync(Guid songId, CancellationToken ct)
+       => BandSongs
+           .Include(s => s.Credits)
+           .Include(s => s.Versions)
+           .AsSplitQuery()
+           .FirstOrDefaultAsync(s => s.Id == songId, ct);
+
+    public async Task<IReadOnlyList<Song>> ListWithRightsAsync(IReadOnlyCollection<Guid> songIds, CancellationToken ct)
+        => await BandSongs.AsNoTracking()
+            .Include(s => s.Credits)
+            .Include(s => s.Versions)
+            .AsSplitQuery()
+            .Where(s => songIds.Contains(s.Id))
+            .ToListAsync(ct);
+
+
     public async Task<IReadOnlyList<SongVersionSummaryDto>> ListVersionsAsync(Guid songId, CancellationToken ct)
         => await BandVersions.AsNoTracking()
             .Where(v => v.SongId == songId)

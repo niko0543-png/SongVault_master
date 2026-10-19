@@ -119,7 +119,12 @@ internal sealed class FakeSongRepository : ISongRepository
     }
 
     public Task<IReadOnlySet<Guid>> ListExistingIdsAsync(IReadOnlyCollection<Guid> songIds, CancellationToken ct)
-        => Task.FromResult<IReadOnlySet<Guid>>(Live.Where(s => songIds.Contains(s.Id)).Select(s => s.Id).ToHashSet());
+ => Task.FromResult<IReadOnlySet<Guid>>(Live.Where(s => songIds.Contains(s.Id)).Select(s => s.Id).ToHashSet());
+
+    public Task<Song?> GetWithRightsAsync(Guid songId, CancellationToken ct) => GetByIdAsync(songId, ct);
+
+    public Task<IReadOnlyList<Song>> ListWithRightsAsync(IReadOnlyCollection<Guid> songIds, CancellationToken ct)
+        => Task.FromResult<IReadOnlyList<Song>>([.. Live.Where(s => songIds.Contains(s.Id))]);
 }
 /// <summary>Sorties en mémoire ; les titres et versions des pistes viennent du FakeSongRepository donné.</summary>
 internal sealed class FakeReleaseRepository(FakeSongRepository? songs = null) : IReleaseRepository
