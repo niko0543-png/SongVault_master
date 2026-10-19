@@ -1,11 +1,10 @@
 ﻿using System.Net;
-
 using Microsoft.Extensions.Options;
-
 using SongVault.Application.Abstractions;
 using SongVault.Application.Common;
 using SongVault.Application.Common.Exceptions;
 using SongVault.Domain.Files;
+using SongVault.Domain.Audit;
 
 namespace SongVault.Application.Files;
 
@@ -31,7 +30,7 @@ public sealed class FileScanQueue(IFileScanRepository scans, IBackgroundJobs job
 /// </summary>
 public sealed class FileScanJob(
     IFileScanRepository scans, IAudioPreviewRepository previews, IFileStorageService storage, IMalwareScanner scanner,
-    IBackgroundJobs jobs, IUnitOfWork unitOfWork, TimeProvider clock) : IBackgroundJobHandler
+        IBackgroundJobs jobs, IUnitOfWork unitOfWork, TimeProvider clock, IAuditRepository audit) : IBackgroundJobHandler
 {
     public const string JobType = "file.scan";
 
@@ -66,8 +65,11 @@ public sealed class FileScanJob(
                 scan.MarkInfected(threat, now);
                 if (target.FileType == SongFileType.Audio)
                     (await previews.GetAsync(fileId, ct))?.MarkFailed("Fichier bloqué par l'antivirus.", now);
-                // La ligne FileScans (menace, date) sert de trace en attendant le journal d'audit du groupe (#19)
                 jobs.Enqueue(InfectedFileNoticeJob.JobType, fileId.ToString(), now);
+                // #19 : au journal d'audit du groupe, sans auteur (c'est SongVault qui bloque)
+                if (target.BandId != Guid.Empty)
+                    audit.Add(AuditEntry.Record(target.BandId, null, AuditAction.FileQuarantined, target.Label, now,
+                        details: $"menace : {threat}"));
             }
             else
             {

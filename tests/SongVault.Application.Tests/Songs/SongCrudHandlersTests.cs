@@ -8,6 +8,8 @@ using SongVault.Domain.Songs;
 using SongVault.Domain.Releases;
 using SongVault.Application.Activity;
 using SongVault.Application.Billing;
+using SongVault.Application.Audit;
+using SongVault.Domain.Audit;
 
 namespace SongVault.Application.Tests.Songs;
 
@@ -20,6 +22,8 @@ public sealed class SongCrudHandlersTests
     private readonly FakeFileStorageService _storage = new();
     private readonly FakeActivityRepository _activity = new();
     private ActivityLog Log() => new(_activity, new FakeCurrentUser());
+    private readonly FakeAuditRepository _audit = new();
+    private AuditLog Audit() => new(_audit, new FakeCurrentUser());
     private readonly FakeReleaseRepository _releases = new();
     private readonly FakeBillingRepository _billing = new();
 
@@ -68,11 +72,14 @@ public sealed class SongCrudHandlersTests
     {
         var song = ExistingSong();
 
-        await new DeleteSongHandler(_songs, _releases, _uow, _storage, _clock, Log(), new PlanLimits(_billing)).HandleAsync(song.Id, CancellationToken.None);
+        await new DeleteSongHandler(_songs, _releases, _uow, _storage, _clock, Log(), new PlanLimits(_billing), Audit()).HandleAsync(song.Id, CancellationToken.None);
 
         Assert.Empty(_songs.Songs);
         Assert.Equal(1, _uow.SaveCount);
         Assert.Equal(song.BandId, Assert.Single(_billing.Refreshed));   // la jauge suit la suppression
+        var entry = Assert.Single(_audit.Entries);                       // #19 : qui a supprimé quoi
+        Assert.Equal((song.BandId, "owner-1", AuditAction.SongDeleted, song.Title),
+            (entry.BandId, entry.ActorId, entry.Action, entry.Subject));
     }
 
     [Fact]
@@ -85,11 +92,12 @@ public sealed class SongCrudHandlersTests
         _releases.Releases.Add(release);
 
         var error = await Assert.ThrowsAsync<ConflictException>(
-            () => new DeleteSongHandler(_songs, _releases, _uow, _storage, _clock, Log(), new PlanLimits(_billing)).HandleAsync(song.Id, CancellationToken.None));
+            () => new DeleteSongHandler(_songs, _releases, _uow, _storage, _clock, Log(), new PlanLimits(_billing), Audit()).HandleAsync(song.Id, CancellationToken.None));
 
         Assert.Contains("« Nuits blanches »", error.Message);
         Assert.Single(_songs.Songs);
         Assert.Equal(0, _uow.SaveCount);
+        Assert.Empty(_audit.Entries);                                    // refusé : rien au journal
     }
 
 
@@ -97,7 +105,7 @@ public sealed class SongCrudHandlersTests
     public async Task Delete_morceau_absent_leve_NotFound()
     {
         await Assert.ThrowsAsync<NotFoundException>(
-            () => new DeleteSongHandler(_songs, _releases, _uow, _storage, _clock, Log(), new PlanLimits(_billing)).HandleAsync(Guid.NewGuid(), CancellationToken.None));
+            () => new DeleteSongHandler(_songs, _releases, _uow, _storage, _clock, Log(), new PlanLimits(_billing), Audit()).HandleAsync(Guid.NewGuid(), CancellationToken.None));
     }
 
     [Theory]

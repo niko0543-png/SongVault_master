@@ -17,6 +17,7 @@ using SongVault.Domain.Activity;
 using SongVault.Domain.Notifications;
 using SongVault.Domain.Sharing;
 using SongVault.Domain.Billing;
+using SongVault.Domain.Audit;
 
 namespace SongVault.Infrastructure.Persistence;
 
@@ -57,6 +58,9 @@ public sealed class SongVaultDbContext(
     public DbSet<Plan> Plans => Set<Plan>();
     public DbSet<Subscription> Subscriptions => Set<Subscription>();
     public DbSet<ProcessedStripeEvent> ProcessedStripeEvents => Set<ProcessedStripeEvent>();
+    /// <summary>Journal d'audit des groupes et historique de connexion des comptes (ADR 0026).</summary>
+    public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
+    public DbSet<AccountEvent> AccountEvents => Set<AccountEvent>();
     /// <summary>Clés qui signent cookies et liens (ADR 0010) : en base pour survivre à une reconstruction de l'API.</summary>
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
@@ -75,6 +79,9 @@ public sealed class SongVaultDbContext(
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
+        // #19 : le journal d'audit ne se modifie pas depuis l'application (le déclencheur SQL le refuse aussi)
+        if (ChangeTracker.Entries<AuditEntry>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))
+            throw new InvalidOperationException("Journal d'audit : une ligne ne se modifie ni ne se supprime.");
         try
         {
             return await base.SaveChangesAsync(cancellationToken);

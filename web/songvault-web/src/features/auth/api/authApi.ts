@@ -16,6 +16,7 @@ export const authApi = {
   forgotPassword: (email: string) => request<void>('/auth/forgotPassword', { method: 'POST', body: { email } }),
   resetPassword: (email: string, resetCode: string, newPassword: string) =>
     request<void>('/auth/resetPassword', { method: 'POST', body: { email, resetCode, newPassword } }),
-  changePassword: (oldPassword: string, newPassword: string) =>
-    request<void>('/auth/manage/info', { method: 'POST', body: { oldPassword, newPassword } }),
+  /** #19 : par /api/me (POST /auth/manage/info est fermé) ; cette session reste ouverte. */
+  changePassword: (currentPassword: string, newPassword: string) =>
+    request<void>('/me/password', { method: 'POST', body: { currentPassword, newPassword } }),
 }

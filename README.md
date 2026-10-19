@@ -131,6 +131,10 @@ docker compose down -v       # supprime aussi la base et les fichiers
 - **Supervision** : en production, traces, erreurs et métriques dans Application Insights
   (OpenTelemetry), alertes par e-mail sur les erreurs, page publique `/statut` et vérification
   de disponibilité par GitHub Actions ([ADR 0025](docs/adr/0025-supervision-en-production.md)).
+- **Double authentification et journal d'audit** : code d'une application (TOTP) en plus du mot
+  de passe, codes de secours, historique de connexion dans « Mon compte » ; chaque groupe a un
+  journal d'audit (qui a supprimé quoi, qui a invité ou retiré qui) que ses Owner consultent
+  et que personne ne peut modifier ([ADR 0026](docs/adr/0026-double-authentification-et-journal-d-audit.md)).
 
 ---
 
@@ -358,6 +362,10 @@ npx playwright test                           # E2E (application lancée sur :80
   Conteneur privé ; URL signées limitées à un fichier, pour créer (1 h) ou lire (30 min).
   Analyse **antivirus ClamAV** de chaque fichier avant toute lecture, une fois
   `Antivirus:Provider=ClamAv` ; un fichier infecté reste bloqué ([ADR 0024](docs/adr/0024-analyse-antivirus.md)).
+- **Double authentification** (TOTP d'Identity) : mot de passe redemandé pour la désactiver ou
+  renouveler les codes de secours, un code faux compte comme un mot de passe faux (verrouillage) ;
+  historique de connexion par compte, avec le réseau masqué ; journal d'audit des groupes protégé
+  par un déclencheur SQL ([ADR 0026](docs/adr/0026-double-authentification-et-journal-d-audit.md)).
 - **Télémétrie sans donnée personnelle** : adresses e-mail, jetons des liens et valeurs des URL
   retirés avant l'envoi à Application Insights ; ni adresse IP ni navigateur ([ADR 0025](docs/adr/0025-supervision-en-production.md)).
 - **Clés Data Protection** chiffrées par une clé Key Vault sur Azure.

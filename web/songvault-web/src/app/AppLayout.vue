@@ -50,6 +50,7 @@ async function onLogout() {
       <RouterLink v-if="bands.activeId" :to="{ name: 'activity', params: { bandId: bands.activeId } }">Activité</RouterLink>
       <RouterLink v-if="bands.activeId" :to="{ name: 'band-members', params: { bandId: bands.activeId } }">Membres</RouterLink>
       <RouterLink v-if="bands.activeId && bands.can('admin')" :to="{ name: 'billing', params: { bandId: bands.activeId } }">Facturation</RouterLink>
+      <RouterLink v-if="bands.activeId && bands.can('admin')" :to="{ name: 'audit', params: { bandId: bands.activeId } }">Journal</RouterLink>
       <RouterLink :to="{ name: 'account' }" class="muted account-link" title="Mon compte">{{ user?.email }}</RouterLink>
       <button type="button" class="secondary" @click="onLogout">Se déconnecter</button>
     </nav>

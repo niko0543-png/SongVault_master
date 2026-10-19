@@ -7,6 +7,8 @@ using SongVault.Application.Common.Exceptions;
 using SongVault.Domain.Bands;
 using SongVault.Domain.Common;
 using SongVault.Domain.Invitations;
+using SongVault.Application.Audit;
+using SongVault.Domain.Audit;
 
 namespace SongVault.Application.Invitations;
 
@@ -14,7 +16,7 @@ public sealed record CreateInvitationCommand(string Email, BandRole Role);
 
 public sealed class CreateInvitationHandler(
     IInvitationRepository invitations, IBandRepository bands, IUnitOfWork unitOfWork, IBandContext bandContext,
-    ICurrentUser currentUser, IEmailSender emailSender, IOptions<AppOptions> app, TimeProvider clock)
+    ICurrentUser currentUser, IEmailSender emailSender, IOptions<AppOptions> app, TimeProvider clock, AuditLog audit)
 {
     /// <summary>
     /// Invite une adresse dans le groupe actif (appelant Owner, vérifié par [MinimumBandRole]).
@@ -37,6 +39,8 @@ public sealed class CreateInvitationHandler(
         var (token, hash) = InvitationToken.New();
         var invitation = Invitation.Create(bandId, email, command.Role, hash, currentUser.UserId, now);
         invitations.Add(invitation);
+        // #19 : l'adresse masquée, pas en clair (le journal se garde un an)
+        audit.Record(bandId, AuditAction.InvitationCreated, AuditEntry.MaskEmail(email), now, details: invitation.Role.ToString());
         await unitOfWork.SaveChangesAsync(ct);
 
         var link = $"{app.Value.PublicUrl.TrimEnd('/')}/invite/{token}";
@@ -65,14 +69,16 @@ public sealed class ListInvitationsHandler(IInvitationRepository invitations, IB
 }
 
 public sealed class RevokeInvitationHandler(
-    IInvitationRepository invitations, IUnitOfWork unitOfWork, IBandContext bandContext, TimeProvider clock)
+    IInvitationRepository invitations, IUnitOfWork unitOfWork, IBandContext bandContext, TimeProvider clock, AuditLog audit)
 {
     /// <summary>Annule une invitation en attente du groupe actif. Déjà utilisée, annulée ou expirée : 410.</summary>
     public async Task HandleAsync(Guid invitationId, CancellationToken ct)
     {
         var invitation = await invitations.GetInBandAsync(bandContext.RequiredBandId, invitationId, ct)
                          ?? throw new NotFoundException("Invitation", invitationId);
-        invitation.Revoke(clock.GetUtcNow());
+        var now = clock.GetUtcNow();
+        invitation.Revoke(now);                          // déjà plus en attente : 410, et rien au journal
+        audit.Record(invitation.BandId, AuditAction.InvitationRevoked, AuditEntry.MaskEmail(invitation.Email), now);
         await unitOfWork.SaveChangesAsync(ct);
     }
 }
@@ -91,7 +97,7 @@ public sealed class PreviewInvitationHandler(IInvitationRepository invitations, 
 
 public sealed class AcceptInvitationHandler(
     IInvitationRepository invitations, IBandRepository bands, IUnitOfWork unitOfWork,
-    ICurrentUser currentUser, TimeProvider clock)
+    ICurrentUser currentUser, TimeProvider clock, AuditLog audit)
 {
     /// <summary>
     /// L'utilisateur connecté rejoint le groupe avec le rôle prévu. Invitation et adhésion partent dans le même
@@ -116,6 +122,8 @@ public sealed class AcceptInvitationHandler(
         invitation.Accept(userId, now);
         if (!band.HasMember(userId))
             band.AddMember(userId, invitation.Role, now);       // déjà membre : il garde son rôle actuel
+        audit.Record(band.Id, AuditAction.InvitationAccepted, AuditEntry.MaskEmail(invitation.Email), now,
+            details: band.Memberships.Single(m => m.UserId == userId).Role.ToString());
         await unitOfWork.SaveChangesAsync(ct);
         return Summary(band, userId);
     }

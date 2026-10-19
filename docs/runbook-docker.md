@@ -383,6 +383,24 @@ $email = 'ana@exemple.fr'
 docker compose @sql -Q "UPDATE BackgroundJobs SET RunAfter = SYSDATETIMEOFFSET() WHERE Type = 'account.purge' AND Status = 'Pending' AND Payload = (SELECT Id FROM AspNetUsers WHERE NormalizedEmail = UPPER('$email'))"
 ```
 
+### Couper la double authentification d'un compte (téléphone et codes de secours perdus)
+
+À faire seulement après avoir vérifié l'identité du titulaire, par un autre moyen que l'adresse du compte
+(qu'un attaquant pourrait contrôler) : par exemple un autre membre du groupe qui le connaît (ADR 0026).
+Le compte se connecte ensuite avec son seul mot de passe ; la ligne « Double authentification
+désactivée » de son historique dit que c'est le support.
+
+```powershell
+$email = 'ana@exemple.fr'
+docker compose @sql -Q "DECLARE @id nvarchar(450) = (SELECT Id FROM AspNetUsers WHERE NormalizedEmail = UPPER('$email'));
+UPDATE AspNetUsers SET TwoFactorEnabled = 0, SecurityStamp = CONVERT(nvarchar(36), NEWID()) WHERE Id = @id;
+DELETE FROM AspNetUserTokens WHERE UserId = @id AND Name IN ('AuthenticatorKey', 'RecoveryCodes');
+INSERT INTO AccountEvents (UserId, Type, OccurredAt, Device) VALUES (@id, 'TwoFactorDisabled', SYSDATETIMEOFFSET(), N'Support SongVault');"
+
+```
+Sur Azure, la même requête (sans `docker compose @sql -Q`, avec l'adresse à la place de `$email`) se lance
+dans l'Éditeur de requêtes de la base `SongVault` du portail (compte `songvaultadmin`, voir le runbook Azure, « Offrir une formule à un groupe »).
+
 ---
 
 

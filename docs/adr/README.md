@@ -31,3 +31,4 @@ l'ancien, qui passe au statut « remplacé par ADR NNNN ».
 | [0023](0023-abonnements-et-quotas.md) | Abonnements et quotas : formules en base, abonnement porté par le groupe, Stripe sans SDK | accepté |
 | [0024](0024-analyse-antivirus.md) | Analyse antivirus : ClamAV partout, dans une tâche de fond, fichier illisible avant le verdict, activée en production à la commercialisation | accepté |
 | [0025](0025-supervision-en-production.md) | Supervision en production : OpenTelemetry vers Application Insights, alertes par e-mail, page de statut publique | accepté |
+| [0026](0026-double-authentification-et-journal-d-audit.md) | Double authentification et journal d'audit : TOTP d'Identity, historique de connexion, journal en ajout seul | accepté |

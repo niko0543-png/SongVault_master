@@ -15,6 +15,7 @@ using SongVault.Infrastructure.Persistence;
 using SongVault.Api.Observability;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using SongVault.Api.ServiceStatus;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -73,7 +74,9 @@ builder.Services.AddIdentityApiEndpoints<IdentityUser>(options =>
     options.Tokens.EmailConfirmationTokenProvider = AccountTokens.EmailConfirmationProvider;
 })
     .AddEntityFrameworkStores<SongVaultDbContext>()
-    .AddTokenProvider<EmailConfirmationTokenProvider>(AccountTokens.EmailConfirmationProvider);
+     .AddTokenProvider<EmailConfirmationTokenProvider>(AccountTokens.EmailConfirmationProvider)
+    // #19 : chaque connexion (réussie ou non) entre dans l'historique du compte (ADR 0026)
+    .AddSignInManager<AuditingSignInManager>();
 
 // Lien de réinitialisation : 2 h (fournisseur par défaut d'Identity)
 builder.Services.Configure<DataProtectionTokenProviderOptions>(o => o.TokenLifespan = AccountTokens.PasswordResetLifetime);
@@ -81,6 +84,17 @@ builder.Services.Configure<DataProtectionTokenProviderOptions>(o => o.TokenLifes
 builder.Services.Configure<SecurityStampValidatorOptions>(o => o.ValidationInterval = TimeSpan.FromMinutes(1));
 // E-mails d'Identity en français, liens vers le front, envoyés en arrière-plan
 builder.Services.AddTransient<IEmailSender<IdentityUser>, IdentityEmailSender>();
+
+// #19 : après une connexion avec code, ce navigateur ne redemande pas de code pendant 14 jours.
+// Changer de mot de passe ou de réglage de double authentification l'oublie (empreinte de sécurité).
+builder.Services.Configure<CookieAuthenticationOptions>(IdentityConstants.TwoFactorRememberMeScheme, options =>
+{
+    options.Cookie.Name = "songvault.2fa";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SameSite = SameSiteMode.Strict;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    options.ExpireTimeSpan = TimeSpan.FromDays(14);
+});
 
 builder.Services.ConfigureApplicationCookie(options =>
 {
@@ -139,7 +153,10 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = c => c
 // /api/auth/register, /api/auth/login, /api/auth/manage/… (fournis par Identity)
 app.MapGroup("/api/auth")
    .MapIdentityApi<IdentityUser>()
-   .RequireRateLimiting(RateLimiting.Auth);      // limite les tentatives de connexion par IP
+    .RequireRateLimiting(RateLimiting.Auth)       // limite les tentatives de connexion par IP
+                                                  // #19 : double authentification et mot de passe passent par /api/me (mot de passe redemandé, historique)
+   .AddEndpointFilter(async (context, next) =>
+       IdentityEndpoints.IsClosed(context.HttpContext.Request) ? Results.NotFound() : await next(context));
 
 // TOUS les contrôleurs exigent un utilisateur connecté
 app.MapControllers().RequireAuthorization();

@@ -78,7 +78,8 @@ public sealed class ActivityHandlersTests
         var song = ExistingSong();
 
         await new DeleteSongHandler(_songs, new FakeReleaseRepository(), _uow, new FakeFileStorageService(), _clock, Log(),
-        new SongVault.Application.Billing.PlanLimits(new FakeBillingRepository()))
+          new SongVault.Application.Billing.PlanLimits(new FakeBillingRepository()),
+        new SongVault.Application.Audit.AuditLog(new FakeAuditRepository(), new FakeCurrentUser("ana")))
             .HandleAsync(song.Id, CancellationToken.None);
 
         var e = Assert.Single(_activity.Events);

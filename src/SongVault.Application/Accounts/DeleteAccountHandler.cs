@@ -1,5 +1,7 @@
 ﻿using SongVault.Application.Abstractions;
+using SongVault.Application.Audit;
 using SongVault.Application.Common.Exceptions;
+using SongVault.Domain.Audit;
 using SongVault.Domain.Bands;
 using SongVault.Domain.Common;
 
@@ -9,7 +11,7 @@ public sealed record DeleteAccountCommand(string Password);
 
 public sealed class DeleteAccountHandler(
     IAccountRepository accounts, IBackgroundJobs jobs, IUnitOfWork unitOfWork, ICurrentUser currentUser,
-    TimeProvider clock, IBillingRepository billing)
+    TimeProvider clock, IBillingRepository billing, AuditLog audit)
 {
     /// <summary>Délai avant l'effacement définitif (ADR 0011).</summary>
     public static readonly TimeSpan PurgeDelay = TimeSpan.FromDays(30);
@@ -35,6 +37,7 @@ public sealed class DeleteAccountHandler(
             throw new ConflictException(
                 $"{string.Join(", ", paying)} {(paying.Count > 1 ? "ont" : "a")} un abonnement en cours : résiliez-le depuis la page Facturation, puis supprimez votre compte.");
 
+        var now = clock.GetUtcNow();
         var blocking = new List<string>();
         foreach (var band in bands)
         {
@@ -42,6 +45,7 @@ public sealed class DeleteAccountHandler(
             try
             {
                 band.RemoveMember(userId);
+                audit.Record(band.Id, AuditAction.MemberLeft, null, now, details: "suppression du compte");   // #19
             }
             catch (LastOwnerException)
             {
@@ -54,7 +58,7 @@ public sealed class DeleteAccountHandler(
                 $"Vous êtes le dernier Owner de {string.Join(", ", blocking)} : nommez d'abord un autre Owner, ou retirez les autres membres.");
 
         await accounts.DeactivateAsync(userId, ct);
-        jobs.Enqueue(PurgeAccountJob.JobType, userId, clock.GetUtcNow() + PurgeDelay);
+        jobs.Enqueue(PurgeAccountJob.JobType, userId, now + PurgeDelay);
         await unitOfWork.SaveChangesAsync(ct);                  // départs, verrouillage et purge : tout ou rien
     }
 }

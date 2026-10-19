@@ -6,6 +6,8 @@ using SongVault.Domain.Common;
 using SongVault.Domain.Files;
 using SongVault.Application.Activity;
 using SongVault.Application.Files;
+using SongVault.Application.Audit;
+using SongVault.Domain.Audit;
 
 namespace SongVault.Application.Comments;
 
@@ -80,7 +82,8 @@ public sealed class EditCommentHandler(
 }
 
 public sealed class DeleteCommentHandler(
-    ICommentRepository comments, IUnitOfWork unitOfWork, IBandContext band, ICurrentUser user)
+    ICommentRepository comments, IUnitOfWork unitOfWork, IBandContext band, ICurrentUser user,
+    AuditLog audit, TimeProvider clock)
 {
     /// <summary>Supprime un commentaire ; celui d'origine part avec toutes ses réponses.</summary>
     public async Task HandleAsync(Guid fileId, Guid commentId, CancellationToken ct)
@@ -89,10 +92,17 @@ public sealed class DeleteCommentHandler(
         if (!comment.IsWrittenBy(user.UserId) && band.Role != BandRole.Owner)
             throw new ForbiddenException("Seuls l'auteur et les Owner du groupe peuvent supprimer un commentaire.");
 
+        var replies = 0;
         if (!comment.IsReply)
             foreach (var reply in await comments.ListRepliesAsync(comment.Id, ct))
+            {
                 comments.Remove(reply);
+                replies++;
+            }
         comments.Remove(comment);
+        // #19 : qui a supprimé le commentaire de qui ; jamais son texte
+        audit.Record(comment.BandId, AuditAction.CommentDeleted, comment.IsReply ? "Réponse" : "Commentaire",
+            clock.GetUtcNow(), comment.AuthorId, replies > 0 ? $"avec {replies} réponse{(replies > 1 ? "s" : "")}" : null);
         await unitOfWork.SaveChangesAsync(ct);      // EF efface les réponses avant leur fil
     }
 }

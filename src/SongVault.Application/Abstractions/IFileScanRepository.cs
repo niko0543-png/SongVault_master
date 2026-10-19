@@ -18,7 +18,8 @@ public interface IFileScanRepository
     Task<InfectedFileNotice?> GetInfectedNoticeAsync(Guid songFileId, CancellationToken ct);
 }
 
-public sealed record FileScanTarget(string StorageKey, SongFileType FileType);
+/// <summary>BandId et Label (« Nocturne — v2 — mix.wav ») servent au journal d'audit si le fichier est bloqué (#19).</summary>
+public sealed record FileScanTarget(string StorageKey, SongFileType FileType, Guid BandId = default, string Label = "");
 
 public sealed record InfectedFileNotice(
     string UploaderEmail, Guid BandId, string BandName, Guid SongId, string SongTitle, Guid VersionId, int VersionNumber,

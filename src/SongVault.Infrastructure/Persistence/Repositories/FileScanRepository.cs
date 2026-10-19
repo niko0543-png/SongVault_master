@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 
 using SongVault.Application.Abstractions;
+using SongVault.Application.Files;
 using SongVault.Domain.Activity;
 using SongVault.Domain.Files;
 using SongVault.Domain.Songs;
@@ -22,11 +23,21 @@ internal sealed class FileScanRepository(SongVaultDbContext db) : IFileScanRepos
             .ToListAsync(ct);
 
     // SongFile n'a pas de filtre de groupe (seul Song en a un) : lisible hors requête HTTP
-    public Task<FileScanTarget?> GetTargetAsync(Guid songFileId, CancellationToken ct)
-        => db.Set<SongFile>().AsNoTracking()
-            .Where(f => f.Id == songFileId)
-            .Select(f => new FileScanTarget(f.StorageKey, f.FileType))
+    public async Task<FileScanTarget?> GetTargetAsync(Guid songFileId, CancellationToken ct)
+    {
+        // #19 : avec le groupe et le nom du fichier, pour le journal d'audit s'il est bloqué
+        var row = await (
+                from f in db.Set<SongFile>().AsNoTracking()
+                join v in db.Set<SongVersion>() on f.SongVersionId equals v.Id
+                join s in db.Songs.IgnoreQueryFilters([SongVaultDbContext.BandFilter]) on v.SongId equals s.Id
+                where f.Id == songFileId
+                select new { f.StorageKey, f.FileType, s.BandId, s.Title, v.Number, f.OriginalFileName })
             .FirstOrDefaultAsync(ct);
+        return row is null
+            ? null
+            : new FileScanTarget(row.StorageKey, row.FileType, row.BandId,
+                DeleteSongFileHandler.FileSubject(row.Title, row.Number, row.OriginalFileName));
+    }
 
     public Task<InfectedFileNotice?> GetInfectedNoticeAsync(Guid songFileId, CancellationToken ct)
         => (from scan in db.FileScans.AsNoTracking()

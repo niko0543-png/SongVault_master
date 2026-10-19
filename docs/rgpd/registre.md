@@ -134,6 +134,34 @@ fonctionnalité qui collecte, conserve ou transmet des données personnelles.
 | Durée | Abonnement : tant que le groupe existe. Factures : 10 ans (Code de commerce, art. L123-22), dans Stripe |
 | Sécurité | Aucune donnée de carte chez SongVault (Checkout et portail hébergés par Stripe) ; webhook signé, vérifié, rejoué sans effet |
 
+## 11. Historique de connexion
+
+| | |
+|---|---|
+| Finalité | Montrer au titulaire les connexions à son compte et les changements de sécurité, pour qu'il repère une intrusion |
+| Base légale | Intérêt légitime (art. 6.1.f) : sécurité du compte |
+| Personnes | Titulaires de compte |
+| Données | Date, type (connexion, mot de passe faux, code refusé, verrouillage, mot de passe changé, double authentification activée ou désactivée, codes renouvelés), réseau (IP masquée en /24 ou /48), navigateur et système résumés |
+| Destinataires | Le titulaire seul (« Mon compte ») |
+| Sous-traitants | Hébergeur |
+| Transferts hors UE | Aucun |
+| Durée | 90 jours ; effacé avec le compte |
+| Sécurité | Jamais d'IP complète ni de User-Agent brut ; rien n'est écrit pour une adresse inconnue |
+
+## 12. Journal d'audit des groupes
+
+| | |
+|---|---|
+| Finalité | Permettre aux Owner de savoir qui a supprimé, invité, retiré ou changé quoi dans le groupe |
+| Base légale | Intérêt légitime du groupe (art. 6.1.f) |
+| Personnes | Membres du groupe ; personnes invitées |
+| Données | Date, action, identifiant de l'auteur et du compte visé, titre ou nom de ce qui est visé, adresse invitée masquée (`n***@exemple.fr`), précision courte (rôle, durée d'un lien, menace détectée). Jamais le texte d'un commentaire ni un jeton |
+| Destinataires | Les Owner du groupe |
+| Sous-traitants | Hébergeur |
+| Transferts hors UE | Aucun |
+| Durée | 1 an ; effacé avec le groupe |
+| Sécurité | Ajout seul : aucune route de modification, refus dans l'application et déclencheur SQL (ADR 0026) |
+
 ## Sous-traitants
 
 | Sous-traitant | Rôle | Localisation | Contrat de traitement (DPA) | État |
@@ -162,6 +190,8 @@ fonctionnalité qui collecte, conserve ou transmet des données personnelles.
   sans auteur (« Compte supprimé »). Il peut les supprimer lui-même avant de partir.
 - Les liens de partage qu'il a créés dans les groupes partagés : ils appartiennent au groupe
   et restent actifs, sans auteur, jusqu'à leur expiration ou leur révocation.
+- Ses lignes du journal d'audit des groupes partagés : gardées un an, sans nom (« Compte
+  supprimé ») ; l'identifiant de l'auteur ne renvoie plus à personne.
 - Les sauvegardes, jusqu'à leur rotation : 7 jours pour la base (restauration à un instant
   donné), 14 jours pour les fichiers (suppression réversible), voir
   `docs/runbook-sauvegardes.md`.

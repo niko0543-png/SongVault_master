@@ -239,6 +239,44 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("SongVault.Domain.Accounts.AccountEvent", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Device")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Network")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OccurredAt");
+
+                    b.HasIndex("UserId", "OccurredAt");
+
+                    b.ToTable("AccountEvents", (string)null);
+                });
+
             modelBuilder.Entity("SongVault.Domain.Accounts.DataExport", b =>
                 {
                     b.Property<Guid>("Id")
@@ -344,6 +382,55 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                     b.HasIndex("SongId");
 
                     b.ToTable("SongViews", (string)null);
+                });
+
+            modelBuilder.Entity("SongVault.Domain.Audit.AuditEntry", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<string>("ActorId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<Guid>("BandId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Details")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Subject")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("TargetUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OccurredAt");
+
+                    b.HasIndex("BandId", "OccurredAt", "Id");
+
+                    b.ToTable("AuditEntries", null, t =>
+                        {
+                            t.HasTrigger("TR_AuditEntries_ReadOnly");
+                        });
+
+                    b.HasAnnotation("SqlServer:UseSqlOutputClause", false);
                 });
 
             modelBuilder.Entity("SongVault.Domain.Bands.Band", b =>
@@ -1195,6 +1282,15 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("SongVault.Domain.Accounts.AccountEvent", b =>
+                {
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("SongVault.Domain.Accounts.DataExport", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", null)
@@ -1246,6 +1342,15 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                     b.HasOne("SongVault.Domain.Songs.Song", null)
                         .WithMany()
                         .HasForeignKey("SongId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SongVault.Domain.Audit.AuditEntry", b =>
+                {
+                    b.HasOne("SongVault.Domain.Bands.Band", null)
+                        .WithMany()
+                        .HasForeignKey("BandId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

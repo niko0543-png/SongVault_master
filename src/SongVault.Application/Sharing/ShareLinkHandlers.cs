@@ -4,6 +4,8 @@ using SongVault.Application.Abstractions;
 using SongVault.Application.Common;
 using SongVault.Application.Common.Exceptions;
 using SongVault.Application.Invitations;
+using SongVault.Application.Audit;
+using SongVault.Domain.Audit;
 using SongVault.Domain.Common;
 using SongVault.Domain.Sharing;
 
@@ -14,7 +16,7 @@ public sealed record CreateShareLinkCommand(
 
 public sealed class CreateShareLinkHandler(
     IShareLinkRepository links, IUnitOfWork unitOfWork, IBandContext bandContext, ICurrentUser currentUser,
-    ISharePasswordHasher passwords, IOptions<AppOptions> app, TimeProvider clock)
+    ISharePasswordHasher passwords, IOptions<AppOptions> app, TimeProvider clock, AuditLog audit)
 {
     /// <summary>
     /// Crée un lien vers une version ou une sortie du groupe actif (Member ou Owner, vérifié par [MinimumBandRole]).
@@ -42,12 +44,18 @@ public sealed class CreateShareLinkHandler(
             ? ShareLink.ForVersion(bandId, command.TargetId, command.Label, command.LifetimeDays, hash, passwordHash, currentUser.UserId, now)
             : ShareLink.ForRelease(bandId, command.TargetId, command.Label, command.LifetimeDays, hash, passwordHash, currentUser.UserId, now);
         links.Add(link);
+        audit.Record(bandId, AuditAction.ShareLinkCreated, Subject(link), now,
+            details: $"{command.LifetimeDays} jours{(link.HasPassword ? ", avec mot de passe" : "")}");
         await unitOfWork.SaveChangesAsync(ct);
 
         var dto = new ShareLinkDto(link.Id, link.TargetType, command.TargetId, link.Label, link.HasPassword,
             link.StatusAt(now), link.CreatedAt, link.ExpiresAt, null, currentUser.Email, 0, null);
         return new ShareLinkCreatedDto(dto, $"{app.Value.PublicUrl.TrimEnd('/')}/s/{token}");
     }
+
+    /// <summary>Le lien tel que le journal d'audit le nomme (#19) : son libellé et ce qu'il partage, jamais son jeton.</summary>
+    public static string Subject(ShareLink link)
+        => $"{link.Label ?? "Lien sans libellé"} ({(link.TargetType == ShareTargetType.Version ? "version" : "sortie")})";
 }
 
 public sealed class ListShareLinksHandler(IShareLinkRepository links, IBandContext bandContext, TimeProvider clock)
@@ -58,19 +66,23 @@ public sealed class ListShareLinksHandler(IShareLinkRepository links, IBandConte
 }
 
 public sealed class RevokeShareLinkHandler(
-    IShareLinkRepository links, IUnitOfWork unitOfWork, IBandContext bandContext, TimeProvider clock)
+    IShareLinkRepository links, IUnitOfWork unitOfWork, IBandContext bandContext, TimeProvider clock, AuditLog audit)
 {
     /// <summary>Coupe le lien tout de suite ; il reste dans la liste avec son journal. Recommencer ne change rien.</summary>
     public async Task HandleAsync(Guid linkId, CancellationToken ct)
     {
         var link = await links.GetInBandAsync(bandContext.RequiredBandId, linkId, ct)
                    ?? throw new NotFoundException("ShareLink", linkId);
-        link.Revoke(clock.GetUtcNow());
+        var now = clock.GetUtcNow();
+        if (link.RevokedAt is null)                     // recommencer ne change rien, ni au journal
+            audit.Record(link.BandId, AuditAction.ShareLinkRevoked, CreateShareLinkHandler.Subject(link), now);
+        link.Revoke(now);
         await unitOfWork.SaveChangesAsync(ct);
     }
 }
 
-public sealed class DeleteShareLinkHandler(IShareLinkRepository links, IUnitOfWork unitOfWork, IBandContext bandContext)
+public sealed class DeleteShareLinkHandler(
+    IShareLinkRepository links, IUnitOfWork unitOfWork, IBandContext bandContext, AuditLog audit, TimeProvider clock)
 {
     /// <summary>Efface le lien et tout son journal. Un lien encore actif cesse aussitôt de marcher.</summary>
     public async Task HandleAsync(Guid linkId, CancellationToken ct)
@@ -78,6 +90,7 @@ public sealed class DeleteShareLinkHandler(IShareLinkRepository links, IUnitOfWo
         var link = await links.GetInBandAsync(bandContext.RequiredBandId, linkId, ct)
                    ?? throw new NotFoundException("ShareLink", linkId);
         links.Remove(link);
+        audit.Record(link.BandId, AuditAction.ShareLinkDeleted, CreateShareLinkHandler.Subject(link), clock.GetUtcNow());
         await unitOfWork.SaveChangesAsync(ct);
     }
 }
