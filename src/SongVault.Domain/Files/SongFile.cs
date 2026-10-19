@@ -6,6 +6,7 @@ namespace SongVault.Domain.Files;
 public sealed class SongFile : ISoftDeletable
 {
     public const int OriginalFileNameMaxLength = 255;
+    public const int StemNameMaxLength = 60;
 
     private SongFile() { }
 
@@ -20,6 +21,11 @@ public sealed class SongFile : ISoftDeletable
     public DateTimeOffset? DeletedAt { get; private set; }
     public string? DeletedById { get; private set; }
     public bool IsDeleted => DeletedAt is not null;
+    /// <summary>Nom de la piste dans le mélangeur (#23, ADR 0030) ; null si le fichier n'est pas une piste.</summary>
+    public string? StemName { get; private set; }
+    /// <summary>Place de la piste dans le mélangeur, à partir de 0 ; null si le fichier n'est pas une piste.</summary>
+    public int? StemPosition { get; private set; }
+    public bool IsStem => StemPosition is not null;
 
     internal static SongFile Create(Guid versionId, string originalFileName, string storageKey,
         string contentType, long sizeBytes, SongFileType fileType, DateTimeOffset now)
@@ -38,6 +44,18 @@ public sealed class SongFile : ISoftDeletable
             FileType = fileType,
             UploadedAt = now,
         };
+    }
+
+    internal void SetStem(string name, int position)
+    {
+        StemName = name;
+        StemPosition = position;
+    }
+
+    internal void ClearStem()
+    {
+        StemName = null;
+        StemPosition = null;
     }
 
     // #20 : la corbeille passe par la version ou le morceau, qui marquent tout avec la même date

@@ -11,6 +11,8 @@ public sealed class SongVersion : ISoftDeletable
     public const int LyricsMaxLength = 20000;
     public const int MinBpm = 20;
     public const int MaxBpm = 300;
+    /// <summary>Pistes du mélangeur (#23) : chaque piste est décodée en entier dans la mémoire du navigateur.</summary>
+    public const int MaxStems = 8;
 
     private readonly List<SongFile> _files = [];
 
@@ -87,6 +89,7 @@ public sealed class SongVersion : ISoftDeletable
     public SongFile? TrashFile(Guid fileId, string userId, DateTimeOffset now)
     {
         var file = _files.SingleOrDefault(f => f.Id == fileId && !f.IsDeleted);
+        file?.ClearStem();                       // #23 : un fichier jeté seul quitte le mélangeur
         file?.MoveToTrash(userId, now);
         return file;
     }
@@ -98,6 +101,34 @@ public sealed class SongVersion : ISoftDeletable
         var file = _files.SingleOrDefault(f => f.Id == fileId && f.IsDeleted);
         file?.Restore();
         return file;
+    }
+
+    /// <summary>
+    /// Remplace les pistes du mélangeur (#23, ADR 0030) : des fichiers audio en place de cette version, sans doublon,
+    /// chacun nommé, dans l'ordre de la liste. Liste vide = plus de mélangeur.
+    /// </summary>
+    public void SetStems(IReadOnlyList<StemChoice> stems, DateTimeOffset now)
+    {
+        // 1. TOUT valider…
+        if (stems.Count > MaxStems)
+            throw new DomainException($"Une version compte au plus {MaxStems} pistes.");
+        if (stems.Select(s => s.FileId).Distinct().Count() != stems.Count)
+            throw new DomainException("Un même fichier ne peut pas être deux pistes.");
+        var chosen = stems.Select(s =>
+        {
+            var file = _files.SingleOrDefault(f => f.Id == s.FileId && !f.IsDeleted)
+                       ?? throw new DomainException("Une piste doit être un fichier de cette version.");
+            if (file.FileType != SongFileType.Audio)
+                throw new DomainException($"« {file.OriginalFileName} » n'est pas un fichier audio.");
+            return (File: file, Name: Text.Required(s.Name, SongFile.StemNameMaxLength, "nom de piste"));
+        }).ToList();
+
+        // 2. … PUIS affecter
+        foreach (var file in _files.Where(f => !f.IsDeleted))
+            file.ClearStem();
+        for (var i = 0; i < chosen.Count; i++)
+            chosen[i].File.SetStem(chosen[i].Name, i);
+        UpdatedAt = now;
     }
 
     // La version et ses fichiers en place partent avec la même date : la restauration retrouve exactement cet ensemble
