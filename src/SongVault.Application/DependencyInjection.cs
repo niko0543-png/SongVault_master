@@ -19,6 +19,7 @@ using SongVault.Application.Billing;
 using SongVault.Application.Audit;
 using SongVault.Application.Trash;
 using SongVault.Application.Setlists;
+using SongVault.Application.Songs.Rights;
 
 namespace SongVault.Application;
 
@@ -102,6 +103,12 @@ public static class DependencyInjection
         services.AddScoped<UpdateSetlistHandler>();
         services.AddScoped<DeleteSetlistHandler>();
         services.AddScoped<SetSetlistItemsHandler>();
+        // #22 : crédits, codes ISWC/ISRC et export CSV (ADR 0029)
+        services.AddScoped<GetSongRightsHandler>();
+        services.AddScoped<SetSongRightsHandler>();
+        services.AddScoped<SetVersionIsrcHandler>();
+        services.AddScoped<ExportSongCreditsHandler>();
+        services.AddScoped<ExportReleaseCreditsHandler>();
         // #11 : fil d'activité et badges (ADR 0017)
         services.AddScoped<ActivityLog>();
         services.AddScoped<ListActivityHandler>();
