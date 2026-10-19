@@ -25,6 +25,8 @@ public sealed class SongVersion : ISoftDeletable
     public string? Lyrics { get; private set; }
     public int? Bpm { get; private set; }                 // NOUVEAU
     public MusicalKey? Key { get; private set; }          // NOUVEAU
+    /// <summary>Code de l'enregistrement (#22) ; une piste de sortie reprend celui de sa version.</summary>
+    public Isrc? Isrc { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
     public DateTimeOffset? DeletedAt { get; private set; }
@@ -65,6 +67,13 @@ public sealed class SongVersion : ISoftDeletable
         Key = key;
         UpdatedAt = now;
     }
+
+    public void SetIsrc(Isrc? isrc, DateTimeOffset now)
+    {
+        Isrc = isrc;
+        UpdatedAt = now;
+    }
+
 
     public SongFile AddFile(string originalFileName, string storageKey, string contentType,
         long sizeBytes, SongFileType fileType, DateTimeOffset now)
