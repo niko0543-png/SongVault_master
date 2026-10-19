@@ -173,4 +173,10 @@ internal sealed class SongRepository(SongVaultDbContext db, IBandContext bandCon
     => await BandVersions.AsNoTracking()
         .Where(v => versionIds.Contains(v.Id))
         .ToDictionaryAsync(v => v.Id, v => v.SongId, ct);
+
+    public async Task<IReadOnlySet<Guid>> ListExistingIdsAsync(IReadOnlyCollection<Guid> songIds, CancellationToken ct)
+        => (await BandSongs.AsNoTracking()
+            .Where(s => songIds.Contains(s.Id))
+            .Select(s => s.Id)
+            .ToListAsync(ct)).ToHashSet();
 }

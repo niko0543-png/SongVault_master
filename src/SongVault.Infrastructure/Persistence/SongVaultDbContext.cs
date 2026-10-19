@@ -18,6 +18,7 @@ using SongVault.Domain.Notifications;
 using SongVault.Domain.Sharing;
 using SongVault.Domain.Billing;
 using SongVault.Domain.Audit;
+using SongVault.Domain.Setlists;
 
 namespace SongVault.Infrastructure.Persistence;
 
@@ -25,7 +26,7 @@ public sealed class SongVaultDbContext(
     DbContextOptions<SongVaultDbContext> options, IBandContext? bandContext = null)
     : IdentityDbContext<IdentityUser>(options), IUnitOfWork, IDataProtectionKeyContext
 {
-    /// <summary>Nom du filtre qui limite Songs et Releases au groupe actif (IgnoreQueryFilters([BandFilter]) pour l'ôter).</summary>
+    /// <summary>Nom du filtre qui limite Songs, Releases et Setlists au groupe actif (IgnoreQueryFilters([BandFilter]) pour l'ôter).</summary>
     public const string BandFilter = "Band";
     /// <summary>
     /// Nom du filtre qui cache la corbeille (#20, ADR 0027) : morceaux, versions et fichiers dont DeletedAt est renseigné.
@@ -51,6 +52,8 @@ public sealed class SongVaultDbContext(
     public DbSet<NotificationDigestItem> NotificationDigestItems => Set<NotificationDigestItem>();
     /// <summary>Sorties (single, EP, album) et leurs pistes (ADR 0016).</summary>
     public DbSet<Release> Releases => Set<Release>();
+    /// <summary>Setlists de concert et leurs lignes (ADR 0028).</summary>
+    public DbSet<Setlist> Setlists => Set<Setlist>();
     /// <summary>Liens de partage externes et leur journal (ADR 0019).</summary>
     public DbSet<ShareLink> ShareLinks => Set<ShareLink>();
     public DbSet<ShareLinkAccess> ShareLinkAccesses => Set<ShareLinkAccess>();
@@ -79,6 +82,7 @@ public sealed class SongVaultDbContext(
         // Défense en profondeur : même si une future requête oublie BandSongs, elle ne sort pas du groupe actif.
         modelBuilder.Entity<Song>().HasQueryFilter(BandFilter, s => s.BandId == CurrentBandId);
         modelBuilder.Entity<Release>().HasQueryFilter(BandFilter, r => r.BandId == CurrentBandId);
+        modelBuilder.Entity<Setlist>().HasQueryFilter(BandFilter, s => s.BandId == CurrentBandId);
         // #20 : la corbeille n'apparaît nulle part, sauf où on la demande
         modelBuilder.Entity<Song>().HasQueryFilter(SoftDeleteFilter, s => s.DeletedAt == null);
         modelBuilder.Entity<SongVersion>().HasQueryFilter(SoftDeleteFilter, v => v.DeletedAt == null);

@@ -993,6 +993,77 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                     b.ToTable("ReleaseTracks", (string)null);
                 });
 
+            modelBuilder.Entity("SongVault.Domain.Setlists.Setlist", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("BandId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateOnly?>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Venue")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BandId", "Date");
+
+                    b.ToTable("Setlists", (string)null);
+                });
+
+            modelBuilder.Entity("SongVault.Domain.Setlists.SetlistItem", b =>
+                {
+                    b.Property<Guid>("SetlistId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("SongId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("DurationMs")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("VersionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("SetlistId", "SongId");
+
+                    b.HasIndex("SongId");
+
+                    b.HasIndex("VersionId");
+
+                    b.HasIndex("SetlistId", "Position")
+                        .IsUnique();
+
+                    b.ToTable("SetlistItems", (string)null);
+                });
+
             modelBuilder.Entity("SongVault.Domain.Sharing.ShareLink", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1519,6 +1590,35 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("SongVault.Domain.Setlists.Setlist", b =>
+                {
+                    b.HasOne("SongVault.Domain.Bands.Band", null)
+                        .WithMany()
+                        .HasForeignKey("BandId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SongVault.Domain.Setlists.SetlistItem", b =>
+                {
+                    b.HasOne("SongVault.Domain.Setlists.Setlist", null)
+                        .WithMany("Items")
+                        .HasForeignKey("SetlistId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SongVault.Domain.Songs.Song", null)
+                        .WithMany()
+                        .HasForeignKey("SongId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SongVault.Domain.Songs.SongVersion", null)
+                        .WithMany()
+                        .HasForeignKey("VersionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
             modelBuilder.Entity("SongVault.Domain.Sharing.ShareLink", b =>
                 {
                     b.HasOne("SongVault.Domain.Bands.Band", null)
@@ -1578,6 +1678,11 @@ namespace SongVault.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("SongVault.Domain.Releases.Release", b =>
                 {
                     b.Navigation("Tracks");
+                });
+
+            modelBuilder.Entity("SongVault.Domain.Setlists.Setlist", b =>
+                {
+                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("SongVault.Domain.Songs.Song", b =>
