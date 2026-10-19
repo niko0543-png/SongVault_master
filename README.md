@@ -138,6 +138,10 @@ docker compose down -v       # supprime aussi la base et les fichiers
 - **Corbeille** : un morceau, une version ou un fichier supprimé se restaure pendant 30 jours,
   avec ce qui est parti avec lui ; ensuite, la purge quotidienne l'efface, fichiers compris, et
   libère la place. Un Owner peut vider la corbeille avant ([ADR 0027](docs/adr/0027-corbeille.md)).
+- **Setlists** : les morceaux d'un concert dans l'ordre de jeu, réordonnés à la souris ou au
+  clavier, avec tonalité, BPM, notes de scène et durée (celle du fichier audio, ou saisie) ;
+  l'API calcule la durée totale, et la feuille imprimée tient sur une page
+  ([ADR 0028](docs/adr/0028-setlists.md)).
 
 ---
 

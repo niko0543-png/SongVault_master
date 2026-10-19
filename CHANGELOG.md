@@ -43,6 +43,7 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) — versions :
 - Journal d'audit de chaque groupe, page « Journal » des Owner : suppressions, liens de partage, invitations, rôles, départs, renommage et fichiers bloqués, gardé un an ; impossible à modifier depuis l'application (déclencheur SQL).
 - Corbeille du groupe (page « Corbeille », `/api/bands/{id}/trash`) : morceaux, versions et fichiers supprimés se restaurent pendant 30 jours, avec exactement ce qui est parti avec eux ; suppression définitive par un Owner ; purge quotidienne ensuite, fichiers du stockage compris (ADR 0027).
 - Suppression d'une version (`DELETE …/versions/{id}`), refusée si une sortie l'utilise.
+- Setlists (page « Setlists », `/api/bands/{id}/setlists`) : nom, date, lieu et morceaux dans l'ordre de jeu, réordonnés à la souris ou au clavier ; version facultative (sinon la dernière), tonalité et BPM de la version, notes de scène ; durée du fichier audio ou saisie, durée totale calculée par l'API ; feuille imprimable d'une page en gros caractères (ADR 0028).
 ### Modifié
 - Les journaux de l'API ne nomment plus le destinataire d'un e-mail non parti, et une erreur 500 y est écrite avec un chemin sans jeton.
 - Le mot de passe se change par `POST /api/me/password`, sans reconnexion ; `/api/auth/manage/2fa` et `POST /api/auth/manage/info` d'Identity sont fermés (404).
@@ -54,6 +55,7 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) — versions :
 - `scripts/purge-orphan-files.ps1` tient compte des archives d'export, puis des pochettes des sorties, puis des aperçus MP3.
 - L'image de l'API contient ffmpeg ; la migration `AddAudioPreviews` prépare l'aperçu des fichiers audio déjà envoyés.
 - Un morceau présent sur une sortie ne se supprime plus : l'API répond 409 avec le nom des sorties.
+- Un morceau présent dans une setlist, ou une version qui y est choisie, ne va pas à la corbeille : l'API répond 409 avec le nom des setlists.
 - Répondre à un commentaire vérifie aussi le morceau et la version de la route : 404 s'ils ne correspondent pas au fichier.
 - Taille maximale d'un fichier envoyé depuis l'application : 2 Go au lieu de 50 Mo.
 - nginx est configuré par variables (`API_UPSTREAM`, `STORAGE_ORIGIN`) et transmet `X-Forwarded-Host`.
