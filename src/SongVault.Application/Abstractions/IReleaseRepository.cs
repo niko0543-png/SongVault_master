@@ -26,4 +26,7 @@ public interface IReleaseRepository
 
     /// <summary>Titres des sorties du groupe où figure ce morceau (refus de suppression du morceau).</summary>
     Task<IReadOnlyList<string>> ListTitlesWithSongAsync(Guid songId, CancellationToken ct);
+
+    /// <summary>Titres des sorties du groupe dont une piste utilise cette version (refus de sa suppression, #20).</summary>
+    Task<IReadOnlyList<string>> ListTitlesWithVersionAsync(Guid versionId, CancellationToken ct);
 }

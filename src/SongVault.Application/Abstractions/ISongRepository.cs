@@ -10,18 +10,17 @@ namespace SongVault.Application.Abstractions;
 public interface ISongRepository
 {
     void Add(Song song);
-    void Remove(Song song);
     Task<Song?> GetByIdAsync(Guid id, CancellationToken ct);
     Task<PagedResult<SongDto>> ListAsync(int page, int pageSize, string? search, SongVersionStatus? status, CancellationToken ct);
     Task<Song?> GetWithVersionAsync(Guid songId, Guid versionId, CancellationToken ct);
+    /// <summary>Le morceau avec toutes ses versions et leurs fichiers en place, pour le mettre à la corbeille (#20).</summary>
+    Task<Song?> GetWithAllVersionsAsync(Guid songId, CancellationToken ct);
     Task<bool> ExistsAsync(Guid songId, CancellationToken ct);
     Task<IReadOnlyList<SongVersionSummaryDto>> ListVersionsAsync(Guid songId, CancellationToken ct);
     Task<SongVersionDto?> GetVersionAsync(Guid songId, Guid versionId, CancellationToken ct);
     Task<StoredFileInfo?> GetFileAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct);
     /// <summary>Le fichier, son morceau et sa version, s'il est dans cette version de ce morceau du groupe actif ; sinon null (#8, #11).</summary>
     Task<SongFileLabel?> GetFileLabelAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct);
-    /// <summary>Clés des fichiers du morceau et de leurs MP3 d'aperçu (#15), à effacer du stockage avec lui.</summary>
-    Task<IReadOnlyList<string>> ListStorageKeysAsync(Guid songId, CancellationToken ct);
     /// <summary>Le fichier à écouter : le MP3 d'aperçu s'il est prêt, sinon l'original (ADR 0021).</summary>
     Task<StoredFileInfo?> GetListenFileAsync(Guid songId, Guid versionId, Guid fileId, CancellationToken ct);
     /// <summary>Forme d'onde d'un fichier de ce groupe, si son aperçu est prêt (ADR 0021).</summary>
