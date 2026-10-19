@@ -1,11 +1,11 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-
 using SongVault.Api.Auth;
 using SongVault.Api.Contracts.Releases;
 using SongVault.Api.Security;
 using SongVault.Application.Releases;
 using SongVault.Domain.Releases;
+using SongVault.Application.Songs.Rights;
 
 namespace SongVault.Api.Controllers;
 
@@ -121,6 +121,15 @@ public sealed class ReleasesController : ControllerBase
     public async Task<IActionResult> DownloadCover(
         Guid id, [FromServices] DownloadReleaseCoverHandler handler, CancellationToken ct)
         => this.ToResult(await handler.HandleAsync(id, ct), asAttachment: false, enableRangeProcessing: false);
+
+    /// <summary>Crédits de toutes les pistes en CSV (#22) : une ligne par ayant droit, avec ISRC et ISWC.</summary>
+    /// <response code="200">Le fichier credits-Titre.csv.</response>
+    [HttpGet("{id:guid}/credits.csv")]
+    [Produces("text/csv")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> ExportCredits(
+        Guid id, [FromServices] ExportReleaseCreditsHandler handler, CancellationToken ct)
+        => this.ToResult(await handler.HandleAsync(id, ct), asAttachment: true, enableRangeProcessing: false);
 
     /// <summary>Retire la pochette.</summary>
     /// <response code="204">Pochette retirée (ou déjà absente).</response>
