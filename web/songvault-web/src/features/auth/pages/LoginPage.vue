@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, nextTick, reactive, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
 import { authApi } from '../api/authApi'
-import { isUnconfirmed, loginError } from '../messages'
+import { isUnconfirmed, loginError, requiresTwoFactor } from '../messages'
 import { safeRedirect } from '@/router/authGuard'
 import { getErrorMessage } from '@/shared/api/ApiError'
 import { useAsyncAction } from '@/shared/composables/useAsyncAction'
@@ -13,10 +13,17 @@ const route = useRoute()
 const router = useRouter()
 
 // Venu d'une invitation ou d'un e-mail : l'adresse est déjà remplie
-const form = reactive({ email: typeof route.query.email === 'string' ? route.query.email : '', password: '' })
+const form = reactive({ email: typeof route.query.email === 'string' ? route.query.email : '', password: '', code: '' })
 const { isLoading, error, run } = useAsyncAction(auth.login)
-const message = computed(() => (error.value ? loginError(error.value) : null))
-const canSubmit = computed(() => form.email.trim() !== '' && form.password !== '' && !isLoading.value)
+
+// #19 : double authentification active, le mot de passe était bon ; on demande le code (ou un code de secours)
+const step = ref<'password' | 'code'>('password')
+const useRecoveryCode = ref(false)
+const codeInput = ref<HTMLInputElement | null>(null)
+
+const message = computed(() => (error.value ? loginError(error.value, step.value === 'code') : null))
+const canSubmit = computed(() =>
+  form.email.trim() !== '' && form.password !== '' && !isLoading.value && (step.value === 'password' || form.code.trim() !== ''))
 
 // #4 : adresse pas encore confirmée, on propose un nouvel e-mail
 const unconfirmed = computed(() => isUnconfirmed(error.value))
@@ -26,8 +33,36 @@ const { isLoading: isResending, error: resendError, run: runResend } = useAsyncA
 async function onSubmit() {
   if (!canSubmit.value) return
   resent.value = false
-  await run({ email: form.email.trim(), password: form.password })
+  const code = form.code.trim()
+  await run({
+    email: form.email.trim(),
+    password: form.password,
+    ...(step.value === 'code' && !useRecoveryCode.value ? { twoFactorCode: code.replace(/[\s-]/g, '') } : {}),
+    ...(step.value === 'code' && useRecoveryCode.value ? { twoFactorRecoveryCode: code } : {}),
+  })
+  if (requiresTwoFactor(error.value)) {
+    error.value = null                    // ce n'est pas une erreur : l'étape suivante
+    step.value = 'code'
+    await nextTick()
+    codeInput.value?.focus()
+    return
+  }
   if (!error.value) await router.replace(safeRedirect(route.query.redirect))
+}
+
+async function toggleRecoveryCode() {
+  useRecoveryCode.value = !useRecoveryCode.value
+  form.code = ''
+  error.value = null
+  await nextTick()
+  codeInput.value?.focus()
+}
+
+function backToPassword() {
+  step.value = 'password'
+  useRecoveryCode.value = false
+  Object.assign(form, { password: '', code: '' })
+  error.value = null
 }
 
 async function onResend() {
@@ -40,14 +75,29 @@ async function onResend() {
   <section class="auth">
     <h1>Connexion</h1>
     <form class="card" novalidate @submit.prevent="onSubmit">
-      <div class="field">
-        <label for="login-email">E-mail</label>
-        <input id="login-email" v-model="form.email" type="email" autocomplete="username" required />
-      </div>
-      <div class="field">
-        <label for="login-password">Mot de passe</label>
-        <input id="login-password" v-model="form.password" type="password" autocomplete="current-password" required />
-      </div>
+      <template v-if="step === 'password'">
+        <div class="field">
+          <label for="login-email">E-mail</label>
+          <input id="login-email" v-model="form.email" type="email" autocomplete="username" required />
+        </div>
+        <div class="field">
+          <label for="login-password">Mot de passe</label>
+          <input id="login-password" v-model="form.password" type="password" autocomplete="current-password" required />
+        </div>
+      </template>
+      <template v-else>
+        <p class="muted">
+          {{ useRecoveryCode
+            ? 'Saisissez l’un de vos codes de secours. Chacun ne sert qu’une fois.'
+            : 'Saisissez le code à 6 chiffres affiché par votre application d’authentification.' }}
+        </p>
+        <div class="field">
+          <label for="login-code">{{ useRecoveryCode ? 'Code de secours' : 'Code de l’application' }}</label>
+          <input id="login-code" ref="codeInput" v-model="form.code" type="text" required
+                 :inputmode="useRecoveryCode ? 'text' : 'numeric'" :autocomplete="useRecoveryCode ? 'off' : 'one-time-code'"
+                 :maxlength="useRecoveryCode ? 20 : 7" spellcheck="false" />
+        </div>
+      </template>
       <p v-if="message" class="field-error" role="alert">{{ message }}</p>
       <template v-if="unconfirmed">
         <p v-if="resent" class="muted" role="status">Nouvel e-mail envoyé à {{ form.email.trim() }}.</p>
@@ -56,7 +106,15 @@ async function onResend() {
           Renvoyer l'e-mail de confirmation
         </button>
       </template>
-      <button type="submit" :disabled="!canSubmit">{{ isLoading ? 'Connexion…' : 'Se connecter' }}</button>
+      <button type="submit" :disabled="!canSubmit">
+        {{ isLoading ? 'Connexion…' : step === 'code' ? 'Valider le code' : 'Se connecter' }}
+      </button>
+      <p v-if="step === 'code'" class="code-links">
+        <button type="button" class="link" @click="toggleRecoveryCode">
+          {{ useRecoveryCode ? 'Utiliser le code de l’application' : 'Utiliser un code de secours' }}
+        </button>
+        <button type="button" class="link" @click="backToPassword">Changer de compte</button>
+      </p>
     </form>
     <p class="muted">
       <RouterLink :to="{ name: 'forgot-password', query: form.email.trim() ? { email: form.email.trim() } : {} }">
@@ -69,4 +127,6 @@ async function onResend() {
 
 <style scoped>
 .auth { max-width: 26rem; margin: 2rem auto; }
+.code-links { display: flex; justify-content: space-between; gap: 1rem; margin: .75rem 0 0; }
+.link { background: none; border: none; padding: 0; color: var(--primary); text-decoration: underline; cursor: pointer; }
 </style>

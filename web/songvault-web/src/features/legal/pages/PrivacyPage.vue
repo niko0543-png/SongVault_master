@@ -63,6 +63,24 @@ import { publisher } from '../publisher'
           <td>Contrat</td>
           <td>Tant que le groupe existe ; les factures sont gardées 10 ans par Stripe (obligation comptable)</td>
         </tr>
+           <tr>
+          <td>
+            Historique de connexion : date, résultat (connexion, échec, code refusé…), réseau d'origine
+            (adresse IP sans son dernier nombre) et navigateur (« Firefox sur Windows »)
+          </td>
+          <td>Vous montrer les connexions à votre compte, repérer une tentative d'intrusion</td>
+          <td>Intérêt légitime (sécurité du compte)</td>
+          <td>90 jours ; effacé avec le compte</td>
+        </tr>
+        <tr>
+          <td>
+            Journal d'audit du groupe : qui a supprimé, invité, retiré ou changé quoi, avec le titre ou le nom
+            concerné et l'adresse invitée masquée
+          </td>
+          <td>Permettre aux Owner de savoir qui a fait quoi dans le groupe</td>
+          <td>Intérêt légitime du groupe</td>
+          <td>1 an ; effacé avec le groupe. Après la suppression de votre compte, vos lignes restent, sans votre nom</td>
+        </tr>
         <tr>
           <td>Archive de vos données</td>
           <td>Vous remettre vos données</td>
@@ -91,7 +109,8 @@ import { publisher } from '../publisher'
       <li><code>songvault.auth</code> : cookie de session, indispensable pour rester connecté (7 jours au plus).</li>
       <li><code>songvault.band</code> : dernier groupe ouvert, stocké dans votre navigateur.</li>
       <li><code>songvault.afterConfirm</code> : page à rouvrir après la confirmation de votre adresse.</li>
-        <li><code>songvault.share</code> : mot de passe d'un lien de partage déjà donné (12 heures au plus, pour ce lien seulement).</li>
+      <li><code>songvault.2fa</code> : navigateur reconnu après une connexion avec code de double authentification (14 jours au plus).</li>
+      <li><code>songvault.share</code> : mot de passe d'un lien de partage déjà donné (12 heures au plus, pour ce lien seulement).</li>
     </ul>
     <p>Aucun cookie de publicité ni de mesure d'audience : aucun consentement n'est donc demandé.</p>
 

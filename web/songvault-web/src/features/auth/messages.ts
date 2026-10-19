@@ -23,19 +23,24 @@ export function registrationErrors(error: unknown): string[] {
   return [getErrorMessage(error)]
 }
 
-/** Message lisible pour une erreur de connexion. */
 /** Connexion refusée parce que l'adresse n'est pas encore confirmée (#4). */
 export function isUnconfirmed(error: unknown): boolean {
   return error instanceof ApiError && error.status === 401 && error.problem.detail?.toLowerCase() === 'notallowed'
 }
 
-/** Message lisible pour une erreur de connexion. */
-export function loginError(error: unknown): string {
+/** Bon mot de passe, double authentification active : il faut encore le code (#19). */
+export function requiresTwoFactor(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 401 && error.problem.detail?.toLowerCase() === 'requirestwofactor'
+}
+
+/** Message lisible pour une erreur de connexion ; withCode : le code venait d'être saisi (#19). */
+export function loginError(error: unknown, withCode = false): string {
   if (isUnconfirmed(error))
     return 'Adresse pas encore confirmée : cliquez sur le lien reçu par e-mail, ou demandez-en un nouveau.'
   if (error instanceof ApiError && error.status === 401)
     return error.problem.detail?.toLowerCase() === 'lockedout'
         ? 'Compte verrouillé : trop de tentatives (réessayez dans quelques minutes), ou suppression du compte demandée.'
+      : withCode ? 'Code incorrect : saisissez le code affiché maintenant dans l’application, ou un code de secours.'
       : 'E-mail ou mot de passe incorrect.'
   if (error instanceof ApiError && error.status === 429) return 'Trop de tentatives. Réessayez dans une minute.'
   return getErrorMessage(error)

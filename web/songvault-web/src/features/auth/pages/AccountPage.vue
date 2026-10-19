@@ -8,6 +8,8 @@ import SectionCard from '@/shared/components/SectionCard.vue'
 import DataExportSection from '@/features/account/components/DataExportSection.vue'
 import NotificationsSection from '@/features/notifications/components/NotificationsSection.vue'
 import DeleteAccountSection from '@/features/account/components/DeleteAccountSection.vue'
+import TwoFactorSection from '@/features/account/components/TwoFactorSection.vue'
+import AccountEventsSection from '@/features/account/components/AccountEventsSection.vue'
 import { useAsyncAction } from '@/shared/composables/useAsyncAction'
 import { useToast } from '@/shared/composables/useToast'
 
@@ -18,13 +20,9 @@ const toast = useToast()
 const form = reactive({ current: '', password: '', confirm: '' })
 const submitted = ref(false)
 
-async function changePassword(current: string, next: string) {
-  await authApi.changePassword(current, next)
-  // Nouvelle empreinte de sécurité : on se reconnecte pour garder cette session
-  await auth.login({ email: user.value?.email ?? '', password: next })
-}
-
-const { isLoading, error, run } = useAsyncAction(changePassword)
+// #19 : l'API renouvelle le cookie de cette session ; plus besoin de se reconnecter (ni de code)
+const { isLoading, error, run } = useAsyncAction(authApi.changePassword)
+const history = ref<InstanceType<typeof AccountEventsSection> | null>(null)
 const mismatch = computed(() => submitted.value && form.password !== form.confirm)
 const messages = computed(() => (error.value ? registrationErrors(error.value) : []))
 
@@ -36,6 +34,7 @@ async function onSubmit() {
   Object.assign(form, { current: '', password: '', confirm: '' })
   submitted.value = false
   toast.success('Mot de passe modifié. Vos autres appareils seront déconnectés d’ici une minute.')
+  void history.value?.load()
 }
 </script>
 
@@ -72,6 +71,8 @@ async function onSubmit() {
         <button type="submit" :disabled="isLoading">{{ isLoading ? 'Enregistrement…' : 'Changer le mot de passe' }}</button>
       </form>
     </SectionCard>
+    <TwoFactorSection @changed="history?.load()" />
+    <AccountEventsSection ref="history" />
     <NotificationsSection />
     <DataExportSection />
     <DeleteAccountSection />

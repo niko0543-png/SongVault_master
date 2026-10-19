@@ -183,6 +183,20 @@ const router = createRouter({
       meta: { title: 'Membres' },
     },
     {
+      // #19 : journal d'audit, réservé aux Owner (l'API répond 403 aux autres)
+      path: '/b/:bandId/audit',
+      name: 'audit',
+      component: () => import('@/features/audit/pages/AuditLogPage.vue'),
+      meta: { title: 'Journal d’audit', owner: true },
+    },
+    {
+      // #16 : la page existait, sa route manquait (le lien « Facturation » ne menait nulle part)
+      path: '/b/:bandId/billing',
+      name: 'billing',
+      component: () => import('@/features/billing/pages/BillingPage.vue'),
+      meta: { title: 'Facturation', owner: true },
+    },
+    {
       // #16 : retour de Stripe Checkout sur ?checkout=success
       path: '/b/:bandId/billing',
       name: 'billing',
@@ -220,6 +234,8 @@ router.beforeEach(async (to) => {
  bands.setActive(bandId)
   // Page d'écriture ouverte par un Guest (lien partagé, favori) : retour à la liste
   if (to.meta.write && !bands.can('write')) return { name: 'songs', params: { bandId } }
+  // #19 : de même pour une page d'Owner ouverte par un autre membre (meta.owner, prévu depuis #16)
+  if (to.meta.owner && !bands.can('admin')) return { name: 'songs', params: { bandId } }
     if (to.meta.owner && !bands.can('admin')) return { name: 'songs', params: { bandId } }
   return true
 })
