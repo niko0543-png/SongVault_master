@@ -16,6 +16,7 @@ using SongVault.Application.Songs.UpdateSong;
 using SongVault.Application.Versions;
 using SongVault.Application.Sharing;
 using SongVault.Application.Billing;
+using SongVault.Application.Audit;
 
 namespace SongVault.Application;
 
@@ -126,6 +127,11 @@ public static class DependencyInjection
         services.AddScoped<StorageRecountScheduler>();
         services.AddScoped<IBackgroundJobHandler, PaymentFailedJob>();
         services.AddScoped<IBackgroundJobHandler, StorageRecountJob>();
+        // #19 : journal d'audit des groupes et historique de connexion (ADR 0026)
+        services.AddScoped<AuditLog>();
+        services.AddScoped<ListAuditHandler>();
+        services.AddScoped<AccountSecurityLog>();
+        services.AddScoped<ListAccountEventsHandler>();
 
         return services;
     }
