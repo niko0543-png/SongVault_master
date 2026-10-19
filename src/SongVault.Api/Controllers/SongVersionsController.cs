@@ -76,4 +76,20 @@ public sealed class SongVersionsController : ControllerBase
             request.Bpm, request.Key), ct);
         return NoContent();
     }
+
+    /// <summary>Met la version et ses fichiers à la corbeille (#20) ; restaurable 30 jours.</summary>
+    /// <param name="songId">Identifiant du morceau.</param>
+    /// <param name="versionId">Identifiant de la version.</param>
+    /// <response code="204">Version à la corbeille.</response>
+    /// <response code="404">Morceau ou version introuvable.</response>
+    /// <response code="409">Une sortie utilise cette version ; en choisir une autre pour la sortie d'abord.</response>
+    [HttpDelete("{versionId:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Delete(
+        Guid songId, Guid versionId, [FromServices] DeleteSongVersionHandler handler, CancellationToken ct)
+    {
+        await handler.HandleAsync(songId, versionId, ct);
+        return NoContent();
+    }
 }

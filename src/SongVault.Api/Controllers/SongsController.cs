@@ -100,9 +100,9 @@ public sealed class SongsController : ControllerBase
         return NoContent();
     }
 
-    /// <summary>Supprime un morceau, ses versions et leurs fichiers.</summary>
+    /// <summary>Met un morceau à la corbeille avec ses versions et leurs fichiers (#20) ; restaurable 30 jours.</summary>
     /// <param name="id">Identifiant du morceau.</param>
-    /// <response code="204">Morceau supprimé.</response>
+    /// <response code="204">Morceau à la corbeille.</response>
     /// <response code="404">Morceau introuvable.</response>
     /// <response code="409">Le morceau figure sur une sortie ; le retirer de la sortie d'abord.</response>
     [HttpDelete("{id:guid}")]

@@ -199,11 +199,11 @@ public sealed class SongFilesController : ControllerBase
         Guid songId, Guid versionId, Guid fileId, [FromServices] RetryFileScanHandler handler, CancellationToken ct)
         => Accepted(new FileScanResponse(await handler.HandleAsync(songId, versionId, fileId, ct)));
 
-    /// <summary>Supprime un fichier de la version.</summary>
+    /// <summary>Met un fichier de la version à la corbeille (#20) ; restaurable 30 jours.</summary>
     /// <param name="songId">Identifiant du morceau.</param>
     /// <param name="versionId">Identifiant de la version.</param>
     /// <param name="fileId">Identifiant du fichier.</param>
-    /// <response code="204">Fichier supprimé.</response>
+    /// <response code="204">Fichier à la corbeille.</response>
     [HttpDelete("{fileId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Delete(

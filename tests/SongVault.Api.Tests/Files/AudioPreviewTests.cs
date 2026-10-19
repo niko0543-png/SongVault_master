@@ -114,7 +114,7 @@ public sealed class AudioPreviewTests(SongVaultApiFactory factory)
     }
 
     [Fact]
-    public async Task Supprimer_le_fichier_supprime_son_apercu()
+    public async Task Supprimer_definitivement_le_fichier_supprime_son_apercu()
     {
         var client = await factory.CreateNewUserClientAsync();
         var (versionUrl, file) = await UploadAsync(client, TestFiles.Wav(1), "court.wav");
@@ -124,6 +124,9 @@ public sealed class AudioPreviewTests(SongVaultApiFactory factory)
         Assert.NotNull(await storage.GetLengthAsync(previewKey, CancellationToken.None));
 
         Assert.Equal(HttpStatusCode.NoContent, (await client.DeleteAsync($"{versionUrl}/files/{file.Id}")).StatusCode);
+        Assert.NotNull(await storage.GetLengthAsync(previewKey, CancellationToken.None));     // #20 : à la corbeille, il reste
+        var bandId = await client.FirstBandIdAsync();
+        Assert.Equal(HttpStatusCode.NoContent, (await client.DeleteAsync($"/api/bands/{bandId}/trash/file/{file.Id}")).StatusCode);
 
         Assert.Null(await storage.GetLengthAsync(previewKey, CancellationToken.None));
     }
