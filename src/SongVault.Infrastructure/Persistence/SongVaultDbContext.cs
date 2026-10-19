@@ -27,7 +27,11 @@ public sealed class SongVaultDbContext(
 {
     /// <summary>Nom du filtre qui limite Songs et Releases au groupe actif (IgnoreQueryFilters([BandFilter]) pour l'ôter).</summary>
     public const string BandFilter = "Band";
-
+    /// <summary>
+    /// Nom du filtre qui cache la corbeille (#20, ADR 0027) : morceaux, versions et fichiers dont DeletedAt est renseigné.
+    /// IgnoreQueryFilters([SoftDeleteFilter]) les montre, le filtre du groupe restant actif.
+    /// </summary>
+    public const string SoftDeleteFilter = "SoftDelete";
     public DbSet<Song> Songs => Set<Song>();
     public DbSet<Band> Bands => Set<Band>();
     public DbSet<BandMembership> BandMemberships => Set<BandMembership>();
@@ -75,6 +79,10 @@ public sealed class SongVaultDbContext(
         // Défense en profondeur : même si une future requête oublie BandSongs, elle ne sort pas du groupe actif.
         modelBuilder.Entity<Song>().HasQueryFilter(BandFilter, s => s.BandId == CurrentBandId);
         modelBuilder.Entity<Release>().HasQueryFilter(BandFilter, r => r.BandId == CurrentBandId);
+        // #20 : la corbeille n'apparaît nulle part, sauf où on la demande
+        modelBuilder.Entity<Song>().HasQueryFilter(SoftDeleteFilter, s => s.DeletedAt == null);
+        modelBuilder.Entity<SongVersion>().HasQueryFilter(SoftDeleteFilter, v => v.DeletedAt == null);
+        modelBuilder.Entity<SongFile>().HasQueryFilter(SoftDeleteFilter, f => f.DeletedAt == null);
     }
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

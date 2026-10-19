@@ -17,5 +17,8 @@ internal sealed class SongFileConfiguration : IEntityTypeConfiguration<SongFile>
         builder.HasIndex(f => f.StorageKey).IsUnique();
         builder.Property(f => f.ContentType).HasMaxLength(100).IsRequired();
         builder.Property(f => f.FileType).HasConversion<string>().HasMaxLength(20);
+        // #20 : corbeille. Index filtré : la purge quotidienne ne lit que ce qui est à la corbeille
+        builder.Property(f => f.DeletedById).HasMaxLength(450);
+        builder.HasIndex(f => f.DeletedAt).HasFilter("[DeletedAt] IS NOT NULL");
     }
 }

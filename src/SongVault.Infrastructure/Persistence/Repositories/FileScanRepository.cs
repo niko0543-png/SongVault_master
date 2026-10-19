@@ -29,7 +29,7 @@ internal sealed class FileScanRepository(SongVaultDbContext db) : IFileScanRepos
         var row = await (
                 from f in db.Set<SongFile>().AsNoTracking()
                 join v in db.Set<SongVersion>() on f.SongVersionId equals v.Id
-                join s in db.Songs.IgnoreQueryFilters([SongVaultDbContext.BandFilter]) on v.SongId equals s.Id
+                join s in db.Songs.IgnoreQueryFilters([SongVaultDbContext.BandFilter, SongVaultDbContext.SoftDeleteFilter]) on v.SongId equals s.Id
                 where f.Id == songFileId
                 select new { f.StorageKey, f.FileType, s.BandId, s.Title, v.Number, f.OriginalFileName })
             .FirstOrDefaultAsync(ct);
@@ -43,7 +43,7 @@ internal sealed class FileScanRepository(SongVaultDbContext db) : IFileScanRepos
         => (from scan in db.FileScans.AsNoTracking()
             join f in db.Set<SongFile>() on scan.SongFileId equals f.Id
             join v in db.Set<SongVersion>() on f.SongVersionId equals v.Id
-            join s in db.Songs.IgnoreQueryFilters([SongVaultDbContext.BandFilter]) on v.SongId equals s.Id
+            join s in db.Songs.IgnoreQueryFilters([SongVaultDbContext.BandFilter, SongVaultDbContext.SoftDeleteFilter]) on v.SongId equals s.Id
             join b in db.Bands on s.BandId equals b.Id
             // L'auteur de l'envoi : celui de l'événement « fichier ajouté » du fil (#11)
             join e in db.ActivityEvents on (Guid?)f.Id equals e.EntityId

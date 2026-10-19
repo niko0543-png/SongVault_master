@@ -21,7 +21,6 @@ internal sealed class SongRepository(SongVaultDbContext db, IBandContext bandCon
 
     // ---------- Écriture ----------
     public void Add(Song song) => db.Songs.Add(song);
-    public void Remove(Song song) => db.Songs.Remove(song);
 
     // ---------- Morceaux ----------
     public Task<Song?> GetByIdAsync(Guid id, CancellationToken ct)
@@ -79,6 +78,12 @@ internal sealed class SongRepository(SongVaultDbContext db, IBandContext bandCon
             .Include(s => s.Versions.Where(v => v.Id == versionId))
                 .ThenInclude(v => v.Files)
             .FirstOrDefaultAsync(s => s.Id == songId, ct);
+
+    public Task<Song?> GetWithAllVersionsAsync(Guid songId, CancellationToken ct)
+     => BandSongs
+         .Include(s => s.Versions).ThenInclude(v => v.Files)
+         .AsSplitQuery()
+         .FirstOrDefaultAsync(s => s.Id == songId, ct);
 
     public async Task<IReadOnlyList<SongVersionSummaryDto>> ListVersionsAsync(Guid songId, CancellationToken ct)
         => await BandVersions.AsNoTracking()

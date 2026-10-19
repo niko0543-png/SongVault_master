@@ -46,11 +46,12 @@ internal sealed class BillingRepository(SongVaultDbContext db) : IBillingReposit
 
     public Task<int> RefreshAllStorageUsedAsync(CancellationToken ct) => RefreshAsync(db.Bands, ct);
 
-    // Une instruction : UPDATE Bands SET StorageUsedBytes = (SELECT SUM(...) des fichiers de ses morceaux).
+    // Une instruction : UPDATE Bands SET StorageUsedBytes = (SELECT SUM(...) des fichiers de ses morceaux, corbeille comprise).
     // Elle lit les fichiers enregistrés, donc deux envois simultanés ne se marchent pas dessus.
     private Task<int> RefreshAsync(IQueryable<Band> bands, CancellationToken ct)
         => bands.ExecuteUpdateAsync(s => s.SetProperty(b => b.StorageUsedBytes, b =>
-            db.Songs.IgnoreQueryFilters(new[] { SongVaultDbContext.BandFilter })   // hors requête HTTP aussi (tâche de nuit)
+            // Hors requête HTTP aussi (tâche de nuit) ; la corbeille compte jusqu'à la purge (#20)
+            db.Songs.IgnoreQueryFilters(new[] { SongVaultDbContext.BandFilter, SongVaultDbContext.SoftDeleteFilter })
                 .Where(song => song.BandId == b.Id)
                 .SelectMany(song => song.Versions)
                 .SelectMany(v => v.Files)
