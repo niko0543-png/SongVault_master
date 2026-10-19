@@ -13,6 +13,8 @@ using SongVault.Application.Common;
 using SongVault.Infrastructure;
 using SongVault.Infrastructure.Persistence;
 using SongVault.Api.Observability;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using SongVault.Api.ServiceStatus;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,7 +34,10 @@ builder.Services.AddOptions<AppOptions>()
     .ValidateOnStart();
 
 builder.Services.AddHealthChecks()
-    .AddDbContextCheck<SongVaultDbContext>("database", tags: ["ready"]);
+    .AddDbContextCheck<SongVaultDbContext>("database", tags: ["ready"])
+    // #18 : pour la page de statut seulement ; une tâche en retard ne doit pas faire redémarrer l'API
+    .AddCheck<BackgroundJobsHealthCheck>("jobs", HealthStatus.Degraded, tags: ["status"]);
+builder.Services.AddSingleton<StatusReporter>();
 
 // --- Supervision (#18) : Application Insights si APPLICATIONINSIGHTS_CONNECTION_STRING est définie (ADR 0025) ---
 builder.AddSongVaultTelemetry();
