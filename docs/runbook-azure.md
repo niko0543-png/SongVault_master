@@ -290,6 +290,54 @@ UPDATE FileScans SET Status = N'Clean', Threat = NULL WHERE SongFileId = @file A
 -- Fichier audio : son aperçu, passé en échec au blocage, se relance depuis la version (« Réessayer »)
 
 ```
+## Supervision
+
+Application Insights `songvault-insights` reçoit les traces, les erreurs et les métriques de l'API (ADR 0025), sans donnée personnelle. Les alertes partent à l'adresse passée au déploiement avec `-AlertEmail`.
+
+### Une alerte arrive
+
+1. Ouvrir `https://<site>/statut` : la page dit si la base de données ou les tâches de fond sont touchées.
+2. Dans le portail Azure, `songvault-insights`, **Échecs** : les requêtes en erreur, groupées par route et par exception. Cliquer sur une exception ouvre sa trace : la requête, ses appels SQL et HTTP, l'exception et sa pile.
+3. Selon la cause : base injoignable (« Vérifier l'état », plus haut), API qui redémarre en boucle (« Lire les journaux »), service tiers (Brevo, Stripe) en panne, ou bogue à corriger puis déployer.
+
+L'alerte « taux d'erreurs 5xx » se déclenche au-delà de 5 % des requêtes sur 15 minutes ; « erreurs enregistrées » dès une exception dans le quart d'heure. Un second e-mail dit quand c'est rentré dans l'ordre.
+
+### Retrouver l'erreur d'un utilisateur
+
+Une erreur 500 affiche « Référence : … » dans l'application. Dans `songvault-insights`, **Journaux** :
+
+```kql
+union requests, exceptions, traces, dependencies
+| where operation_Id == "4bf92f3577b34da6a3ce929d0e0e4736"
+| order by timestamp asc
+
+```
+### Changer l'adresse des alertes
+
+Redéployer la version en place avec la nouvelle adresse ; elle est gardée aux déploiements suivants :
+
+```powershell
+$env:SONGVAULT_SQL_PASSWORD = Read-Host "Mot de passe administrateur SQL"
+.\scripts\deploy-azure.ps1 -ImageTag v1.11.0 -AlertEmail contact@songvault.eu
+
+```
+Pour essayer l'envoi : portail Azure, **Alertes**, **Groupes d'actions**, `songvault-alertes`, **Tester**.
+
+### Vérification de disponibilité (GitHub)
+
+Le workflow `uptime` lit `<site>/api/status` toutes les 15 minutes. Il a besoin de la variable `PROD_URL` du dépôt :
+
+```powershell
+gh variable set PROD_URL --body "https://songvault-web.<domaine>.francecentral.azurecontainerapps.io"
+gh workflow run uptime
+
+```
+Un run en échec (site injoignable ou « en panne ») est écrit par e-mail à la personne qui a modifié `uptime.yml` en dernier (réglage GitHub : Settings, Notifications, Actions, « Only notify for failed workflows »). GitHub suspend les workflows programmés après 60 jours sans activité sur le dépôt : le réactiver depuis l'onglet Actions.
+
+### Plafond quotidien des journaux
+
+L'espace `songvault-logs` collecte au plus 0,3 Go par jour. Plafond atteint : plus rien n'arrive jusqu'au lendemain, alertes comprises. Pour voir la consommation : `songvault-logs`, **Utilisation et coûts estimés**. Pour changer le plafond : `dailyQuotaGb` dans `infra/main.bicep`, puis déployer.
+
 ## Changer la clé du compte de stockage
 
 C'est le seul moyen d'invalider d'un coup toutes les URL signées en cours, par exemple après une fuite. Les envois en cours échouent, il suffit de les recommencer.
@@ -304,7 +352,7 @@ Le déploiement relit la clé et met à jour le secret de l'API.
 
 ## Coût et arrêt complet
 
-Pour un usage faible, compter de l'ordre de 10 à 20 € par mois, et environ 15 € de plus une fois l'antivirus activé (#17). L'essentiel vient de l'API toujours active, de la base Basic et, s'il est activé, du conteneur antivirus ; le stockage et Key Vault coûtent quelques centimes. Vérifier avec la [calculatrice de prix Azure](https://azure.microsoft.com/fr-fr/pricing/calculator/) et poser une alerte de budget dans « Gestion des coûts ».
+Pour un usage faible, compter de l'ordre de 10 à 20 € par mois, dont environ 2 € pour les alertes (#18), et environ 15 € de plus une fois l'antivirus activé (#17). L'essentiel vient de l'API toujours active, de la base Basic et, s'il est activé, du conteneur antivirus ; le stockage et Key Vault coûtent quelques centimes. Vérifier avec la [calculatrice de prix Azure](https://azure.microsoft.com/fr-fr/pricing/calculator/) et poser une alerte de budget dans « Gestion des coûts ».
 
 Tout supprimer, données comprises (sans retour possible). Les verrous de la base et du stockage bloquent la suppression : les retirer d'abord.
 

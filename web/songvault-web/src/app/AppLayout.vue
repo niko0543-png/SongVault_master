@@ -65,6 +65,7 @@ async function onLogout() {
     <RouterLink :to="{ name: 'privacy' }">Confidentialité</RouterLink>
     <RouterLink :to="{ name: 'plans' }">Formules</RouterLink>
     <RouterLink :to="{ name: 'terms-of-sale' }">CGV</RouterLink>
+    <RouterLink :to="{ name: 'status' }">État du service</RouterLink>
   </footer>
 
   <AudioPlayer v-if="isAuthenticated" />

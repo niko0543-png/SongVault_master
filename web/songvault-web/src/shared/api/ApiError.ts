@@ -20,8 +20,11 @@ export class ApiError extends Error {
 export function getErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.status === 0) return "Le serveur est injoignable. Vérifiez que l'API est démarrée."
-    if (error.status >= 500)
-      return 'Le serveur est indisponible ou a rencontré une erreur. Réessayez.'
+    if (error.status >= 500) {
+      const message = 'Le serveur est indisponible ou a rencontré une erreur. Réessayez.'
+      // #18 : la référence retrouve l'erreur et sa trace dans Application Insights
+      return error.problem.reference ? `${message} Référence : ${error.problem.reference}` : message
+    }
     return error.message
   }
   return 'Une erreur inattendue est survenue.'

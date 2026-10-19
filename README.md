@@ -128,6 +128,9 @@ docker compose down -v       # supprime aussi la base et les fichiers
   pouvoir être écouté, téléchargé ou partagé. Un fichier infecté est bloqué, son auteur
   prévenu par e-mail ; une analyse en échec se relance. Activée par `Antivirus:Provider`
   (en production, à la commercialisation).
+- **Supervision** : en production, traces, erreurs et métriques dans Application Insights
+  (OpenTelemetry), alertes par e-mail sur les erreurs, page publique `/statut` et vérification
+  de disponibilité par GitHub Actions ([ADR 0025](docs/adr/0025-supervision-en-production.md)).
 
 ---
 
@@ -355,6 +358,8 @@ npx playwright test                           # E2E (application lancée sur :80
   Conteneur privé ; URL signées limitées à un fichier, pour créer (1 h) ou lire (30 min).
   Analyse **antivirus ClamAV** de chaque fichier avant toute lecture, une fois
   `Antivirus:Provider=ClamAv` ; un fichier infecté reste bloqué ([ADR 0024](docs/adr/0024-analyse-antivirus.md)).
+- **Télémétrie sans donnée personnelle** : adresses e-mail, jetons des liens et valeurs des URL
+  retirés avant l'envoi à Application Insights ; ni adresse IP ni navigateur ([ADR 0025](docs/adr/0025-supervision-en-production.md)).
 - **Clés Data Protection** chiffrées par une clé Key Vault sur Azure.
 - **Limitation de débit** sur l'authentification et l'envoi de fichiers (429).
 - **Liens de partage** : jeton aléatoire dont seule l'empreinte est en base, routes publiques
@@ -443,8 +448,12 @@ images Docker et actions GitHub, regroupées pour limiter le bruit.
   ([ADR 0022](docs/adr/0022-e-mails-en-production-avec-brevo.md),
   [runbook](docs/runbook-azure.md#e-mails-brevo)).
 - **Santé** : `GET /health/live` (processus vivant) et `GET /health/ready` (base joignable)
-  sur l'API, utilisés par les healthchecks Compose.
+  sur l'API, utilisés par les healthchecks Compose. `GET /api/status`, ouvert à tous, alimente
+  la page `/statut` (application, base de données, tâches de fond).
 - **Journaux** : JSON structurés hors développement (`docker compose logs api`).
+- **Supervision** : en production, Application Insights `songvault-insights`, alertes par
+  e-mail et workflow `uptime` ([runbook](docs/runbook-azure.md#supervision)) ; rien n'est
+  envoyé sans `APPLICATIONINSIGHTS_CONNECTION_STRING`.
 - **Tâches de fond** : table `BackgroundJobs`, consultée toutes les 5 secondes par l'API (export, expiration des archives, purge des comptes) ; 
 trois essais, puis `Failed` avec le message d'erreur. Tâches en échec et réactivation d'un compte supprimé : [runbook](docs/runbook-docker.md#comptes-supprimés-et-tâches-de-fond).
 - **Sauvegarde** : sur Azure, restauration de la base à un instant donné (7 jours) et

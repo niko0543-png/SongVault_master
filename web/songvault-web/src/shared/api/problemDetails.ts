@@ -5,6 +5,7 @@ export interface ProblemDetails {
   status?: number
   detail?: string
   traceId?: string
+    reference?: string // #18 : erreurs 500, identifiant de la trace à donner pour retrouver l'erreur
   errors?: Record<string, string[]> // présent pour les 400 de validation
 }
 
