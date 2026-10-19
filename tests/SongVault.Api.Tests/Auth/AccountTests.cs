@@ -161,15 +161,16 @@ public sealed partial class AccountTests(SongVaultApiFactory factory)
         var email = NewEmail();
         var client = await factory.CreateNewUserClientAsync(email);
 
-        var withoutOld = await client.PostAsJsonAsync("/api/auth/manage/info", new { newPassword = NewPassword });
-        var wrongOld = await client.PostAsJsonAsync("/api/auth/manage/info",
-            new { oldPassword = "Mauvais-Password1!", newPassword = NewPassword });
-        var rightOld = await client.PostAsJsonAsync("/api/auth/manage/info",
-            new { oldPassword = SongVaultApiFactory.TestPassword, newPassword = NewPassword });
+        // #19 : /api/me/password remplace POST /api/auth/manage/info (fermé), et garde la session ouverte
+        var withoutOld = await client.PostAsJsonAsync("/api/me/password", new { newPassword = NewPassword });
+        var wrongOld = await client.PostAsJsonAsync("/api/me/password",
+            new { currentPassword = "Mauvais-Password1!", newPassword = NewPassword });
+        var rightOld = await client.PostAsJsonAsync("/api/me/password",
+            new { currentPassword = SongVaultApiFactory.TestPassword, newPassword = NewPassword });
 
         Assert.Equal(HttpStatusCode.BadRequest, withoutOld.StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, wrongOld.StatusCode);
-        Assert.Equal(HttpStatusCode.OK, rightOld.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, rightOld.StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await LoginAsync(Anonymous(), email, NewPassword)).StatusCode);
     }
 }

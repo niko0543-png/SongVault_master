@@ -91,7 +91,7 @@ public sealed class ShareLinkHandlersTests
     {
         var revoked = TokenOf(await CreateAsync());
         await new RevokeShareLinkHandler(_links, _uow, new FakeBandContext(BandId), _clock, Audit())
-    .HandleAsync(_links.Links[0].Id, CancellationToken.None);
+            .HandleAsync(_links.Links[0].Id, CancellationToken.None);
         var expiring = TokenOf(await CreateAsync(days: 1));
 
         await Assert.ThrowsAsync<NotFoundException>(() => Gate().OpenAsync(revoked, null, CancellationToken.None));
