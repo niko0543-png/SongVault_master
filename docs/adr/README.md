@@ -36,3 +36,4 @@ l'ancien, qui passe au statut « remplacé par ADR NNNN ».
 | [0028](0028-setlists.md) | Setlists : liste ordonnée des sorties, durée totale calculée par l'API, feuille imprimée sans bibliothèque | accepté |
 | [0029](0029-credits-et-repartition-des-droits.md) | Crédits et répartition des droits : règle des 100 % dans le domaine, ISWC sur le morceau, ISRC sur la version, CSV écrit sans bibliothèque | accepté |
 | [0030](0030-pistes-separees-et-melangeur.md) | Pistes séparées : la piste portée par le fichier, mélangeur Web Audio calé sur l'horloge audio | accepté |
+| [0031](0031-archive-complete-d-une-sortie.md) | Archive complète d'une sortie : ZIP écrit en flux dans le stockage, téléchargeable 24 h après connexion | accepté |
