@@ -977,6 +977,46 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                     b.ToTable("Releases", (string)null);
                 });
 
+            modelBuilder.Entity("SongVault.Domain.Releases.ReleaseExport", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("BandId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("ExpiresAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("ReleaseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("RequestedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("RequestedById")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<long?>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReleaseId", "RequestedAt");
+
+                    b.ToTable("ReleaseExports", (string)null);
+                });
+
             modelBuilder.Entity("SongVault.Domain.Releases.ReleaseTrack", b =>
                 {
                     b.Property<Guid>("ReleaseId")
@@ -1619,6 +1659,15 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("BandId")
                         .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SongVault.Domain.Releases.ReleaseExport", b =>
+                {
+                    b.HasOne("SongVault.Domain.Releases.Release", null)
+                        .WithMany()
+                        .HasForeignKey("ReleaseId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 

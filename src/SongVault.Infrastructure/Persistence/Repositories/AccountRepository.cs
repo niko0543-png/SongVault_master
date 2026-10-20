@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Identity;
 using SongVault.Domain.Bands;
 using SongVault.Domain.Files;
 using SongVault.Domain.Songs;
+using SongVault.Domain.Releases;
 
 namespace SongVault.Infrastructure.Persistence.Repositories;
 
@@ -154,7 +155,13 @@ internal sealed class AccountRepository(SongVaultDbContext db, UserManager<Ident
             .Select(e => e.StorageKey!)
             .ToListAsync(ct));
 
+        // #24 : archives des sorties de ces groupes, et celles qu'il a demandées dans les groupes partagés
+        var releaseExports = db.ReleaseExports
+            .Where(e => e.RequestedById == userId || releases.Any(r => r.Id == e.ReleaseId));
+
+        keys.AddRange((await releaseExports.Select(e => e.Id).ToListAsync(ct)).Select(ReleaseExport.StorageKeyFor));
         var email = (user.Email ?? "").ToLowerInvariant();     // Invitations.Email est en minuscules
+        await releaseExports.ExecuteDeleteAsync(ct);
         await releases.ExecuteDeleteAsync(ct);                 // pistes en cascade
         // Setlists (#21) : avant les morceaux que citent leurs lignes (lignes en cascade)
         await db.Setlists.IgnoreQueryFilters([SongVaultDbContext.BandFilter])
