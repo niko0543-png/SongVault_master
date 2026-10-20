@@ -1,13 +1,12 @@
 ﻿using System.Net.Http.Headers;
-
 using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Sas;
-
 using Microsoft.Extensions.Options;
-
 using SongVault.Application.Abstractions;
+using Azure.Storage.Blobs.Specialized;
+
 
 namespace SongVault.Infrastructure.Storage;
 
@@ -49,6 +48,17 @@ internal sealed class AzureBlobFileStorageService : IFileStorageService
             throw new FileNotFoundException("Fichier absent du stockage.", storageKey, ex);
         }
     }
+
+    // #24 : blocs de 4 Mo envoyés au fil de l'écriture, liste des blocs validée à la fermeture du flux.
+    // If-None-Match: * sur cette validation : refusé (409) si le fichier existe déjà, comme SaveAsync.
+    public async Task<Stream> OpenWriteAsync(string storageKey, CancellationToken ct)
+        => await _container.GetBlockBlobClient(storageKey).OpenWriteAsync(overwrite: true,
+            new BlockBlobOpenWriteOptions
+            {
+                BufferSize = 4 * 1024 * 1024,
+                OpenConditions = new BlobRequestConditions { IfNoneMatch = ETag.All },
+            }, ct);
+
 
     public async Task DeleteAsync(string storageKey, CancellationToken ct)
         => await Blob(storageKey).DeleteIfExistsAsync(DeleteSnapshotsOption.IncludeSnapshots, cancellationToken: ct);

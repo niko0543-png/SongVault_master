@@ -149,6 +149,9 @@ docker compose down -v       # supprime aussi la base et les fichiers
 - **Pistes séparées** : jusqu'à 8 fichiers audio d'une version (voix, guitare, batterie…) lus
   ensemble, calés à l'échantillon près, avec muet, solo et volume pour chacun
   ([ADR 0030](docs/adr/0030-pistes-separees-et-melangeur.md)).  
+- **Archive pour le distributeur** : un ZIP de la sortie (fichiers audio des versions choisies,
+  pistes séparées, paroles, crédits et pochette) préparé en arrière-plan, annoncé par e-mail et
+  téléchargeable 24 heures ([ADR 0031](docs/adr/0031-archive-complete-d-une-sortie.md)).
 
 ---
 

@@ -28,6 +28,11 @@ internal sealed class LocalFileStorageService : IFileStorageService
         => Task.FromResult<Stream>(new FileStream(ResolvePath(storageKey), FileMode.Open,
             FileAccess.Read, FileShare.Read, BufferSize, useAsync: true));
 
+    // CreateNew, comme SaveAsync ; le fichier grandit au fil de l'écriture (#24)
+    public Task<Stream> OpenWriteAsync(string storageKey, CancellationToken ct)
+        => Task.FromResult<Stream>(new FileStream(ResolvePath(storageKey), FileMode.CreateNew,
+            FileAccess.Write, FileShare.None, BufferSize, useAsync: true));
+
     public Task DeleteAsync(string storageKey, CancellationToken ct)
     {
         var path = ResolvePath(storageKey);

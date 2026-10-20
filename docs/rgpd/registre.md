@@ -33,7 +33,7 @@ fonctionnalité qui collecte, conserve ou transmet des données personnelles.
 | Destinataires | Les autres membres du groupe, selon leur rôle (ADR 0008) |
 | Sous-traitants | Hébergeur (base et stockage des fichiers) |
 | Transferts hors UE | Aucun |
-| Durée | Tant que le groupe existe ; un groupe dont le compte supprimé était le seul membre est effacé avec lui. Un morceau, une version ou un fichier supprimé reste 30 jours dans la corbeille du groupe, puis il est effacé, fichiers compris (ADR 0027) |
+| Durée | Tant que le groupe existe ; un groupe dont le compte supprimé était le seul membre est effacé avec lui. Un morceau, une version ou un fichier supprimé reste 30 jours dans la corbeille du groupe, puis il est effacé, fichiers compris (ADR 0027). L'archive ZIP d'une sortie (ADR 0031) est une copie gardée 24 heures, puis effacée |
 | Sécurité | Isolation par groupe vérifiée à chaque requête ; fichiers hors base, signature binaire contrôlée |
 
 ## 3. Invitations

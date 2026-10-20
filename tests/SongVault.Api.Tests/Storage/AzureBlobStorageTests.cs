@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using SongVault.Application.Abstractions;
+using System.Security.Cryptography;
 
 namespace SongVault.Api.Tests.Storage;
 
@@ -57,6 +58,36 @@ public sealed class AzureBlobStorageTests(SongVaultApiFactory factory, AzuriteFi
 
         Assert.Equal(409, error.Status);
     }
+
+    [Fact]
+    public async Task Ecrit_un_fichier_en_flux_et_refuse_une_cle_existante()
+    {
+        await using var host = BlobHost();
+        var storage = host.Services.GetRequiredService<IFileStorageService>();
+        var key = $"release-export-{Guid.NewGuid():N}.zip";
+        var bytes = RandomNumberGenerator.GetBytes(9 * 1024 * 1024);              // plus de deux blocs de 4 Mo
+
+        await using (var write = await storage.OpenWriteAsync(key, CancellationToken.None))
+            foreach (var chunk in bytes.Chunk(1024 * 1024))
+                await write.WriteAsync(chunk);
+
+        Assert.Equal(bytes.Length, await storage.GetLengthAsync(key, CancellationToken.None));
+        await using (var read = await storage.OpenReadAsync(key, CancellationToken.None))
+        {
+            using var copy = new MemoryStream();
+            await read.CopyToAsync(copy);
+            Assert.Equal(bytes, copy.ToArray());
+        }
+
+        var error = await Assert.ThrowsAsync<RequestFailedException>(async () =>
+        {
+            await using var again = await storage.OpenWriteAsync(key, CancellationToken.None);
+            await again.WriteAsync(new byte[] { 1 });
+        });
+        Assert.Equal(409, error.Status);
+        Assert.Equal(bytes.Length, await storage.GetLengthAsync(key, CancellationToken.None));
+    }
+
 
     [Fact]
     public async Task L_URL_d_envoi_cree_le_fichier_sans_permettre_de_le_lire()

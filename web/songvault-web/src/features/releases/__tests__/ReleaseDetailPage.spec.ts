@@ -18,6 +18,8 @@ vi.mock('../api/releasesApi', async (importOriginal) => ({
     uploadCover: vi.fn(), removeCover: vi.fn(), coverUrl: () => '/cover',
   },
 }))
+
+vi.mock('../api/releaseExportsApi')                // #24 : section de l'archive, testée à part
 vi.mock('@/features/songs/api/songsApi')
 vi.mock('@/features/versions/api/versionsApi')
 
