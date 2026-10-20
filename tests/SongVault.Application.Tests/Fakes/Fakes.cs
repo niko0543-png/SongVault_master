@@ -277,6 +277,11 @@ internal sealed class FakeFileStorageService : IFileStorageService
         return Task.CompletedTask;
     }
 
+    /// <summary>Comme le stockage objet : un flux sans retour en arrière, fichier visible une fois le flux fermé.</summary>
+    public Task<Stream> OpenWriteAsync(string storageKey, CancellationToken ct)
+        => Files.ContainsKey(storageKey)
+            ? throw new IOException($"Le fichier {storageKey} existe déjà.")
+            : Task.FromResult<Stream>(new ForwardOnlyWriteStream(bytes => Files[storageKey] = bytes));
 
     public Task<long?> GetLengthAsync(string storageKey, CancellationToken ct)
         => Task.FromResult(Files.TryGetValue(storageKey, out var bytes) ? bytes.Length : (long?)null);
