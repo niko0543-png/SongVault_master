@@ -27,6 +27,7 @@ internal sealed class GlobalExceptionHandler(
             LastOwnerException => (StatusCodes.Status409Conflict, "Dernier propriétaire du groupe"),
             ConflictException => (StatusCodes.Status409Conflict, "Conflit"),
             InvitationUnavailableException => (StatusCodes.Status410Gone, "Invitation indisponible"),
+            LinkExpiredException => (StatusCodes.Status410Gone, "Lien expiré"),
             BadHttpRequestException bad => (bad.StatusCode, "Requête invalide"),
             UnsupportedFileException => (StatusCodes.Status400BadRequest, "Fichier refusé"),
             FileTooLargeException => (StatusCodes.Status413PayloadTooLarge, "Fichier trop volumineux"),
