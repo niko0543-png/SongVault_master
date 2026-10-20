@@ -50,6 +50,19 @@ export interface ReleaseInput {
   releaseDate: string | null
 }
 
+export type ReleaseExportStatus = 'Pending' | 'Ready' | 'Failed'
+
+/** #24 : archive ZIP de la sortie pour le distributeur (GET …/releases/{id}/exports/latest). */
+export interface ReleaseExport {
+  id: string
+  status: ReleaseExportStatus
+  requestedAt: string
+  completedAt: string | null
+  expiresAt: string | null
+  sizeBytes: number | null
+}
+
+
 /** Une piste telle que l'API la reçoit : la place vient de l'ordre dans la liste. */
 export interface TrackChoice {
   songId: string
