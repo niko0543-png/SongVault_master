@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import type { SongBadge } from '../types'
+import { t } from '@/shared/i18n'
 
 /** Pastille « Nouveau » ou « Modifié » d'un morceau (#11) ; rien pour None. Le texte suffit, sans la couleur. */
 defineProps<{ badge: SongBadge }>()
 
-const labels: Record<Exclude<SongBadge, 'None'>, string> = { New: 'Nouveau', Updated: 'Modifié' }
+const labels: Record<Exclude<SongBadge, 'None'>, string> = { New: t('songs.badge.new'), Updated: t('songs.badge.updated') }
 const titles: Record<Exclude<SongBadge, 'None'>, string> = {
-  New: "Pas encore ouvert, et modifié par un autre membre",
-  Updated: 'Modifié par un autre membre depuis votre dernière visite',
+  New: t('songs.badge.newHelp'),
+  Updated: t('songs.badge.updatedHelp'),
 }
 </script>
 

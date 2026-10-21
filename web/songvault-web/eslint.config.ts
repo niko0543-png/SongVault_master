@@ -26,6 +26,26 @@ export default defineConfigWithVueTs(
     files: ['src/**/__tests__/*'],
   },
 
+  // #26 : aucun texte en dur dans les gabarits, tout passe par t() (ADR 0033)
+  {
+    name: 'app/no-bare-strings',
+    files: ['src/**/*.vue'],
+    rules: {
+      'vue/no-bare-strings-in-template': ['error', {
+        allowlist: [
+          'SongVault', 'E-mail', 'BPM', 'ISWC', 'ISRC', 'CSV', 'ZIP', 'cnil.fr',
+          '·', '—', '–', '−', '+', '×', '/', '(', ')', ':', '.', ',', '…', '↑', '↓', '←', '→', '▶', '⏸', '✕', '♪', '⠿', '%', '#', '*', '|', '🎸',
+          '/\\bv$/',                     // « v3 » : le numéro de version
+          '/^[MS]$/',                     // boutons Muet et Solo du mélangeur
+          '/^[\\dA-Z.-]+$/',              // exemples de codes : T-000.000.000-0, FR-XXX-26-00001
+          '/songvault\\w+/',              // songvault.auth… (le point est déjà retiré par la liste)
+        ],
+        attributes: { '/.+/': ['title', 'aria-label', 'aria-placeholder', 'aria-roledescription', 'aria-valuetext', 'placeholder', 'alt', 'label', 'message', 'submit-label'] },
+        directives: ['v-text'],
+      }],
+    },
+  },
+
   ...pluginOxlint.buildFromOxlintConfigFile('.oxlintrc.json'),
 
   skipFormatting,

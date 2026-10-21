@@ -1,3 +1,5 @@
+import { labels } from '@/shared/i18n'
+
 /** État renvoyé par GET /api/status (#18). */
 export type ServiceState = 'ok' | 'degraded' | 'down'
 
@@ -12,8 +14,8 @@ export interface StatusReport {
   components: ComponentStatus[]
 }
 
-export const STATE_LABELS: Record<ServiceState, string> = {
-  ok: 'Opérationnel',
-  degraded: 'Ralenti',
-  down: 'En panne',
-}
+export const STATE_LABELS = labels<ServiceState>({
+  ok: 'status.states.ok',
+  degraded: 'status.states.degraded',
+  down: 'status.states.down',
+})

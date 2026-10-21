@@ -6,6 +6,7 @@ import { loginQuery, takeAfterConfirm } from '../afterConfirm'
 import { useAuthStore } from '../stores/authStore'
 import LoadingState from '@/shared/components/LoadingState.vue'
 import { ApiError, getErrorMessage } from '@/shared/api/ApiError'
+import { t } from '@/shared/i18n'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -36,22 +37,21 @@ onMounted(async () => {
 
 <template>
   <section class="auth">
-    <h1>Confirmation de l'adresse</h1>
-    <LoadingState v-if="state === 'loading'" message="Confirmation…" />
+    <h1>{{ t('auth.confirmEmail.title') }}</h1>
+    <LoadingState v-if="state === 'loading'" :message="t('auth.confirmEmail.confirming')" />
 
     <div v-else-if="state === 'done'" class="card" role="status">
-      <p>Votre adresse est confirmée.</p>
-      <RouterLink v-if="auth.isAuthenticated" :to="target">Continuer</RouterLink>
-      <RouterLink v-else :to="{ name: 'login', query: loginQuery(target) }">Se connecter</RouterLink>
+      <p>{{ t('auth.confirmEmail.done') }}</p>
+      <RouterLink v-if="auth.isAuthenticated" :to="target">{{ t('auth.confirmEmail.continue') }}</RouterLink>
+      <RouterLink v-else :to="{ name: 'login', query: loginQuery(target) }">{{ t('auth.confirmEmail.login') }}</RouterLink>
     </div>
 
     <div v-else class="card" role="alert">
       <p v-if="state === 'invalid'">
-        Ce lien de confirmation est invalide ou a expiré. Connectez-vous avec votre adresse et votre mot de passe :
-        la page vous proposera d'en recevoir un nouveau.
+        {{ t('auth.confirmEmail.invalid') }}
       </p>
       <p v-else>{{ errorMessage }}</p>
-      <RouterLink :to="{ name: 'login' }">Aller à la connexion</RouterLink>
+      <RouterLink :to="{ name: 'login' }">{{ t('auth.confirmEmail.goToLogin') }}</RouterLink>
     </div>
   </section>
 </template>

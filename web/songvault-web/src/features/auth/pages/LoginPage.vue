@@ -7,6 +7,7 @@ import { isUnconfirmed, loginError, requiresTwoFactor } from '../messages'
 import { safeRedirect } from '@/router/authGuard'
 import { getErrorMessage } from '@/shared/api/ApiError'
 import { useAsyncAction } from '@/shared/composables/useAsyncAction'
+import { t } from '@/shared/i18n'
 
 const auth = useAuthStore()
 const route = useRoute()
@@ -73,7 +74,7 @@ async function onResend() {
 
 <template>
   <section class="auth">
-    <h1>Connexion</h1>
+    <h1>{{ t('auth.login.title') }}</h1>
     <form class="card" novalidate @submit.prevent="onSubmit">
       <template v-if="step === 'password'">
         <div class="field">
@@ -81,18 +82,18 @@ async function onResend() {
           <input id="login-email" v-model="form.email" type="email" autocomplete="username" required />
         </div>
         <div class="field">
-          <label for="login-password">Mot de passe</label>
+          <label for="login-password">{{ t('auth.login.password') }}</label>
           <input id="login-password" v-model="form.password" type="password" autocomplete="current-password" required />
         </div>
       </template>
       <template v-else>
         <p class="muted">
           {{ useRecoveryCode
-            ? 'Saisissez l’un de vos codes de secours. Chacun ne sert qu’une fois.'
-            : 'Saisissez le code à 6 chiffres affiché par votre application d’authentification.' }}
+            ? t('auth.login.recoveryHelp')
+            : t('auth.login.codeHelp') }}
         </p>
         <div class="field">
-          <label for="login-code">{{ useRecoveryCode ? 'Code de secours' : 'Code de l’application' }}</label>
+          <label for="login-code">{{ useRecoveryCode ? t('auth.login.recoveryCode') : t('auth.login.appCode') }}</label>
           <input id="login-code" ref="codeInput" v-model="form.code" type="text" required
                  :inputmode="useRecoveryCode ? 'text' : 'numeric'" :autocomplete="useRecoveryCode ? 'off' : 'one-time-code'"
                  :maxlength="useRecoveryCode ? 20 : 7" spellcheck="false" />
@@ -100,28 +101,28 @@ async function onResend() {
       </template>
       <p v-if="message" class="field-error" role="alert">{{ message }}</p>
       <template v-if="unconfirmed">
-        <p v-if="resent" class="muted" role="status">Nouvel e-mail envoyé à {{ form.email.trim() }}.</p>
+        <p v-if="resent" class="muted" role="status">{{ t('auth.login.resent', { email: form.email.trim() }) }}</p>
         <p v-else-if="resendError" class="field-error" role="alert">{{ getErrorMessage(resendError) }}</p>
         <button v-if="!resent" type="button" class="secondary" :disabled="isResending" @click="onResend">
-          Renvoyer l'e-mail de confirmation
+          {{ t('auth.login.resend') }}
         </button>
       </template>
       <button type="submit" :disabled="!canSubmit">
-        {{ isLoading ? 'Connexion…' : step === 'code' ? 'Valider le code' : 'Se connecter' }}
+        {{ isLoading ? t('auth.login.signingIn') : step === 'code' ? t('auth.login.submitCode') : t('auth.login.submit') }}
       </button>
       <p v-if="step === 'code'" class="code-links">
         <button type="button" class="link" @click="toggleRecoveryCode">
-          {{ useRecoveryCode ? 'Utiliser le code de l’application' : 'Utiliser un code de secours' }}
+          {{ useRecoveryCode ? t('auth.login.useAppCode') : t('auth.login.useRecoveryCode') }}
         </button>
-        <button type="button" class="link" @click="backToPassword">Changer de compte</button>
+        <button type="button" class="link" @click="backToPassword">{{ t('auth.login.switchAccount') }}</button>
       </p>
     </form>
     <p class="muted">
       <RouterLink :to="{ name: 'forgot-password', query: form.email.trim() ? { email: form.email.trim() } : {} }">
-        Mot de passe oublié ?
+        {{ t('auth.login.forgot') }}
       </RouterLink>
     </p>
-    <p class="muted">Pas encore de compte ? <RouterLink :to="{ name: 'register', query: route.query }">Créer un compte</RouterLink></p>
+    <p class="muted">{{ t('auth.login.noAccount') }} <RouterLink :to="{ name: 'register', query: route.query }">{{ t('auth.login.register') }}</RouterLink></p>
   </section>
 </template>
 

@@ -7,6 +7,7 @@ import { useConfirm } from '@/shared/composables/useConfirm'
 import { useToast } from '@/shared/composables/useToast'
 import { useAuthStore } from '@/features/auth/stores/authStore'
 import { accountApi } from '../api/accountApi'
+import { t } from '@/shared/i18n'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -20,15 +21,13 @@ const isDeleting = ref(false)
 async function onSubmit() {
   error.value = null
   if (!password.value) {
-    error.value = 'Saisissez votre mot de passe.'
+    error.value = t('account.deleteAccount.passwordRequired')
     return
   }
   const confirmed = await confirm({
-    title: 'Supprimer votre compte ?',
-    message:
-      'Vous quittez tout de suite vos groupes partagés. Dans 30 jours, le compte sera effacé définitivement, ' +
-      'avec les groupes dont vous êtes le seul membre et leurs fichiers.',
-    confirmLabel: 'Supprimer mon compte',
+    title: t('account.deleteAccount.confirmTitle'),
+    message: t('account.deleteAccount.confirmMessage'),
+    confirmLabel: t('account.deleteAccount.submit'),
     danger: true,
   })
   if (!confirmed) return
@@ -37,7 +36,7 @@ async function onSubmit() {
   try {
     await accountApi.deleteAccount(password.value)
     auth.clearSession()
-    toast.success('Compte supprimé. Il sera effacé définitivement dans 30 jours.')
+    toast.success(t('account.deleteAccount.done'))
     await router.replace({ name: 'login' })
   } catch (e) {
     error.value = getErrorMessage(e)
@@ -48,19 +47,18 @@ async function onSubmit() {
 </script>
 
 <template>
-  <SectionCard title="Supprimer mon compte">
+  <SectionCard :title="t('account.deleteAccount.submit')">
     <p class="muted">
-      Si vous êtes le dernier Owner d’un groupe qui a d’autres membres, nommez d’abord un autre Owner.
-      Pour garder une copie de vos données, exportez-les avant.
+      {{ t('account.deleteAccount.intro') }}
     </p>
     <form class="delete-form" novalidate @submit.prevent="onSubmit">
       <div class="field">
-        <label for="delete-password">Mot de passe</label>
+        <label for="delete-password">{{ t('account.deleteAccount.password') }}</label>
         <input id="delete-password" v-model="password" type="password" autocomplete="current-password" required />
       </div>
       <p v-if="error" class="field-error" role="alert">{{ error }}</p>
       <button type="submit" class="danger" :disabled="isDeleting">
-        {{ isDeleting ? 'Suppression…' : 'Supprimer mon compte' }}
+        {{ isDeleting ? t('account.deleteAccount.deleting') : t('account.deleteAccount.submit') }}
       </button>
     </form>
   </SectionCard>

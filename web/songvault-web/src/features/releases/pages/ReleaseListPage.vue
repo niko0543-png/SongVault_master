@@ -12,6 +12,7 @@ import EmptyState from '@/shared/components/EmptyState.vue'
 import SectionCard from '@/shared/components/SectionCard.vue'
 import { getErrorMessage } from '@/shared/api/ApiError'
 import { useAsyncAction } from '@/shared/composables/useAsyncAction'
+import { t } from '@/shared/i18n'
 
 const bands = useBandStore()
 const router = useRouter()
@@ -44,17 +45,17 @@ async function onCreate(input: ReleaseInput) {
 <template>
   <section>
     <header class="page-header">
-      <h1>Sorties</h1>
+      <h1>{{ t('releases.list.title') }}</h1>
     </header>
 
-    <SectionCard v-if="bands.can('write')" title="Nouvelle sortie">
-      <ReleaseForm submit-label="Créer la sortie" :submitting="creation.isLoading.value"
+    <SectionCard v-if="bands.can('write')" :title="t('releases.list.newTitle')">
+      <ReleaseForm :submit-label="t('releases.list.create')" :submitting="creation.isLoading.value"
                    :error="creation.error.value ? getErrorMessage(creation.error.value) : null" @submit="onCreate" />
     </SectionCard>
 
     <LoadingState v-if="isLoading" />
     <ErrorState v-else-if="error" :message="getErrorMessage(error)" @retry="load" />
-    <EmptyState v-else-if="releases.length === 0" message="Aucune sortie pour l'instant : ni single, ni EP, ni album." />
+    <EmptyState v-else-if="releases.length === 0" :message="t('releases.list.empty')" />
 
     <ul v-else class="release-list">
       <li v-for="release in releases" :key="release.id" class="card release" data-testid="release-item">

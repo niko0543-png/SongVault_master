@@ -5,12 +5,13 @@ import { storeToRefs } from 'pinia'
 import { useBandStore } from '../stores/bandStore'
 import { ApiError, getErrorMessage } from '@/shared/api/ApiError'
 import type { BandRole } from '../types'
+import { labels, t } from '@/shared/i18n'
 
 const store = useBandStore()
 const { bands, activeId } = storeToRefs(store)
 const router = useRouter()
 
-const roleLabels: Record<BandRole, string> = { Owner: 'propriétaire', Member: 'membre', Guest: 'invité' }
+const roleLabels = labels<BandRole>({ Owner: 'bands.switcher.roles.Owner', Member: 'bands.switcher.roles.Member', Guest: 'bands.switcher.roles.Guest' })
 
 const isCreating = ref(false)
 const newName = ref('')
@@ -40,21 +41,21 @@ async function onCreate() {
 
 <template>
   <div class="band-switcher">
-    <label for="band-select">Groupe</label>
+    <label for="band-select">{{ t('bands.switcher.band') }}</label>
     <select id="band-select" :value="activeId ?? ''" @change="onSelect">
       <option v-for="band in bands" :key="band.id" :value="band.id">
         {{ band.name }} ({{ roleLabels[band.role] }})
       </option>
     </select>
 
-    <button v-if="!isCreating" type="button" class="secondary" @click="isCreating = true">Nouveau groupe</button>
+    <button v-if="!isCreating" type="button" class="secondary" @click="isCreating = true">{{ t('bands.switcher.newBand') }}</button>
     <form v-else class="band-create" @submit.prevent="onCreate">
-      <input v-model="newName" aria-label="Nom du nouveau groupe" placeholder="Nom du groupe" required maxlength="100" />
-      <button type="submit">Créer</button>
-      <button type="button" class="secondary" @click="isCreating = false">Annuler</button>
+      <input v-model="newName" :aria-label="t('bands.switcher.newBandName')" :placeholder="t('bands.switcher.bandName')" required maxlength="100" />
+      <button type="submit">{{ t('bands.switcher.create') }}</button>
+      <button type="button" class="secondary" @click="isCreating = false">{{ t('common.actions.cancel') }}</button>
       <p v-if="error" role="alert" class="field-error">
         {{ error }}
-        <RouterLink v-if="isPlanLimit" :to="{ name: 'plans' }">Voir les formules</RouterLink>
+        <RouterLink v-if="isPlanLimit" :to="{ name: 'plans' }">{{ t('bands.switcher.seePlans') }}</RouterLink>
       </p>
     </form>
   </div>

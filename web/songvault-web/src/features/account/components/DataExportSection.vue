@@ -5,6 +5,7 @@ import { getErrorMessage } from '@/shared/api/ApiError'
 import { formatDate, formatFileSize } from '@/shared/utils/format'
 import { accountApi, EXPORT_DOWNLOAD_URL } from '../api/accountApi'
 import type { DataExport } from '../types'
+import { t } from '@/shared/i18n'
 
 const POLL_MS = 5000
 
@@ -50,22 +51,21 @@ onBeforeUnmount(() => clearTimeout(timer))
 </script>
 
 <template>
-  <SectionCard title="Vos données">
+  <SectionCard :title="t('account.dataExport.title')">
     <p class="muted">
-      Une archive ZIP de votre compte, de vos groupes et de leurs morceaux, versions et fichiers.
-      Un e-mail vous prévient quand elle est prête ; elle reste disponible 7 jours.
+      {{ t('account.dataExport.intro') }}
     </p>
-    <p v-if="isPending" role="status">Préparation en cours…</p>
+    <p v-if="isPending" role="status">{{ t('account.dataExport.preparing') }}</p>
     <p v-else-if="current?.status === 'Ready'">
-      Archive prête ({{ formatFileSize(current.sizeBytes ?? 0) }}), disponible jusqu’au {{ formatDate(current.expiresAt!) }}.
-      <a :href="EXPORT_DOWNLOAD_URL" download>Télécharger l’archive</a>
+      {{ t('account.dataExport.ready', { sizeBytes: formatFileSize(current.sizeBytes ?? 0), expiresAt: formatDate(current.expiresAt!) }) }}
+      <a :href="EXPORT_DOWNLOAD_URL" download>{{ t('account.dataExport.download') }}</a>
     </p>
     <p v-else-if="current?.status === 'Failed'" class="field-error">
-      La préparation a échoué. Réessayez ; si cela se reproduit, écrivez-nous.
+      {{ t('account.dataExport.failed') }}
     </p>
     <p v-if="error" class="field-error" role="alert">{{ error }}</p>
     <button type="button" :disabled="isPending || isRequesting" @click="requestExport">
-      {{ current ? 'Préparer une nouvelle archive' : 'Exporter mes données' }}
+      {{ current ? t('account.dataExport.prepareNew') : t('account.dataExport.export') }}
     </button>
   </SectionCard>
 </template>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { nextTick, useTemplateRef, watch } from 'vue'
 import { useConfirm } from '../composables/useConfirm'
+import { t } from '@/shared/i18n'
 
 const { pending, answer } = useConfirm()
 const dialog = useTemplateRef<HTMLDialogElement>('confirm-dialog')
@@ -36,8 +37,8 @@ function onClose() {
       <h2 id="confirm-title">{{ pending.title }}</h2>
       <p id="confirm-message">{{ pending.message }}</p>
       <div class="actions">
-        <button value="cancel" class="secondary" autofocus>Annuler</button>
-        <button value="confirm" :class="{ danger: pending.danger }">{{ pending.confirmLabel ?? 'Confirmer' }}</button>
+        <button value="cancel" class="secondary" autofocus>{{ t('common.actions.cancel') }}</button>
+        <button value="confirm" :class="{ danger: pending.danger }">{{ pending.confirmLabel ?? t('common.actions.confirm') }}</button>
       </div>
     </form>
   </dialog>

@@ -8,11 +8,12 @@ import { ApiError, getErrorMessage } from '@/shared/api/ApiError'
 import { formatDate } from '@/shared/utils/format'
 import { useAsyncAction } from '@/shared/composables/useAsyncAction'
 import { useToast } from '@/shared/composables/useToast'
+import { t } from '@/shared/i18n'
 
 const bands = useBandStore()
 const toast = useToast()
 
-const roleLabels: Record<InvitableRole, string> = { Member: 'Membre', Guest: 'Invité' }
+const roleLabels: Record<InvitableRole, string> = { Member: t('invitations.panel.roles.Member'), Guest: t('invitations.panel.roles.Guest') }
 const ROLES: InvitableRole[] = ['Member', 'Guest']
 
 const form = reactive<{ email: string; role: InvitableRole }>({ email: '', role: 'Member' })
@@ -25,7 +26,7 @@ const { isLoading, error, run } = useAsyncAction(invitationsApi.create)
 // 400 : adresse refusée par la validation ; 422 : déjà membre (le détail de l'API le dit)
 const createMessage = computed(() => {
   if (!error.value) return null
-  if (error.value instanceof ApiError && error.value.status === 400) return 'Adresse e-mail invalide.'
+  if (error.value instanceof ApiError && error.value.status === 400) return t('invitations.panel.badEmail')
   return getErrorMessage(error.value)
 })
 
@@ -50,7 +51,7 @@ async function onInvite() {
   if (!result) return
   created.value = result
   form.email = ''
-  if (result.emailSent) toast.success(`Invitation envoyée à ${result.email}.`)
+  if (result.emailSent) toast.success(t('invitations.panel.sent', { email: result.email }))
   await load()
 }
 
@@ -58,10 +59,10 @@ async function onCopy() {
   if (!created.value) return
   try {
     await navigator.clipboard.writeText(created.value.link)
-    toast.success('Lien copié.')
+    toast.success(t('invitations.panel.copied'))
   } catch {
     // Presse-papiers indisponible (page servie en http hors localhost) : le champ reste sélectionnable
-    toast.error('Copie impossible : sélectionnez le lien et copiez-le à la main.')
+    toast.error(t('invitations.panel.copyFailed'))
   }
 }
 
@@ -69,7 +70,7 @@ async function onRevoke(invitation: Invitation) {
   busyId.value = invitation.id
   try {
     await invitationsApi.revoke(invitation.id)
-    toast.success(`Invitation de ${invitation.email} annulée.`)
+    toast.success(t('invitations.panel.revoked', { email: invitation.email }))
   } catch (e) {
     // 410 : utilisée ou expirée entre-temps, la liste relue la fera disparaître
     if (!(e instanceof ApiError && e.status === 410)) toast.error(getErrorMessage(e))
@@ -82,46 +83,46 @@ async function onRevoke(invitation: Invitation) {
 </script>
 
 <template>
-  <SectionCard title="Inviter quelqu'un">
+  <SectionCard :title="t('invitations.panel.title')">
     <form class="invite-form" novalidate @submit.prevent="onInvite">
       <div class="field">
         <label for="invite-email">E-mail</label>
         <input id="invite-email" v-model="form.email" type="email" autocomplete="off" required />
       </div>
       <div class="field">
-        <label for="invite-role">Rôle</label>
+        <label for="invite-role">{{ t('invitations.panel.role') }}</label>
         <select id="invite-role" v-model="form.role">
           <option v-for="role in ROLES" :key="role" :value="role">{{ roleLabels[role] }}</option>
         </select>
       </div>
-      <button type="submit" :disabled="isLoading || !form.email.trim()">{{ isLoading ? 'Envoi…' : 'Inviter' }}</button>
+      <button type="submit" :disabled="isLoading || !form.email.trim()">{{ isLoading ? t('invitations.panel.sending') : t('invitations.panel.invite') }}</button>
     </form>
     <p v-if="createMessage" class="field-error" role="alert">{{ createMessage }}</p>
 
     <div v-if="created" class="created" data-testid="invitation-link">
       <p v-if="created.emailSent" class="muted">
-        Lien envoyé à {{ created.email }}, valable jusqu'au {{ formatDate(created.expiresAt) }}. Il ne sera plus affiché ensuite.
+        {{ t('invitations.panel.created', { email: created.email, expiresAt: formatDate(created.expiresAt) }) }}
       </p>
       <p v-else class="field-error" role="alert">
-        L'e-mail n'a pas pu partir. Envoyez ce lien vous-même à {{ created.email }} :
+        {{ t('invitations.panel.mailFailed', { email: created.email }) }}
       </p>
       <div class="link-row">
-        <input :value="created.link" readonly aria-label="Lien d'invitation" />
-        <button type="button" class="secondary" @click="onCopy">Copier le lien</button>
+        <input :value="created.link" readonly :aria-label="t('invitations.panel.linkLabel')" />
+        <button type="button" class="secondary" @click="onCopy">{{ t('invitations.panel.copy') }}</button>
       </div>
     </div>
 
-    <h3>En attente</h3>
+    <h3>{{ t('invitations.panel.pending') }}</h3>
     <p v-if="listError" class="field-error" role="alert">{{ listError }}</p>
-    <p v-else-if="pending.length === 0" class="muted">Aucune invitation en attente.</p>
+    <p v-else-if="pending.length === 0" class="muted">{{ t('invitations.panel.empty') }}</p>
     <ul v-else class="invitation-list">
       <li v-for="invitation in pending" :key="invitation.id" class="invitation" data-testid="invitation-item">
         <div class="invitation-info">
           <span>{{ invitation.email }} · {{ roleLabels[invitation.role] }}</span>
-          <small class="muted">Expire le {{ formatDate(invitation.expiresAt) }}</small>
+          <small class="muted">{{ t('invitations.panel.expires', { expiresAt: formatDate(invitation.expiresAt) }) }}</small>
         </div>
         <button type="button" class="secondary" :disabled="busyId === invitation.id" @click="onRevoke(invitation)">
-          Révoquer
+          {{ t('invitations.panel.revoke') }}
         </button>
       </li>
     </ul>

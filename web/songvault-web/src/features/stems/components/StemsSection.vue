@@ -15,6 +15,7 @@ import { getErrorMessage } from '@/shared/api/ApiError'
 import { useAsyncAction } from '@/shared/composables/useAsyncAction'
 import { useToast } from '@/shared/composables/useToast'
 import { formatTime } from '@/shared/utils/format'
+import { t } from '@/shared/i18n'
 
 /**
  * Pistes séparées d'une version (#23, ADR 0030). files est la liste de la page : quand un fichier arrive,
@@ -69,15 +70,15 @@ async function onSave(input: StemInput[]) {
   stems.value = saved
   editing.value = false
   if (mixer.state.value !== 'idle' && playableKey.value !== loadedKey) mixer.dispose()
-  toast.success(saved.length ? 'Pistes enregistrées.' : 'Mélangeur retiré.')
+  toast.success(saved.length ? t('stems.section.saved') : t('stems.section.removed'))
 }
 </script>
 
 <template>
-  <SectionCard title="Pistes séparées">
+  <SectionCard :title="t('stems.section.title')">
     <template v-if="!readonly && !editing && !isLoading && !loadError" #actions>
       <button type="button" class="secondary" @click="editing = true">
-        {{ stems.length ? 'Modifier les pistes' : 'Choisir les pistes' }}
+        {{ stems.length ? t('stems.section.edit') : t('stems.section.choose') }}
       </button>
     </template>
 
@@ -90,16 +91,15 @@ async function onSave(input: StemInput[]) {
     </template>
 
     <p v-else-if="stems.length === 0" class="muted">
-      <template v-if="readonly">Pas de pistes séparées pour cette version.</template>
+      <template v-if="readonly">{{ t('stems.section.empty') }}</template>
       <template v-else>
-        Envoyez un fichier audio par instrument (voix, guitare, batterie…), puis choisissez-les ici pour les écouter
-        ensemble et régler chacun.
+        {{ t('stems.section.help') }}
       </template>
     </p>
 
     <template v-else>
       <p v-if="waiting.length" class="muted" role="status" data-testid="stems-waiting">
-        Pas encore jouables (analyse ou aperçu en cours, ou en échec dans Fichiers) : {{ waiting.map((s) => s.name).join(', ') }}.
+        {{ t('stems.section.waiting', { name: waiting.map((s) => s.name).join(', ') }) }}
       </p>
 
       <StemMixer v-if="mixer.state.value === 'ready' && mixer.engine.value" :engine="mixer.engine.value"
@@ -110,14 +110,12 @@ async function onSave(input: StemInput[]) {
           <li v-for="s in stems" :key="s.fileId">{{ s.name }} <small class="muted">· {{ s.originalFileName }}</small></li>
         </ul>
         <p v-if="!fits" class="field-error" role="alert" data-testid="stems-too-long">
-          Trop long pour la mémoire de cet appareil : {{ formatTime(totalSeconds) }} de pistes au total
-          (environ {{ neededMb }} Mo une fois décodées), {{ formatTime(maxSeconds(budget)) }} au plus ici.
-          Retirez une piste ou écoutez les fichiers un par un.
+          {{ t('stems.section.tooLong', { totalSeconds: formatTime(totalSeconds), neededMb, budget: formatTime(maxSeconds(budget)) }) }}
         </p>
         <p v-if="mixer.state.value === 'error'" class="field-error" role="alert">{{ mixer.error.value }}</p>
         <button type="button" :disabled="!fits || playable.length === 0 || mixer.state.value === 'loading'" @click="onLoadMixer">
-          <template v-if="mixer.state.value === 'loading'">Chargement… {{ mixer.loaded.value }}/{{ playable.length }}</template>
-          <template v-else>Ouvrir le mélangeur ({{ playable.length }} {{ playable.length > 1 ? 'pistes' : 'piste' }})</template>
+          <template v-if="mixer.state.value === 'loading'">{{ t('stems.section.loading', { loaded: mixer.loaded.value, count: playable.length }) }}</template>
+          <template v-else>{{ t('stems.section.open', { count: playable.length }) }}</template>
         </button>
       </template>
     </template>

@@ -5,6 +5,7 @@ import { hasChords, transposition } from '../chordpro'
 import { parseKey, transposeKey } from '../chords'
 import { VERSION_LYRICS_MAX } from '@/features/versions/types'
 import { useConfirm } from '@/shared/composables/useConfirm'
+import { t } from '@/shared/i18n'
 
 /**
  * #25 : paroles d'une version, lues avec leurs accords ou modifiées en texte (ADR 0032).
@@ -43,18 +44,20 @@ function shift(semitones: number) {
 const signed = computed(() => (offset.value > 0 ? `+${offset.value}` : `${offset.value}`))
 const label = computed(() => {
   const { from, to } = result.value
-  if (offset.value === 0) return from ? `${from} (d’origine)` : 'Tonalité d’origine'
-  return from ? `${from} → ${to} (${signed.value})` : `${signed.value} demi-tons`
+  if (offset.value === 0) return from ? t('chords.lyrics.original', { key: from }) : t('chords.lyrics.originalKey')
+  return from ? `${from} → ${to} (${signed.value})` : t('chords.lyrics.semitones', { n: signed.value })
 })
 
 async function onSaveTransposed() {
   if (offset.value === 0 || props.dirty) return
   const key = parseKey(props.musicalKey) ? transposeKey(props.musicalKey, offset.value) : null
   const confirmed = await confirm({
-    title: `Enregistrer les accords ${result.value.to ? `en ${result.value.to}` : `à ${signed.value} demi-tons`} ?`,
-    message: `Les accords des paroles sont réécrits${key ? ` et la tonalité de la version passe à ${key}` : ''}. `
-      + `Pour revenir en arrière, transposez de ${offset.value > 0 ? '−' : '+'}${Math.abs(offset.value)} et enregistrez à nouveau.`,
-    confirmLabel: 'Enregistrer',
+    title: result.value.to
+      ? t('chords.lyrics.saveInKeyTitle', { key: result.value.to })
+      : t('chords.lyrics.saveBySemitonesTitle', { n: signed.value }),
+    message: `${key ? t('chords.lyrics.rewrittenWithKey', { key }) : t('chords.lyrics.rewritten')} `
+      + t('chords.lyrics.undo', { back: `${offset.value > 0 ? '−' : '+'}${Math.abs(offset.value)}` }),
+    confirmLabel: t('common.actions.save'),
   })
   if (!confirmed) return
   const lyrics = result.value.text
@@ -66,36 +69,36 @@ async function onSaveTransposed() {
 <template>
   <div class="lyrics-panel">
     <div class="toolbar">
-      <div v-if="canWrite" class="group" role="group" aria-label="Affichage des paroles">
+      <div v-if="canWrite" class="group" role="group" :aria-label="t('chords.lyrics.viewLabel')">
         <button type="button" :class="{ secondary: mode !== 'read' }" :aria-pressed="mode === 'read'"
-                @click="mode = 'read'">Lecture</button>
+                @click="mode = 'read'">{{ t('chords.lyrics.read') }}</button>
         <button type="button" :class="{ secondary: mode !== 'edit' }" :aria-pressed="mode === 'edit'"
-                @click="mode = 'edit'">Modifier le texte</button>
+                @click="mode = 'edit'">{{ t('chords.lyrics.edit') }}</button>
       </div>
-      <div v-if="chorded && mode === 'read'" class="group" role="group" aria-label="Transposition">
-        <button type="button" class="secondary" aria-label="Descendre d’un demi-ton" @click="shift(-1)">−½ ton</button>
+      <div v-if="chorded && mode === 'read'" class="group" role="group" :aria-label="t('chords.lyrics.transposition')">
+        <button type="button" class="secondary" :aria-label="t('chords.lyrics.down')" @click="shift(-1)">{{ t('chords.lyrics.downShort') }}</button>
         <output class="key" aria-live="polite">{{ label }}</output>
-        <button type="button" class="secondary" aria-label="Monter d’un demi-ton" @click="shift(1)">+½ ton</button>
-        <button v-if="offset !== 0" type="button" class="secondary" @click="offset = 0">Revenir à l’original</button>
+        <button type="button" class="secondary" :aria-label="t('chords.lyrics.up')" @click="shift(1)">{{ t('chords.lyrics.upShort') }}</button>
+        <button v-if="offset !== 0" type="button" class="secondary" @click="offset = 0">{{ t('chords.lyrics.reset') }}</button>
       </div>
     </div>
 
     <template v-if="mode === 'edit'">
-      <textarea v-model="text" class="lyrics" rows="14" :maxlength="VERSION_LYRICS_MAX" aria-label="Paroles"
+      <textarea v-model="text" class="lyrics" rows="14" :maxlength="VERSION_LYRICS_MAX" :aria-label="t('chords.lyrics.lyrics')"
                 :disabled="!canWrite" spellcheck="true" />
       <p class="muted hint">
-        <small>Accords entre crochets, juste avant la syllabe : [Am]Je marche [F]seul. {c: Refrain} pour une indication.</small>
+        <small>{{ t('chords.lyrics.help') }}</small>
       </p>
     </template>
 
     <template v-else>
-      <p v-if="modelValue.trim() === ''" class="muted">Pas encore de paroles.</p>
+      <p v-if="modelValue.trim() === ''" class="muted">{{ t('chords.lyrics.empty') }}</p>
       <ChordSheet v-else :source="result.text" />
       <div v-if="canWrite && offset !== 0" class="save-transposed">
         <button type="button" class="secondary" :disabled="dirty" @click="onSaveTransposed">
-          Enregistrer dans cette tonalité
+          {{ t('chords.lyrics.saveInKey') }}
         </button>
-        <small v-if="dirty" class="muted">Enregistrez ou annulez d’abord vos autres modifications.</small>
+        <small v-if="dirty" class="muted">{{ t('chords.lyrics.saveBlocked') }}</small>
       </div>
     </template>
   </div>

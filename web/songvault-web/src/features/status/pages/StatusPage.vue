@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { statusApi } from '../api/statusApi'
 import { STATE_LABELS, type ServiceState, type StatusReport } from '../types'
 import { formatDate } from '@/shared/utils/format'
+import { t } from '@/shared/i18n'
 
 /** Rafraîchie seule, comme une page de statut qu'on laisse ouverte pendant un incident. */
 const REFRESH_MS = 60_000
@@ -14,13 +15,13 @@ const lastTry = ref<Date | null>(null)
 let timer: ReturnType<typeof setInterval> | undefined
 
 const HEADLINES: Record<ServiceState, string> = {
-  ok: 'Tout fonctionne',
-  degraded: 'SongVault fonctionne, avec du retard',
-  down: 'SongVault est en panne',
+  ok: t('status.page.allGood'),
+  degraded: t('status.page.degraded'),
+  down: t('status.page.down'),
 }
 
 const headline = computed(() => {
-  if (unreachable.value) return 'SongVault ne répond pas'
+  if (unreachable.value) return t('status.page.noAnswer')
   return report.value ? HEADLINES[report.value.status] : ''
 })
 
@@ -41,14 +42,14 @@ onUnmounted(() => clearInterval(timer))
 
 <template>
   <section class="status-page">
-    <h1>État du service</h1>
-    <p v-if="loading" class="muted" role="status">Vérification…</p>
+    <h1>{{ t('status.page.title') }}</h1>
+    <p v-if="loading" class="muted" role="status">{{ t('status.page.checking') }}</p>
     <template v-else>
       <p class="headline" :class="unreachable ? 'down' : report?.status" role="status" aria-live="polite">
         {{ headline }}
       </p>
       <p v-if="unreachable" class="muted">
-        Le site s’affiche, mais le serveur ne répond pas. Nous sommes prévenus ; cette page se met à jour toute seule.
+        {{ t('status.page.apiDown') }}
       </p>
       <ul v-else-if="report" class="components card">
         <li v-for="component in report.components" :key="component.name">
@@ -56,9 +57,9 @@ onUnmounted(() => clearInterval(timer))
           <span class="state" :class="component.status">{{ STATE_LABELS[component.status] }}</span>
         </li>
       </ul>
-      <p v-if="report && !unreachable" class="muted">Vérifié le {{ formatDate(report.checkedAt) }}.</p>
-      <p v-else-if="lastTry" class="muted">Dernier essai le {{ formatDate(lastTry.toISOString()) }}.</p>
-      <button type="button" class="secondary" @click="refresh">Vérifier maintenant</button>
+      <p v-if="report && !unreachable" class="muted">{{ t('status.page.checked', { checkedAt: formatDate(report.checkedAt) }) }}</p>
+      <p v-else-if="lastTry" class="muted">{{ t('status.page.lastTry', { lastTry: formatDate(lastTry.toISOString()) }) }}</p>
+      <button type="button" class="secondary" @click="refresh">{{ t('status.page.checkNow') }}</button>
     </template>
   </section>
 </template>

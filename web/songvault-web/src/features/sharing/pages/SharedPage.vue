@@ -7,6 +7,7 @@ import { formatReleaseDate } from '@/features/releases/format'
 import LoadingState from '@/shared/components/LoadingState.vue'
 import { ApiError, getErrorMessage } from '@/shared/api/ApiError'
 import { formatDate } from '@/shared/utils/format'
+import { t } from '@/shared/i18n'
 
 const props = defineProps<{ token: string }>()
 
@@ -46,7 +47,7 @@ async function onUnlock() {
     await load()
   } catch (e) {
     // 422 : mauvais mot de passe ; 429 : trop d'essais (le détail de l'API le dit)
-    unlockError.value = e instanceof ApiError && e.status === 422 ? 'Mot de passe incorrect.' : getErrorMessage(e)
+    unlockError.value = e instanceof ApiError && e.status === 422 ? t('sharing.shared.wrongPassword') : getErrorMessage(e)
   } finally {
     unlocking.value = false
   }
@@ -77,34 +78,34 @@ onBeforeUnmount(() => robots?.remove())
     <LoadingState v-if="state === 'loading'" />
 
     <div v-else-if="state === 'locked'" class="card">
-      <h1>Écoute protégée</h1>
+      <h1>{{ t('sharing.shared.protected') }}</h1>
       <form novalidate @submit.prevent="onUnlock">
         <div class="field">
-          <label for="share-password">Mot de passe</label>
+          <label for="share-password">{{ t('sharing.shared.password') }}</label>
           <input id="share-password" v-model="password" type="password" autocomplete="off" required
                  :maxlength="SHARE_PASSWORD_MAX" aria-describedby="share-password-help" />
-          <small id="share-password-help" class="muted">Le groupe qui vous a envoyé ce lien vous l'a donné à part.</small>
+          <small id="share-password-help" class="muted">{{ t('sharing.shared.passwordHelp') }}</small>
         </div>
         <p v-if="unlockError" class="field-error" role="alert">{{ unlockError }}</p>
-        <button type="submit" :disabled="unlocking || !password">{{ unlocking ? 'Vérification…' : 'Écouter' }}</button>
+        <button type="submit" :disabled="unlocking || !password">{{ unlocking ? t('sharing.shared.checking') : t('sharing.shared.listen') }}</button>
       </form>
     </div>
 
     <div v-else-if="state === 'not-found'" class="card" role="alert">
-      <h1>Lien indisponible</h1>
-      <p>Ce lien n'existe pas, a expiré ou a été révoqué par le groupe. Demandez-lui un nouveau lien.</p>
+      <h1>{{ t('sharing.shared.unavailable') }}</h1>
+      <p>{{ t('sharing.shared.unavailableText') }}</p>
     </div>
 
     <div v-else-if="state === 'error'" class="card" role="alert">
       <p>{{ errorMessage }}</p>
-      <button type="button" class="secondary" @click="load">Réessayer</button>
+      <button type="button" class="secondary" @click="load">{{ t('common.actions.retry') }}</button>
     </div>
 
     <template v-else-if="content">
       <header class="shared-header">
-        <img v-if="content.hasCover" :src="sharingApi.coverUrl(token)" :alt="`Pochette de ${content.title}`" class="cover" />
+        <img v-if="content.hasCover" :src="sharingApi.coverUrl(token)" :alt="t('sharing.shared.coverOf', { title: content.title })" class="cover" />
         <div>
-          <p class="muted">{{ content.bandName }} vous fait écouter</p>
+          <p class="muted">{{ t('sharing.shared.presents', { bandName: content.bandName }) }}</p>
           <h1>{{ content.title }}</h1>
           <p class="muted">{{ subtitle }}</p>
         </div>
@@ -117,17 +118,17 @@ onBeforeUnmount(() => robots?.remove())
             {{ track.songTitle }}<small v-if="track.artist" class="muted"> · {{ track.artist }}</small>
           </h2>
           <p v-if="content.targetType === 'Release'" class="muted">v{{ track.versionNumber }} · {{ track.versionTitle }}</p>
-          <p v-if="track.files.length === 0" class="muted">Pas encore de fichier audio.</p>
+          <p v-if="track.files.length === 0" class="muted">{{ t('sharing.shared.noAudio') }}</p>
           <figure v-for="file in track.files" :key="file.id" class="file">
             <figcaption>{{ file.fileName }}</figcaption>
             <audio controls preload="none" controlslist="nodownload" :src="sharingApi.fileUrl(token, file.id)"
-                   :aria-label="`Écouter ${file.fileName}`" />
+                   :aria-label="t('sharing.shared.listenTo', { fileName: file.fileName })" />
           </figure>
         </li>
       </ol>
 
       <p class="muted notice">
-        Écoute seule, valable jusqu'au {{ formatDate(content.expiresAt) }}. Le groupe peut couper ce lien à tout moment.
+        {{ t('sharing.shared.listenOnly', { expiresAt: formatDate(content.expiresAt) }) }}
       </p>
     </template>
   </section>

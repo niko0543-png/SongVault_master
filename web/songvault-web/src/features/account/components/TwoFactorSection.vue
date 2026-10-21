@@ -8,6 +8,7 @@ import { useConfirm } from '@/shared/composables/useConfirm'
 import { useToast } from '@/shared/composables/useToast'
 import { accountApi } from '../api/accountApi'
 import type { TwoFactorSetup, TwoFactorStatus } from '../types'
+import { t } from '@/shared/i18n'
 
 const emit = defineEmits<{ changed: [] }>()
 const toast = useToast()
@@ -79,7 +80,7 @@ function cancelSetup() {
 }
 
 async function regenerate() {
-  if (!password.value) { error.value = 'Saisissez votre mot de passe.'; return }
+  if (!password.value) { error.value = t('account.twoFactor.passwordRequired'); return }
   const ok = await attempt(async () => { recoveryCodes.value = await accountApi.regenerateRecoveryCodes(password.value) })
   if (!ok) return
   password.value = ''
@@ -90,11 +91,11 @@ async function regenerate() {
 }
 
 async function disable() {
-  if (!password.value) { error.value = 'Saisissez votre mot de passe.'; return }
+  if (!password.value) { error.value = t('account.twoFactor.passwordRequired'); return }
   const confirmed = await confirm({
-    title: 'Désactiver la double authentification ?',
-    message: 'Votre mot de passe suffira de nouveau pour vous connecter. Vos codes de secours ne serviront plus.',
-    confirmLabel: 'Désactiver',
+    title: t('account.twoFactor.disableTitle'),
+    message: t('account.twoFactor.disableMessage'),
+    confirmLabel: t('account.twoFactor.disable'),
     danger: true,
   })
   if (!confirmed) return
@@ -104,97 +105,95 @@ async function disable() {
   recoveryCodes.value = null
   await load()
   emit('changed')
-  toast.success('Double authentification désactivée.')
+  toast.success(t('account.twoFactor.disabled'))
 }
 
 async function forgetBrowser() {
   if (await attempt(() => accountApi.forgetBrowser())) {
     await load()
-    toast.success('Le code sera redemandé à la prochaine connexion sur ce navigateur.')
+    toast.success(t('account.twoFactor.forgotten'))
   }
 }
 
 async function copyCodes() {
   try {
     await navigator.clipboard.writeText((recoveryCodes.value ?? []).join('\n'))
-    toast.success('Codes copiés.')
+    toast.success(t('account.twoFactor.copied'))
   } catch {
-    error.value = 'Copie impossible : recopiez les codes à la main.'
+    error.value = t('account.twoFactor.copyFailed')
   }
 }
 </script>
 
 <template>
-  <SectionCard title="Double authentification">
+  <SectionCard :title="t('account.twoFactor.title')">
     <ErrorState v-if="loadError" :message="getErrorMessage(loadError)" @retry="load" />
     <LoadingState v-else-if="!status" />
 
     <!-- Codes de secours tout juste créés : montrés une seule fois -->
     <div v-else-if="recoveryCodes" class="codes">
-      <p><strong>Gardez ces codes de secours en lieu sûr.</strong>
-        Chacun permet une connexion si vous n’avez plus votre téléphone. Ils ne seront plus affichés.</p>
-      <ol ref="codesList" class="code-list" tabindex="-1" aria-label="Codes de secours" data-testid="recovery-codes">
+      <p><strong>{{ t('account.twoFactor.keepCodes') }}</strong>
+        {{ t('account.twoFactor.codesHelp') }}</p>
+      <ol ref="codesList" class="code-list" tabindex="-1" :aria-label="t('account.twoFactor.codesLabel')" data-testid="recovery-codes">
         <li v-for="c in recoveryCodes" :key="c"><code>{{ c }}</code></li>
       </ol>
       <div class="actions">
-        <button type="button" class="secondary" @click="copyCodes">Copier les codes</button>
-        <button type="button" @click="recoveryCodes = null">J’ai noté mes codes</button>
+        <button type="button" class="secondary" @click="copyCodes">{{ t('account.twoFactor.copyCodes') }}</button>
+        <button type="button" @click="recoveryCodes = null">{{ t('account.twoFactor.codesNoted') }}</button>
       </div>
     </div>
 
     <!-- Activation en cours : la clé, puis un premier code -->
     <form v-else-if="setup" class="narrow" novalidate @submit.prevent="enable">
       <ol class="steps">
-        <li>Ouvrez votre application d’authentification (Google Authenticator, Microsoft Authenticator, Aegis, 1Password…).</li>
+        <li>{{ t('account.twoFactor.step1') }}</li>
         <li>
-          Ajoutez un compte avec cette clé :
+          {{ t('account.twoFactor.step2') }}
           <code class="key" data-testid="shared-key">{{ setup.sharedKey }}</code>
-          <a :href="setup.authenticatorUri">Sur ce téléphone : ouvrir dans l’application</a>
+          <a :href="setup.authenticatorUri">{{ t('account.twoFactor.openInApp') }}</a>
         </li>
-        <li>Saisissez le code à 6 chiffres qu’elle affiche.</li>
+        <li>{{ t('account.twoFactor.step3') }}</li>
       </ol>
       <div class="field">
-        <label for="two-factor-code">Code de l’application</label>
+        <label for="two-factor-code">{{ t('account.twoFactor.appCode') }}</label>
         <input id="two-factor-code" ref="codeInput" v-model="code" type="text" inputmode="numeric"
                autocomplete="one-time-code" maxlength="7" required />
       </div>
       <p v-if="error" class="field-error" role="alert">{{ error }}</p>
       <div class="actions">
-        <button type="submit" :disabled="!canEnable">{{ isBusy ? 'Activation…' : 'Activer' }}</button>
-        <button type="button" class="secondary" @click="cancelSetup">Annuler</button>
+        <button type="submit" :disabled="!canEnable">{{ isBusy ? t('account.twoFactor.enabling') : t('account.twoFactor.enable') }}</button>
+        <button type="button" class="secondary" @click="cancelSetup">{{ t('common.actions.cancel') }}</button>
       </div>
     </form>
 
     <!-- Inactive -->
     <div v-else-if="!status.enabled">
       <p class="muted">
-        Désactivée. Activée, la connexion demande en plus de votre mot de passe un code à 6 chiffres
-        donné par une application sur votre téléphone.
+        {{ t('account.twoFactor.offHelp') }}
       </p>
       <p v-if="error" class="field-error" role="alert">{{ error }}</p>
-      <button type="button" :disabled="isBusy" @click="startSetup">Activer la double authentification</button>
+      <button type="button" :disabled="isBusy" @click="startSetup">{{ t('account.twoFactor.enableButton') }}</button>
     </div>
 
     <!-- Active -->
     <form v-else class="narrow" novalidate @submit.prevent>
       <p>
-        <strong>Activée.</strong>
-        {{ status.recoveryCodesLeft }} code{{ status.recoveryCodesLeft > 1 ? 's' : '' }} de secours
-        restant{{ status.recoveryCodesLeft > 1 ? 's' : '' }}.
+        <strong>{{ t('account.twoFactor.on') }}</strong>
+        {{ t('account.twoFactor.codesLeft', { count: status.recoveryCodesLeft }) }}
       </p>
       <p v-if="status.browserRemembered" class="muted">
-        Ce navigateur ne vous demande pas de code pendant 14 jours après une connexion avec code.
-        <button type="button" class="link" :disabled="isBusy" @click="forgetBrowser">Redemander le code ici</button>
+        {{ t('account.twoFactor.rememberHelp') }}
+        <button type="button" class="link" :disabled="isBusy" @click="forgetBrowser">{{ t('account.twoFactor.forget') }}</button>
       </p>
       <div class="field">
-        <label for="two-factor-password">Mot de passe</label>
+        <label for="two-factor-password">{{ t('account.twoFactor.password') }}</label>
         <input id="two-factor-password" v-model="password" type="password" autocomplete="current-password" required />
-        <small class="muted">Redemandé pour créer de nouveaux codes de secours ou désactiver.</small>
+        <small class="muted">{{ t('account.twoFactor.passwordHelp') }}</small>
       </div>
       <p v-if="error" class="field-error" role="alert">{{ error }}</p>
       <div class="actions">
-        <button type="button" class="secondary" :disabled="isBusy" @click="regenerate">Nouveaux codes de secours</button>
-        <button type="button" class="danger" :disabled="isBusy" @click="disable">Désactiver</button>
+        <button type="button" class="secondary" :disabled="isBusy" @click="regenerate">{{ t('account.twoFactor.newCodes') }}</button>
+        <button type="button" class="danger" :disabled="isBusy" @click="disable">{{ t('account.twoFactor.disable') }}</button>
       </div>
     </form>
   </SectionCard>

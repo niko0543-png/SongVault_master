@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.DataProtection;
 using SongVault.Api.Auth;
 using SongVault.Api.ErrorHandling;
+using SongVault.Api.Localization;
 using SongVault.Api.Security;
 using SongVault.Application;
 using SongVault.Application.Abstractions;
@@ -23,7 +24,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers()
     .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(allowIntegerValues: false)));
 builder.Services.AddOpenApi();
-builder.Services.AddProblemDetails();
+// #26 : chaque réponse d'erreur est traduite selon Accept-Language, avec un code stable (ADR 0033)
+builder.Services.AddProblemDetails(options => options.CustomizeProblemDetails = ProblemTranslation.Apply);
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 builder.Services.AddApplication();

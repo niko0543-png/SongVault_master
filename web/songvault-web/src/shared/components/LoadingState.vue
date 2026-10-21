@@ -1,7 +1,9 @@
 <script setup lang="ts">
-withDefaults(defineProps<{ message?: string }>(), { message: 'Chargement…' })
+import { t } from '@/shared/i18n'
+
+defineProps<{ message?: string }>()
 </script>
 
 <template>
-  <p class="muted" role="status" aria-live="polite" data-testid="loading-state">{{ message }}</p>
+  <p class="muted" role="status" aria-live="polite" data-testid="loading-state">{{ message ?? t('shared.loading') }}</p>
 </template>

@@ -6,6 +6,7 @@ import { getErrorMessage } from '@/shared/api/ApiError'
 import { useToast } from '@/shared/composables/useToast'
 import { notificationsApi } from '../api/notificationsApi'
 import { KIND_LABELS, MODE_LABELS, type NotificationKind, type NotificationMode, type NotificationPreference } from '../types'
+import { t } from '@/shared/i18n'
 
 const toast = useToast()
 const kinds = Object.keys(KIND_LABELS) as NotificationKind[]
@@ -36,7 +37,7 @@ async function save() {
   error.value = null
   try {
     fill(await notificationsApi.update(kinds.map((kind) => ({ kind, mode: form[kind] }))))
-    toast.success('Notifications enregistrées.')
+    toast.success(t('notifications.section.saved'))
   } catch (e) {
     error.value = getErrorMessage(e)
   } finally {
@@ -46,12 +47,11 @@ async function save() {
 </script>
 
 <template>
-  <SectionCard title="Notifications par e-mail">
+  <SectionCard :title="t('notifications.section.title')">
     <p class="muted">
-      Valable dans tous vos groupes. Vos propres modifications ne vous envoient jamais d’e-mail.
-      Le résumé part chaque matin vers 7 h.
+      {{ t('notifications.section.intro') }}
     </p>
-    <LoadingState v-if="isLoading" message="Chargement…" />
+    <LoadingState v-if="isLoading" :message="t('notifications.section.loading')" />
     <form v-else class="notifications-form" novalidate @submit.prevent="save">
       <div v-for="kind in kinds" :key="kind" class="field">
         <label :for="`notif-${kind}`">{{ KIND_LABELS[kind].title }}</label>
@@ -61,7 +61,7 @@ async function save() {
         <small :id="`notif-${kind}-help`" class="muted">{{ KIND_LABELS[kind].help }}</small>
       </div>
       <p v-if="error" class="field-error" role="alert">{{ error }}</p>
-      <button type="submit" :disabled="isSaving">{{ isSaving ? 'Enregistrement…' : 'Enregistrer' }}</button>
+      <button type="submit" :disabled="isSaving">{{ isSaving ? t('common.actions.saving') : t('common.actions.save') }}</button>
     </form>
   </SectionCard>
 </template>

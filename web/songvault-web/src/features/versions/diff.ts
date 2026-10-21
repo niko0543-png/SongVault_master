@@ -1,4 +1,5 @@
 import type { SongFile } from '@/features/files/types'
+import { t } from '@/shared/i18n'
 import { statusLabels, type SongVersion } from './types'
 
 // Différences entre deux versions (#9) : de A (avant) vers B (après).
@@ -104,10 +105,10 @@ export interface FieldDiff {
 export function diffFields(a: SongVersion, b: SongVersion): FieldDiff[] {
   const show = (value: string | number | null) => (value === null || value === '' ? '—' : String(value))
   const fields: [FieldDiff['key'], string, (v: SongVersion) => string][] = [
-    ['title', 'Titre', (v) => show(v.title)],
-    ['status', 'Statut', (v) => statusLabels[v.status]],
+    ['title', t('versions.fields.title'), (v) => show(v.title)],
+    ['status', t('versions.fields.status'), (v) => statusLabels[v.status]],
     ['bpm', 'BPM', (v) => show(v.bpm)],
-    ['key', 'Tonalité', (v) => show(v.key)],
+    ['key', t('versions.fields.key'), (v) => show(v.key)],
   ]
   return fields.map(([key, label, read]) => {
     const before = read(a)

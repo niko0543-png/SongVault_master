@@ -13,6 +13,7 @@ import LoadingState from '@/shared/components/LoadingState.vue'
 import ErrorState from '@/shared/components/ErrorState.vue'
 import { getErrorMessage } from '@/shared/api/ApiError'
 import { formatDate } from '@/shared/utils/format'
+import { t } from '@/shared/i18n'
 
 type Side = 'a' | 'b'
 
@@ -102,21 +103,21 @@ async function listen(side: Side) {
 
 <template>
   <section>
-    <RouterLink :to="{ name: 'song-detail', params: { songId } }">← {{ songTitle || 'Retour au morceau' }}</RouterLink>
-    <h1>Comparer deux versions</h1>
+    <RouterLink :to="{ name: 'song-detail', params: { songId } }">← {{ songTitle || t('versions.compare.backToSong') }}</RouterLink>
+    <h1>{{ t('versions.compare.title') }}</h1>
 
     <LoadingState v-if="isLoading" />
     <ErrorState v-else-if="error" :message="getErrorMessage(error)" @retry="load()" />
-    <p v-else-if="versions.length < 2" class="card">Il faut au moins deux versions pour comparer.</p>
+    <p v-else-if="versions.length < 2" class="card">{{ t('versions.compare.needTwo') }}</p>
 
     <template v-else>
       <div class="ab-bar card">
         <button v-for="side in (['a', 'b'] as const)" :key="side" type="button"
                 :class="{ secondary: activeSide !== side }" :aria-pressed="activeSide === side"
                 :disabled="!trackFor(side)" @click="listen(side)">
-          Écouter {{ side.toUpperCase() }}
+          {{ t('versions.compare.listen', { side: side.toUpperCase() }) }}
         </button>
-        <small class="muted">La bascule conserve la position : pertinent si les deux maquettes ont le même tempo.</small>
+        <small class="muted">{{ t('versions.compare.switchHelp') }}</small>
       </div>
 
       <div class="columns">
@@ -129,8 +130,8 @@ async function listen(side: Side) {
 
           <template v-if="sides[side]">
                         <p><StatusBadge :status="sides[side]!.status" /></p>
-            <p class="muted"><small>Créée le {{ formatDate(sides[side]!.createdAt) }}</small></p>
-            <p v-if="!firstAudio(sides[side]!.files)" class="muted">Aucun fichier audio.</p>
+            <p class="muted"><small>{{ t('versions.compare.created', { createdAt: formatDate(sides[side]!.createdAt) }) }}</small></p>
+            <p v-if="!firstAudio(sides[side]!.files)" class="muted">{{ t('versions.compare.noAudio') }}</p>
           </template>
         </article>
       </div>

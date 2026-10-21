@@ -2,6 +2,7 @@
 import type { Plan } from '../types'
 import { describeBands, formatMonthlyPrice } from '../format'
 import { formatFileSize } from '@/shared/utils/format'
+import { t } from '@/shared/i18n'
 
 defineProps<{
   plans: Plan[]
@@ -19,11 +20,11 @@ defineSlots<{ action?: (props: { plan: Plan }) => unknown }>()
       <h3>{{ plan.name }}</h3>
       <p class="plan-price">{{ formatMonthlyPrice(plan.monthlyPriceCents) }}</p>
       <ul class="plan-limits">
-        <li>{{ formatFileSize(plan.storageQuotaBytes) }} de fichiers par groupe</li>
+        <li>{{ t('billing.planCards.storage', { storageQuotaBytes: formatFileSize(plan.storageQuotaBytes) }) }}</li>
         <li>{{ describeBands(plan) }}</li>
-        <li>Membres et invités sans limite</li>
+        <li>{{ t('billing.planCards.unlimitedMembers') }}</li>
       </ul>
-      <p v-if="plan.id === currentPlanId" class="muted"><strong>Formule actuelle</strong></p>
+      <p v-if="plan.id === currentPlanId" class="muted"><strong>{{ t('billing.planCards.current') }}</strong></p>
       <slot v-else name="action" :plan="plan" />
     </li>
   </ul>

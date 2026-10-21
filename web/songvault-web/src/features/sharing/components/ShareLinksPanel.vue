@@ -11,6 +11,7 @@ import { formatDate } from '@/shared/utils/format'
 import { useAsyncAction } from '@/shared/composables/useAsyncAction'
 import { useConfirm } from '@/shared/composables/useConfirm'
 import { useToast } from '@/shared/composables/useToast'
+import { t } from '@/shared/i18n'
 
 const props = defineProps<{ target: ShareTarget }>()
 const toast = useToast()
@@ -26,7 +27,7 @@ const journal = ref<ShareLinkAccess[]>([])
 const journalError = ref<string | null>(null)
 
 const passwordError = computed(() =>
-  form.password && form.password.length < SHARE_PASSWORD_MIN ? `Au moins ${SHARE_PASSWORD_MIN} caractères.` : null)
+  form.password && form.password.length < SHARE_PASSWORD_MIN ? t('sharing.panel.passwordMin', { sharePasswordMin: SHARE_PASSWORD_MIN }) : null)
 const { isLoading, error, run } = useAsyncAction(sharingApi.create)
 const createMessage = computed(() => (error.value ? getErrorMessage(error.value) : null))
 
@@ -63,10 +64,10 @@ async function onCopy() {
   if (!created.value) return
   try {
     await navigator.clipboard.writeText(created.value.url)
-    toast.success('Lien copié.')
+    toast.success(t('sharing.panel.copied'))
   } catch {
     // Presse-papiers indisponible (page servie en http hors localhost) : le champ reste sélectionnable
-    toast.error('Copie impossible : sélectionnez le lien et copiez-le à la main.')
+    toast.error(t('sharing.panel.copyFailed'))
   }
 }
 
@@ -74,7 +75,7 @@ async function onRevoke(link: ShareLink) {
   busyId.value = link.id
   try {
     await sharingApi.revoke(link.id)
-    toast.success('Lien révoqué : il ne marche plus.')
+    toast.success(t('sharing.panel.revoked'))
     if (created.value?.link.id === link.id) created.value = null
     await load()
   } catch (e) {
@@ -86,9 +87,9 @@ async function onRevoke(link: ShareLink) {
 
 async function onDelete(link: ShareLink) {
   const confirmed = await confirm({
-    title: 'Supprimer ce lien ?',
-    message: 'Le lien et son journal seront effacés. Un lien encore actif cesse aussitôt de marcher.',
-    confirmLabel: 'Supprimer',
+    title: t('sharing.panel.deleteTitle'),
+    message: t('sharing.panel.deleteMessage'),
+    confirmLabel: t('common.actions.delete'),
     danger: true,
   })
   if (!confirmed) return
@@ -121,84 +122,83 @@ async function onToggleJournal(link: ShareLink) {
 }
 
 function statusLine(link: ShareLink): string {
-  if (link.status === 'Revoked' && link.revokedAt) return `Révoqué le ${formatDate(link.revokedAt)}`
-  if (link.status === 'Expired') return `Expiré le ${formatDate(link.expiresAt)}`
-  return `Expire le ${formatDate(link.expiresAt)}`
+  if (link.status === 'Revoked' && link.revokedAt) return t('sharing.panel.revokedOn', { revokedAt: formatDate(link.revokedAt) })
+  if (link.status === 'Expired') return t('sharing.panel.expiredOn', { expiresAt: formatDate(link.expiresAt) })
+  return t('sharing.panel.expiresOn', { expiresAt: formatDate(link.expiresAt) })
 }
 
 function opensLine(link: ShareLink): string {
-  if (link.openCount === 0) return 'Jamais ouvert'
-  const times = link.openCount === 1 ? '1 ouverture' : `${link.openCount} ouvertures`
-  return link.lastOpenedAt ? `${times}, la dernière le ${formatDate(link.lastOpenedAt)}` : times
+  if (link.openCount === 0) return t('sharing.panel.neverOpened')
+  const times = t('sharing.panel.opens', { count: link.openCount })
+  return link.lastOpenedAt ? t('sharing.panel.lastOpened', { times, date: formatDate(link.lastOpenedAt) }) : times
 }
 </script>
 
 <template>
-  <SectionCard title="Partager hors du groupe">
+  <SectionCard :title="t('sharing.panel.title')">
     <p class="muted">
-      Un lien d'écoute seule, sans compte : pour un ingénieur du son, un label, une salle.
-      Il ne donne accès qu'aux fichiers audio {{ target.type === 'Version' ? 'de cette version' : 'des pistes de cette sortie' }}.
+      {{ target.type === 'Version' ? t('sharing.panel.introVersion') : t('sharing.panel.introRelease') }}
     </p>
     <form class="share-form" novalidate @submit.prevent="onCreate">
       <div class="field">
-        <label for="share-label">Pour qui ?</label>
-        <input id="share-label" v-model="form.label" :maxlength="SHARE_LABEL_MAX" placeholder="ex. Studio Delta, mix" autocomplete="off" />
+        <label for="share-label">{{ t('sharing.panel.forWhom') }}</label>
+        <input id="share-label" v-model="form.label" :maxlength="SHARE_LABEL_MAX" :placeholder="t('sharing.panel.labelPlaceholder')" autocomplete="off" />
       </div>
       <div class="field">
-        <label for="share-days">Valable</label>
+        <label for="share-days">{{ t('sharing.panel.validFor') }}</label>
         <select id="share-days" v-model.number="form.days">
-          <option v-for="days in SHARE_DURATIONS" :key="days" :value="days">{{ days === 1 ? '1 jour' : `${days} jours` }}</option>
+          <option v-for="days in SHARE_DURATIONS" :key="days" :value="days">{{ t('sharing.panel.days', { count: days }) }}</option>
         </select>
       </div>
       <div class="field">
-        <label for="share-password">Mot de passe (facultatif)</label>
+        <label for="share-password">{{ t('sharing.panel.password') }}</label>
         <input id="share-password" v-model="form.password" type="password" autocomplete="new-password"
                :maxlength="SHARE_PASSWORD_MAX" :aria-invalid="!!passwordError" aria-describedby="share-password-error" />
         <p v-if="passwordError" id="share-password-error" class="field-error">{{ passwordError }}</p>
       </div>
-      <button type="submit" :disabled="isLoading || !!passwordError">{{ isLoading ? 'Création…' : 'Créer le lien' }}</button>
+      <button type="submit" :disabled="isLoading || !!passwordError">{{ isLoading ? t('sharing.panel.creating') : t('sharing.panel.create') }}</button>
     </form>
     <p v-if="createMessage" class="field-error" role="alert">{{ createMessage }}</p>
 
     <div v-if="created" class="created" data-testid="share-link-url">
       <p class="muted">
-        Copiez ce lien maintenant : il ne sera plus affiché. Valable jusqu'au {{ formatDate(created.link.expiresAt) }}.
-        <template v-if="created.link.hasPassword"> Le mot de passe n'est pas dans le lien : donnez-le à part.</template>
+        {{ t('sharing.panel.copyNow', { expiresAt: formatDate(created.link.expiresAt) }) }}
+        <template v-if="created.link.hasPassword"> {{ t('sharing.panel.passwordApart') }}</template>
       </p>
       <div class="link-row">
-        <input :value="created.url" readonly aria-label="Lien de partage" />
-        <button type="button" class="secondary" @click="onCopy">Copier le lien</button>
+        <input :value="created.url" readonly :aria-label="t('sharing.panel.linkLabel')" />
+        <button type="button" class="secondary" @click="onCopy">{{ t('sharing.panel.copy') }}</button>
       </div>
     </div>
 
-    <h3>Liens</h3>
+    <h3>{{ t('sharing.panel.links') }}</h3>
     <p v-if="listError" class="field-error" role="alert">{{ listError }}</p>
-    <p v-else-if="links.length === 0" class="muted">Aucun lien pour l'instant.</p>
+    <p v-else-if="links.length === 0" class="muted">{{ t('sharing.panel.empty') }}</p>
     <ul v-else class="link-list">
       <li v-for="link in links" :key="link.id" class="share-link" data-testid="share-link-item">
         <div class="link-info">
           <span>
-            {{ link.label ?? 'Sans libellé' }}
+            {{ link.label ?? t('sharing.panel.noLabel') }}
             <span class="status" :class="`status-${link.status.toLowerCase()}`">{{ shareStatusLabels[link.status] }}</span>
-            <span v-if="link.hasPassword" class="muted"> · avec mot de passe</span>
+            <span v-if="link.hasPassword" class="muted"> {{ t('sharing.panel.withPassword') }}</span>
           </span>
           <small class="muted">
-            {{ statusLine(link) }} · {{ opensLine(link) }}<template v-if="link.createdByEmail"> · créé par {{ link.createdByEmail }}</template>
+            {{ statusLine(link) }} · {{ opensLine(link) }}<template v-if="link.createdByEmail"> {{ t('sharing.panel.createdBy', { createdByEmail: link.createdByEmail }) }}</template>
           </small>
         </div>
         <div class="link-actions">
           <button type="button" class="secondary" :aria-expanded="openJournalId === link.id" @click="onToggleJournal(link)">
-            Journal
+            {{ t('sharing.panel.log') }}
           </button>
           <button v-if="link.status === 'Active'" type="button" class="secondary" :disabled="busyId === link.id"
-                  @click="onRevoke(link)">Révoquer</button>
-          <button type="button" class="secondary" :disabled="busyId === link.id" @click="onDelete(link)">Supprimer</button>
+                  @click="onRevoke(link)">{{ t('sharing.panel.revoke') }}</button>
+          <button type="button" class="secondary" :disabled="busyId === link.id" @click="onDelete(link)">{{ t('common.actions.delete') }}</button>
         </div>
         <div v-if="openJournalId === link.id" class="journal" data-testid="share-journal">
           <p v-if="journalError" class="field-error" role="alert">{{ journalError }}</p>
-          <p v-else-if="journal.length === 0" class="muted">Personne n'a encore ouvert ce lien.</p>
+          <p v-else-if="journal.length === 0" class="muted">{{ t('sharing.panel.neverOpenedLog') }}</p>
           <table v-else>
-            <thead><tr><th scope="col">Quand</th><th scope="col">Quoi</th><th scope="col">Visiteur</th><th scope="col">Navigateur</th></tr></thead>
+            <thead><tr><th scope="col">{{ t('sharing.panel.when') }}</th><th scope="col">{{ t('sharing.panel.what') }}</th><th scope="col">{{ t('sharing.panel.visitor') }}</th><th scope="col">{{ t('sharing.panel.browser') }}</th></tr></thead>
             <tbody>
               <tr v-for="(access, i) in journal" :key="i">
                 <td>{{ formatDate(access.at) }}</td>

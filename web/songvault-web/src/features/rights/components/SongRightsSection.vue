@@ -10,6 +10,7 @@ import ErrorState from '@/shared/components/ErrorState.vue'
 import { getErrorMessage } from '@/shared/api/ApiError'
 import { useAsyncAction } from '@/shared/composables/useAsyncAction'
 import { useToast } from '@/shared/composables/useToast'
+import { t } from '@/shared/i18n'
 
 /**
  * Crédits et codes d'un morceau (#22, ADR 0029) : ISWC de l'œuvre, ayants droit et leurs parts, ISRC de chaque
@@ -69,7 +70,7 @@ async function onSave() {
   const saved = await saving.run()
   if (!saved) return
   reset(saved)
-  toast.success('Crédits enregistrés.')
+  toast.success(t('rights.section.saved'))
 }
 
 // ---- ISRC d'une version ----
@@ -93,9 +94,9 @@ const savedTotal = computed(() => formatPercent(toCents(rights.value?.totalPerce
 </script>
 
 <template>
-  <SectionCard title="Crédits et codes">
+  <SectionCard :title="t('rights.section.title')">
     <template #actions>
-      <a v-if="rights" :href="rightsApi.songCsvUrl(songId)" download>Exporter en CSV</a>
+      <a v-if="rights" :href="rightsApi.songCsvUrl(songId)" download>{{ t('rights.section.export') }}</a>
     </template>
 
     <LoadingState v-if="isLoading" />
@@ -104,42 +105,42 @@ const savedTotal = computed(() => formatPercent(toCents(rights.value?.totalPerce
     <template v-else-if="rights">
       <!-- Lecture seule (Guest) -->
       <template v-if="readonly">
-        <p><strong>ISWC</strong> (œuvre) : {{ rights.iswc ?? 'non renseigné' }}</p>
-        <p v-if="rights.credits.length === 0" class="muted">Aucun crédit renseigné.</p>
+        <p><strong>ISWC</strong> {{ t('rights.section.iswc', { iswc: rights.iswc ?? t('rights.section.notSet') }) }}</p>
+        <p v-if="rights.credits.length === 0" class="muted">{{ t('rights.section.empty') }}</p>
         <table v-else class="credits">
-          <thead><tr><th scope="col">Ayant droit</th><th scope="col">Rôle</th><th scope="col" class="num">Part</th></tr></thead>
+          <thead><tr><th scope="col">{{ t('rights.section.holder') }}</th><th scope="col">{{ t('rights.section.role') }}</th><th scope="col" class="num">{{ t('rights.section.share') }}</th></tr></thead>
           <tbody>
             <tr v-for="(c, i) in rights.credits" :key="i">
               <td>{{ c.name }}</td><td>{{ creditRoleLabels[c.role] }}</td><td class="num">{{ formatPercent(toCents(c.sharePercent)) }}</td>
             </tr>
           </tbody>
-          <tfoot><tr><th scope="row" colspan="2">Total</th><td class="num">{{ savedTotal }}</td></tr></tfoot>
+          <tfoot><tr><th scope="row" colspan="2">{{ t('rights.section.total') }}</th><td class="num">{{ savedTotal }}</td></tr></tfoot>
         </table>
       </template>
 
       <!-- Édition (Member et Owner) -->
       <form v-else @submit.prevent="onSave">
         <div class="field">
-          <label for="song-iswc">ISWC <small class="muted">(code de l'œuvre, facultatif : T-034.524.680-1)</small></label>
+          <label for="song-iswc">ISWC <small class="muted">{{ t('rights.section.iswcHelp') }}</small></label>
           <input id="song-iswc" v-model="iswc" :maxlength="CODE_INPUT_MAX" autocomplete="off" placeholder="T-000.000.000-0" />
         </div>
         <CreditsEditor v-model="rows" :disabled="saving.isLoading.value" />
         <p v-if="saving.error.value" class="field-error" role="alert">{{ getErrorMessage(saving.error.value) }}</p>
-        <button type="submit" :disabled="!!problem || saving.isLoading.value">Enregistrer les crédits</button>
+        <button type="submit" :disabled="!!problem || saving.isLoading.value">{{ t('rights.section.save') }}</button>
       </form>
 
-      <h3>ISRC des versions <small class="muted">(code de l'enregistrement : FR-Z03-26-00001)</small></h3>
-      <p v-if="rights.versions.length === 0" class="muted">Pas encore de version.</p>
+      <h3>{{ t('rights.section.isrcTitle') }} <small class="muted">{{ t('rights.section.isrcHelp') }}</small></h3>
+      <p v-if="rights.versions.length === 0" class="muted">{{ t('rights.section.noVersion') }}</p>
       <ul class="isrc-list">
         <li v-for="v in rights.versions" :key="v.id" data-testid="version-isrc">
           <span class="version">v{{ v.number }} · {{ v.title }}</span>
           <template v-if="readonly">
-            <span>{{ v.isrc ?? 'non renseigné' }}</span>
+            <span>{{ v.isrc ?? t('rights.section.notSet') }}</span>
           </template>
           <form v-else class="isrc-form" @submit.prevent="onSaveIsrc(v)">
-            <input v-model="isrcDrafts[v.id]" :maxlength="CODE_INPUT_MAX" :aria-label="`ISRC de la version ${v.number}`"
+            <input v-model="isrcDrafts[v.id]" :maxlength="CODE_INPUT_MAX" :aria-label="t('rights.section.isrcOf', { number: v.number })"
                    autocomplete="off" placeholder="FR-XXX-26-00001" />
-            <button type="submit" class="secondary" :disabled="isrcSaving === v.id">Enregistrer</button>
+            <button type="submit" class="secondary" :disabled="isrcSaving === v.id">{{ t('common.actions.save') }}</button>
           </form>
           <p v-if="isrcError?.id === v.id" class="field-error" role="alert">{{ isrcError.message }}</p>
         </li>

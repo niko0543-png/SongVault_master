@@ -12,6 +12,7 @@ import EmptyState from '@/shared/components/EmptyState.vue'
 import SectionCard from '@/shared/components/SectionCard.vue'
 import { getErrorMessage } from '@/shared/api/ApiError'
 import { useAsyncAction } from '@/shared/composables/useAsyncAction'
+import { t } from '@/shared/i18n'
 
 const bands = useBandStore()
 const router = useRouter()
@@ -44,17 +45,17 @@ async function onCreate(input: SetlistInput) {
 <template>
   <section>
     <header class="page-header">
-      <h1>Setlists</h1>
+      <h1>{{ t('setlists.list.title') }}</h1>
     </header>
 
-    <SectionCard v-if="bands.can('write')" title="Nouvelle setlist">
-      <SetlistForm submit-label="Créer la setlist" :submitting="creation.isLoading.value"
+    <SectionCard v-if="bands.can('write')" :title="t('setlists.list.newTitle')">
+      <SetlistForm :submit-label="t('setlists.list.create')" :submitting="creation.isLoading.value"
                    :error="creation.error.value ? getErrorMessage(creation.error.value) : null" @submit="onCreate" />
     </SectionCard>
 
     <LoadingState v-if="isLoading" />
     <ErrorState v-else-if="error" :message="getErrorMessage(error)" @retry="load" />
-    <EmptyState v-else-if="setlists.length === 0" message="Aucune setlist pour l'instant." />
+    <EmptyState v-else-if="setlists.length === 0" :message="t('setlists.list.empty')" />
 
     <ul v-else class="setlist-list">
       <li v-for="setlist in setlists" :key="setlist.id" class="card" data-testid="setlist-item">

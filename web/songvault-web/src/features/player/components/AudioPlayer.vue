@@ -7,6 +7,7 @@ import { SKIP_SECONDS, useMediaSession } from '../composables/useMediaSession'
 import { formatTime } from '@/shared/utils/format'
 import { onBeforeUnmount, onMounted } from 'vue'
 import { isGlobalShortcut } from '@/shared/utils/keyboard'
+import { t } from '@/shared/i18n'
 
 const audioElement = useTemplateRef<HTMLAudioElement>('audio-element')
 useAudioPlayer(audioElement)
@@ -34,15 +35,15 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
   <!-- TOUJOURS rendu (même sans piste) : c'est l'unique <audio> de l'application -->
   <audio ref="audio-element" preload="metadata" />
 
-  <div v-if="track" class="player" role="region" aria-label="Lecteur audio">
+  <div v-if="track" class="player" role="region" :aria-label="t('player.audio.label')">
     <div class="controls">
-      <button type="button" class="secondary skip" :aria-label="`Reculer de ${SKIP_SECONDS} secondes`"
+      <button type="button" class="secondary skip" :aria-label="t('player.audio.back', { skipSeconds: SKIP_SECONDS })"
               :disabled="!duration" @click="player.skip(-SKIP_SECONDS)">−{{ SKIP_SECONDS }}</button>
-      <button type="button" class="play" :aria-label="isPlaying ? 'Mettre en pause' : 'Lire'"
-          aria-keyshortcuts="Space k" :title="isPlaying ? 'Pause (Espace)' : 'Lecture (Espace)'" @click="player.toggle()">
+      <button type="button" class="play" :aria-label="isPlaying ? t('player.audio.pause') : t('player.audio.play')"
+          aria-keyshortcuts="Space k" :title="isPlaying ? t('player.audio.pauseHint') : t('player.audio.playHint')" @click="player.toggle()">
         {{ isPlaying ? '⏸' : '▶' }}
       </button>
-      <button type="button" class="secondary skip" :aria-label="`Avancer de ${SKIP_SECONDS} secondes`"
+      <button type="button" class="secondary skip" :aria-label="t('player.audio.forward', { skipSeconds: SKIP_SECONDS })"
               :disabled="!duration" @click="player.skip(SKIP_SECONDS)">+{{ SKIP_SECONDS }}</button>
     </div>
     <div class="info">
@@ -52,8 +53,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
     <input
       class="seek" type="range" min="0" step="0.1"
       :max="duration || 0" :value="currentTime" :disabled="!duration"
-      aria-label="Position de lecture"
-      :aria-valuetext="`${formatTime(currentTime)} sur ${formatTime(duration)}`"
+      :aria-label="t('player.audio.position')"
+      :aria-valuetext="t('shared.time.positionOf', { position: formatTime(currentTime), duration: formatTime(duration) })"
       @input="onSeek"
     />
     <span class="time">{{ formatTime(currentTime) }} / {{ formatTime(duration) }}</span>

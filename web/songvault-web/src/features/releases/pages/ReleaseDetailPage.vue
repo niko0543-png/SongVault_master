@@ -24,6 +24,7 @@ import { ApiError, getErrorMessage } from '@/shared/api/ApiError'
 import { useConfirm } from '@/shared/composables/useConfirm'
 import { useToast } from '@/shared/composables/useToast'
 import { formatFileSize } from '@/shared/utils/format'
+import { t } from '@/shared/i18n'
 
 const props = defineProps<{ releaseId: string }>()
 const bands = useBandStore()
@@ -75,15 +76,15 @@ async function onDelete() {
   if (!release.value) return
   const { id, title } = release.value
   const confirmed = await confirm({
-    title: 'Supprimer cette sortie ?',
-    message: `« ${title} » et sa pochette seront supprimées. Les morceaux et leurs versions restent.`,
-    confirmLabel: 'Supprimer',
+    title: t('releases.detail.deleteTitle'),
+    message: t('releases.detail.deleteMessage', { title }),
+    confirmLabel: t('common.actions.delete'),
     danger: true,
   })
   if (!confirmed) return
   try {
     await releasesApi.remove(id)
-    toast.success(`« ${title} » a été supprimée.`)
+    toast.success(t('releases.detail.deleted', { title }))
     await router.push({ name: 'releases' })
   } catch (e) {
     detailsError.value = getErrorMessage(e)
@@ -129,7 +130,7 @@ function onRemoveTrack(track: ReleaseTrack) {
 
 function versionLabel(track: ReleaseTrack): string {
   const v = track.versions.find((x) => x.id === track.versionId)
-  return v ? `v${v.number} · ${v.title} (${statusLabels[v.status]})` : 'Version inconnue'
+  return v ? `v${v.number} · ${v.title} (${statusLabels[v.status]})` : t('releases.detail.unknownVersion')
 }
 
 // ---- Ajout d'un morceau ----
@@ -159,7 +160,7 @@ async function onAdd(song: Song) {
     const latest = versions.reduce<(typeof versions)[number] | null>(
       (best, v) => (best && best.number > v.number ? best : v), null)
     if (!latest) {
-      tracksError.value = `« ${song.title} » n'a pas encore de version : créez-en une avant de l'ajouter.`
+      tracksError.value = t('releases.detail.noVersion', { title: song.title })
       return
     }
     await saveTracks([...toChoices(release.value), { songId: song.id, versionId: latest.id }])
@@ -178,7 +179,7 @@ async function onCoverChosen(event: Event) {
   if (!file || !release.value) return
   coverError.value = null
   if (file.size > COVER_MAX_BYTES) {
-    coverError.value = `L'image dépasse ${formatFileSize(COVER_MAX_BYTES)}.`
+    coverError.value = t('releases.detail.coverTooLarge', { coverMaxBytes: formatFileSize(COVER_MAX_BYTES) })
     input.value = ''
     return
   }
@@ -211,10 +212,10 @@ async function onRemoveCover() {
 
 <template>
   <section>
-    <RouterLink :to="{ name: 'releases' }">← Toutes les sorties</RouterLink>
+    <RouterLink :to="{ name: 'releases' }">{{ t('releases.detail.back') }}</RouterLink>
 
     <LoadingState v-if="isLoading" />
-    <div v-else-if="isNotFound" class="card" role="alert"><p>Cette sortie n'existe pas ou a été supprimée.</p></div>
+    <div v-else-if="isNotFound" class="card" role="alert"><p>{{ t('releases.detail.notFound') }}</p></div>
     <ErrorState v-else-if="error" :message="getErrorMessage(error)" @retry="load(releaseId)" />
 
     <template v-else-if="release">
@@ -224,73 +225,73 @@ async function onRemoveCover() {
           <p class="muted">{{ releaseTypeLabels[release.type] }} · {{ formatReleaseDate(release.releaseDate) }}</p>
         </div>
         <div v-if="canWrite && !isEditing" class="actions">
-          <button type="button" class="secondary" @click="isEditing = true">Modifier</button>
-          <button type="button" class="danger" @click="onDelete">Supprimer</button>
+          <button type="button" class="secondary" @click="isEditing = true">{{ t('releases.detail.edit') }}</button>
+          <button type="button" class="danger" @click="onDelete">{{ t('common.actions.delete') }}</button>
         </div>
       </header>
       <p v-if="detailsError && !isEditing" class="field-error" role="alert">{{ detailsError }}</p>
-      <SectionCard v-if="isEditing" title="Modifier la sortie">
+      <SectionCard v-if="isEditing" :title="t('releases.detail.editTitle')">
         <ReleaseForm :initial="{ title: release.title, type: release.type, releaseDate: release.releaseDate }"
-                     submit-label="Enregistrer" :submitting="savingDetails" :error="detailsError"
+                     :submit-label="t('common.actions.save')" :submitting="savingDetails" :error="detailsError"
                      @submit="onSaveDetails" @cancel="isEditing = false" />
       </SectionCard>
 
       <div class="layout">
-        <SectionCard title="Pochette">
+        <SectionCard :title="t('releases.detail.cover')">
           <img v-if="release.hasCover" :src="releasesApi.coverUrl(release.id, release.updatedAt)"
-               :alt="`Pochette de ${release.title}`" class="cover" />
-          <p v-else class="muted">Pas encore de pochette.</p>
+               :alt="t('releases.detail.coverOf', { title: release.title })" class="cover" />
+          <p v-else class="muted">{{ t('releases.detail.noCover') }}</p>
           <template v-if="canWrite">
             <label class="file-label">
-              {{ release.hasCover ? 'Remplacer la pochette' : 'Ajouter une pochette' }}
-              <small class="muted">JPEG, PNG ou WebP, {{ formatFileSize(COVER_MAX_BYTES) }} au plus</small>
+              {{ release.hasCover ? t('releases.detail.replaceCover') : t('releases.detail.addCover') }}
+              <small class="muted">{{ t('releases.detail.coverRules', { coverMaxBytes: formatFileSize(COVER_MAX_BYTES) }) }}</small>
               <input type="file" :accept="COVER_ACCEPT" :disabled="savingCover" @change="onCoverChosen" />
             </label>
             <button v-if="release.hasCover" type="button" class="secondary" :disabled="savingCover"
-                    @click="onRemoveCover">Retirer la pochette</button>
+                    @click="onRemoveCover">{{ t('releases.detail.removeCover') }}</button>
           </template>
           <p v-if="coverError" class="field-error" role="alert">{{ coverError }}</p>
         </SectionCard>
 
-        <SectionCard :title="`Pistes (${release.tracks.length})`">
+        <SectionCard :title="t('releases.detail.tracks', { count: release.tracks.length })">
           <template v-if="release.tracks.length" #actions>
-            <a :href="rightsApi.releaseCsvUrl(release.id)" download>Exporter les crédits (CSV)</a>
+            <a :href="rightsApi.releaseCsvUrl(release.id)" download>{{ t('releases.detail.exportCredits') }}</a>
           </template>
           <p v-if="tracksError" class="field-error" role="alert">{{ tracksError }}</p>
-          <p v-if="release.tracks.length === 0" class="muted">Aucune piste pour l'instant.</p>
+          <p v-if="release.tracks.length === 0" class="muted">{{ t('releases.detail.noTracks') }}</p>
           <ReorderableList v-else :items="release.tracks" :item-key="(t) => t.songId" :item-label="(t) => t.songTitle"
-                           label="Pistes de la sortie" :disabled="!canWrite || savingTracks" @move="onMove">
+                           :label="t('releases.detail.tracksLabel')" :disabled="!canWrite || savingTracks" @move="onMove">
             <template #default="{ item }">
               <div class="track" data-testid="release-track">
                 <span class="number">{{ item.trackNumber }}.</span>
                 <RouterLink :to="{ name: 'song-detail', params: { songId: item.songId } }">{{ item.songTitle }}</RouterLink>
                 <select v-if="canWrite" :value="item.versionId" :disabled="savingTracks"
-                        :aria-label="`Version de ${item.songTitle}`" @change="onChangeVersion(item, $event)">
+                        :aria-label="t('releases.detail.versionOf', { songTitle: item.songTitle })" @change="onChangeVersion(item, $event)">
                   <option v-for="v in item.versions" :key="v.id" :value="v.id">
                     v{{ v.number }} · {{ v.title }} ({{ statusLabels[v.status] }})
                   </option>
                 </select>
                 <span v-else class="muted">{{ versionLabel(item) }}</span>
                 <button v-if="canWrite" type="button" class="secondary" :disabled="savingTracks"
-                        :aria-label="`Retirer ${item.songTitle} de la sortie`" @click="onRemoveTrack(item)">Retirer</button>
+                        :aria-label="t('releases.detail.removeTrack', { songTitle: item.songTitle })" @click="onRemoveTrack(item)">{{ t('releases.detail.remove') }}</button>
               </div>
             </template>
           </ReorderableList>
-          <p v-if="savingTracks" class="muted" role="status">Enregistrement…</p>
+          <p v-if="savingTracks" class="muted" role="status">{{ t('common.actions.saving') }}</p>
 
           <form v-if="canWrite" class="add-track" role="search" @submit.prevent="onSearch">
-            <label for="track-search">Ajouter un morceau</label>
+            <label for="track-search">{{ t('releases.detail.addSong') }}</label>
             <div class="search-row">
-              <input id="track-search" v-model="search" type="search" placeholder="Titre ou artiste" :disabled="isFull" />
-              <button type="submit" class="secondary" :disabled="isFull">Chercher</button>
+              <input id="track-search" v-model="search" type="search" :placeholder="t('releases.detail.searchPlaceholder')" :disabled="isFull" />
+              <button type="submit" class="secondary" :disabled="isFull">{{ t('releases.detail.search') }}</button>
             </div>
-            <p v-if="isFull" class="muted">Une sortie compte au plus {{ RELEASE_MAX_TRACKS }} pistes.</p>
+            <p v-if="isFull" class="muted">{{ t('releases.detail.maxTracks', { releaseMaxTracks: RELEASE_MAX_TRACKS }) }}</p>
             <ul v-if="searched" class="results">
               <li v-for="song in candidates" :key="song.id">
                 <span>{{ song.title }}<small v-if="song.artist" class="muted"> · {{ song.artist }}</small></span>
-                <button type="button" class="secondary" :disabled="savingTracks || isFull" @click="onAdd(song)">Ajouter</button>
+                <button type="button" class="secondary" :disabled="savingTracks || isFull" @click="onAdd(song)">{{ t('releases.detail.add') }}</button>
               </li>
-              <li v-if="candidates.length === 0" class="muted">Aucun autre morceau trouvé.</li>
+              <li v-if="candidates.length === 0" class="muted">{{ t('releases.detail.noOtherSong') }}</li>
             </ul>
           </form>
         </SectionCard>
