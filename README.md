@@ -158,6 +158,9 @@ docker compose down -v       # supprime aussi la base et les fichiers
 - **Français et anglais** : l'interface dans les deux langues, choisie en bas de page et gardée
   dans le compte ; les messages d'erreur de l'API suivent la même langue
   ([ADR 0033](docs/adr/0033-interface-multilingue.md)).
+- **Lecteur Guitar Pro** : la partition et la tablature d'un fichier Guitar Pro (GP3 à GP8)
+  s'affichent et se jouent dans la page, avec tempo ralenti, boucle, transposition, muet et solo
+  par piste, sans jamais toucher au fichier ([ADR 0034](docs/adr/0034-lecteur-guitar-pro.md)).  
 
 ---
 
@@ -365,6 +368,7 @@ npm run test:unit -- --run                    # front
 npx playwright test                           # E2E (application lancée sur :8080)
 npx playwright test e2e/stems-drift.spec.ts   # dérive du mélangeur, sans l'application
 npx playwright test e2e/chords-mobile.spec.ts # accords à 360 px, sans l'application
+npx playwright test e2e/guitar-pro.spec.ts    # lecteur Guitar Pro, sans l'application
 ```
 
 ---
