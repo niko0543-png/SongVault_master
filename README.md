@@ -155,6 +155,9 @@ docker compose down -v       # supprime aussi la base et les fichiers
 - **Paroles avec accords** : les accords au-dessus des paroles (`[Am]Je marche…`), lisibles sur
   téléphone, et la transposition par demi-tons sans jamais toucher au texte enregistré
   ([ADR 0032](docs/adr/0032-paroles-avec-accords.md)).
+- **Français et anglais** : l'interface dans les deux langues, choisie en bas de page et gardée
+  dans le compte ; les messages d'erreur de l'API suivent la même langue
+  ([ADR 0033](docs/adr/0033-interface-multilingue.md)).
 
 ---
 
