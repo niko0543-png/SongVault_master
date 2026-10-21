@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useToast } from '../composables/useToast'
+import { t } from '@/shared/i18n'
 
 const { toasts, dismiss } = useToast()
 </script>
@@ -15,7 +16,7 @@ const { toasts, dismiss } = useToast()
       data-testid="toast"
     >
       <span>{{ toast.message }}</span>
-      <button type="button" class="toast-close" aria-label="Fermer la notification" @click="dismiss(toast.id)">×</button>
+      <button type="button" class="toast-close" :aria-label="t('shared.toast.close')" @click="dismiss(toast.id)">×</button>
     </div>
   </div>
 </template>

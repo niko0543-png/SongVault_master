@@ -1,33 +1,34 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
 import { publisher } from '../publisher'
+import { locale, t } from '@/shared/i18n'
 </script>
 
 <template>
   <article class="legal">
-    <h1>Mentions légales</h1>
+    <h1>{{ t('legal.notice.title') }}</h1>
+    <p v-if="locale === 'en'" class="muted" data-testid="french-prevails">{{ t('legal.englishNote') }}</p>
 
-    <h2>Éditeur</h2>
+    <h2>{{ t('legal.notice.publisher') }}</h2>
     <p>
       {{ publisher.name }}<br />
       {{ publisher.address }}<br />
       {{ publisher.registration }}<br />
-      Contact : <a :href="`mailto:${publisher.email}`">{{ publisher.email }}</a>
+      {{ t('legal.notice.contact') }} <a :href="`mailto:${publisher.email}`">{{ publisher.email }}</a>
     </p>
-    <p>Directeur de la publication : {{ publisher.director }}</p>
+    <p>{{ t('legal.notice.director', { director: publisher.director }) }}</p>
 
-    <h2>Hébergement</h2>
+    <h2>{{ t('legal.notice.hosting') }}</h2>
     <p>{{ publisher.host }}</p>
 
-    <h2>Contenus déposés</h2>
+    <h2>{{ t('legal.notice.content') }}</h2>
     <p>
-      Les morceaux, paroles, notes et fichiers déposés restent la propriété de leurs auteurs.
-      SongVault ne les utilise que pour les conserver et les montrer aux membres du groupe concerné.
+      {{ t('legal.notice.contentText') }}
     </p>
 
-    <h2>Données personnelles</h2>
+    <h2>{{ t('legal.notice.personalData') }}</h2>
     <p>
-      Voir la <RouterLink :to="{ name: 'privacy' }">politique de confidentialité</RouterLink>.
+      {{ t('legal.notice.see') }} <RouterLink :to="{ name: 'privacy' }">{{ t('legal.notice.privacyLink') }}</RouterLink>.
     </p>
   </article>
 </template>

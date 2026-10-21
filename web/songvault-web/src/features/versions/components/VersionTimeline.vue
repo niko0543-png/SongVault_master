@@ -3,6 +3,7 @@ import type { SongVersionStatus, SongVersionSummary } from '../types'
 import StatusBadge from './StatusBadge.vue'
 import StatusSelect from './StatusSelect.vue'
 import { formatDate } from '@/shared/utils/format'
+import { t } from '@/shared/i18n'
 
 // readonly : Guest du groupe (#2), le statut s'affiche sans sélecteur
 defineProps<{ songId: string; versions: SongVersionSummary[]; savingId?: string | null; readonly?: boolean }>()
@@ -12,7 +13,7 @@ const emit = defineEmits<{ changeStatus: [versionId: string, status: SongVersion
 
 <template>
   <p v-if="versions.length === 0" class="muted">
-    Aucune version pour l'instant.<template v-if="!readonly"> Créez la première ci-dessous.</template>
+    {{ t('versions.timeline.empty') }}<template v-if="!readonly"> {{ t('versions.timeline.createBelow') }}</template>
   </p>
   <ol v-else class="timeline">
     <li v-for="version in versions" :key="version.id" class="card timeline-item" data-testid="version-item">
@@ -29,7 +30,7 @@ const emit = defineEmits<{ changeStatus: [versionId: string, status: SongVersion
         v-if="!readonly"
         :model-value="version.status"
         :disabled="savingId === version.id"
-        :label="`Statut de la version ${version.number}`"
+        :label="t('versions.timeline.statusOf', { number: version.number })"
         @update:model-value="(status) => emit('changeStatus', version.id, status)"
       />
     </li>

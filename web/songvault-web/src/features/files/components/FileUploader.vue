@@ -8,6 +8,7 @@ import { useAsyncAction } from '@/shared/composables/useAsyncAction'
 import { ApiError, getErrorMessage } from '@/shared/api/ApiError'
 import { RouterLink } from 'vue-router'
 import { useBandStore } from '@/features/bands/stores/bandStore'
+import { t } from '@/shared/i18n'
 
 const props = defineProps<{ songId: string; versionId: string }>()
 const emit = defineEmits<{ uploaded: [file: SongFile] }>()
@@ -27,11 +28,11 @@ const isQuotaError = computed(() => upload.error.value instanceof ApiError && up
 const accept = computed(() => policy.value?.allowedExtensions.join(',') ?? '')
 
 function serverMessage(error: unknown): string {
-  if (error instanceof ApiError && error.status === 413) return 'Fichier trop volumineux pour le serveur.'
+  if (error instanceof ApiError && error.status === 413) return t('files.uploader.tooLarge')
   if (error instanceof ApiError && error.status === 400) return error.message   // ex. « Type de fichier non autorisé… »
   if (error instanceof ApiError && error.status === 402) return error.message   // #16 : « Stockage du groupe plein… »
-  if (error instanceof ApiError && error.status === 403 && error.message === 'Envoi refusé')
-    return "L'envoi a été refusé par le stockage (adresse expirée ?). Recommencez."
+  if (error instanceof ApiError && error.status === 403 && error.message === t('files.upload.refused'))
+    return t('files.uploader.storageRefused')
   return getErrorMessage(error)
 }
 
@@ -70,24 +71,24 @@ function onDrop(event: DragEvent) {
     @dragleave="isDragging = false"
     @drop.prevent="onDrop"
   >
-    <p v-if="policyError" class="field-error">Impossible de charger les règles d'envoi.</p>
+    <p v-if="policyError" class="field-error">{{ t('files.uploader.policyFailed') }}</p>
     <template v-else>
-      <label for="file-input" class="secondary-button">Choisir un fichier</label>
+      <label for="file-input" class="secondary-button">{{ t('files.uploader.choose') }}</label>
       <input id="file-input" ref="file-input" type="file" class="visually-hidden"
              :accept="accept" :disabled="!policy || upload.isLoading.value" @change="onChange" />
-      <span class="muted"> ou glissez-le ici</span>
+      <span class="muted"> {{ t('files.uploader.orDrop') }}</span>
       <p v-if="policy" class="muted"><small>{{ policy.allowedExtensions.join(', ') }}</small></p>
     </template>
 
        <div v-if="upload.isLoading.value" role="status">
       <!-- value absent (null) : barre indéterminée, le temps de l'annonce et de la confirmation -->
-      <progress aria-label="Envoi en cours" max="1" :value="progress ?? undefined" />
-      Envoi de {{ currentName }}…
+      <progress :aria-label="t('files.uploader.progress')" max="1" :value="progress ?? undefined" />
+      {{ t('files.uploader.uploading', { currentName }) }}
       <span v-if="progress !== null" data-testid="upload-progress">{{ Math.round(progress * 100) }} %</span>
     </div>
       <p v-if="message" class="field-error" role="alert" data-testid="upload-error">
         {{ message }}
-        <RouterLink v-if="isQuotaError && bands.can('admin')" :to="{ name: 'billing' }">Voir les formules</RouterLink>
+        <RouterLink v-if="isQuotaError && bands.can('admin')" :to="{ name: 'billing' }">{{ t('files.uploader.seePlans') }}</RouterLink>
       </p>
   </div>
 </template>

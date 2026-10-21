@@ -5,6 +5,7 @@ import { useAuthStore } from '../stores/authStore'
 import { registrationErrors } from '../messages'
 import { rememberAfterConfirm } from '../afterConfirm'
 import { useAsyncAction } from '@/shared/composables/useAsyncAction'
+import { t } from '@/shared/i18n'
 
 const auth = useAuthStore()
 const route = useRoute()
@@ -31,36 +32,36 @@ async function onSubmit() {
 
 <template>
   <section class="auth">
-    <h1>Créer un compte</h1>
+    <h1>{{ t('auth.register.title') }}</h1>
     <form class="card" novalidate @submit.prevent="onSubmit">
       <div class="field">
         <label for="register-email">E-mail</label>
         <input id="register-email" v-model="form.email" type="email" autocomplete="username" required />
       </div>
       <div class="field">
-        <label for="register-password">Mot de passe</label>
+        <label for="register-password">{{ t('auth.register.password') }}</label>
         <input id="register-password" v-model="form.password" type="password" autocomplete="new-password"
                aria-describedby="password-rules" required />
         <small id="password-rules" class="muted">
-          6 caractères minimum, avec une majuscule, une minuscule, un chiffre et un caractère spécial.
+          {{ t('auth.register.passwordRules') }}
         </small>
       </div>
       <div class="field">
-        <label for="register-confirm">Confirmer le mot de passe</label>
+        <label for="register-confirm">{{ t('auth.register.confirmPassword') }}</label>
         <input id="register-confirm" v-model="form.confirm" type="password" autocomplete="new-password"
                :aria-invalid="mismatch" required />
-        <p v-if="mismatch" class="field-error">Les deux mots de passe ne correspondent pas.</p>
+        <p v-if="mismatch" class="field-error">{{ t('auth.register.mismatch') }}</p>
       </div>
       <ul v-if="messages.length" class="field-error" role="alert">
         <li v-for="m in messages" :key="m">{{ m }}</li>
       </ul>
-      <button type="submit" :disabled="isLoading">{{ isLoading ? 'Création…' : 'Créer mon compte' }}</button>
+      <button type="submit" :disabled="isLoading">{{ isLoading ? t('auth.register.creating') : t('auth.register.submit') }}</button>
     </form>
         <p class="muted">
-      Vos données sont traitées comme décrit dans la
-      <RouterLink :to="{ name: 'privacy' }">politique de confidentialité</RouterLink>.
+      {{ t('auth.register.privacyBefore') }}
+      <RouterLink :to="{ name: 'privacy' }">{{ t('auth.register.privacyLink') }}</RouterLink>.
     </p>
-    <p class="muted">Déjà un compte ? <RouterLink :to="{ name: 'login', query: route.query }">Se connecter</RouterLink></p>
+    <p class="muted">{{ t('auth.register.haveAccount') }} <RouterLink :to="{ name: 'login', query: route.query }">{{ t('auth.register.login') }}</RouterLink></p>
   </section>
 </template>
 

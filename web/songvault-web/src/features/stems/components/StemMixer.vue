@@ -4,6 +4,7 @@ import { effectiveGains, newControl } from '../mix'
 import type { Mixer } from '../mixerEngine'
 import { usePlayerStore } from '@/features/player/stores/playerStore'
 import { formatTime } from '@/shared/utils/format'
+import { t } from '@/shared/i18n'
 
 /** Le mélangeur (#23) : lecture des pistes ensemble, et pour chacune muet, solo et volume. */
 const props = defineProps<{ engine: Mixer; names: readonly string[] }>()
@@ -50,14 +51,14 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="mixer" role="region" aria-label="Mélangeur">
+  <div class="mixer" role="region" :aria-label="t('stems.mixer.label')">
     <div class="transport">
-      <button type="button" class="play" :aria-label="isPlaying ? 'Mettre les pistes en pause' : 'Lire les pistes'"
+      <button type="button" class="play" :aria-label="isPlaying ? t('stems.mixer.pause') : t('stems.mixer.play')"
               @click="isPlaying ? pause() : play()">
         {{ isPlaying ? '❚❚' : '▶' }}
       </button>
       <input class="seek" type="range" min="0" step="0.1" :max="engine.duration" :value="position"
-             aria-label="Position dans les pistes" :aria-valuetext="`${formatTime(position)} sur ${formatTime(engine.duration)}`"
+             :aria-label="t('stems.mixer.position')" :aria-valuetext="t('shared.time.positionOf', { position: formatTime(position), duration: formatTime(engine.duration) })"
              @change="seek(Number(($event.target as HTMLInputElement).value))" />
       <span class="time">{{ formatTime(position) }} / {{ formatTime(engine.duration) }}</span>
     </div>
@@ -65,12 +66,12 @@ onBeforeUnmount(() => {
     <ul class="tracks">
       <li v-for="(name, i) in names" :key="i" data-testid="mixer-track" :class="{ silent: effectiveGains(controls)[i] === 0 }">
         <span class="name">{{ name }}</span>
-        <button type="button" class="secondary toggle" :aria-pressed="controls[i]!.muted" :aria-label="`Couper ${name}`"
-                title="Muet" @click="controls[i]!.muted = !controls[i]!.muted">M</button>
-        <button type="button" class="secondary toggle" :aria-pressed="controls[i]!.solo" :aria-label="`Écouter ${name} en solo`"
-                title="Solo" @click="controls[i]!.solo = !controls[i]!.solo">S</button>
+        <button type="button" class="secondary toggle" :aria-pressed="controls[i]!.muted" :aria-label="t('stems.mixer.mute', { name })"
+                :title="t('stems.mixer.muteShort')" @click="controls[i]!.muted = !controls[i]!.muted">M</button>
+        <button type="button" class="secondary toggle" :aria-pressed="controls[i]!.solo" :aria-label="t('stems.mixer.solo', { name })"
+                :title="t('stems.mixer.soloShort')" @click="controls[i]!.solo = !controls[i]!.solo">S</button>
         <input v-model.number="controls[i]!.volume" class="volume" type="range" min="0" max="1" step="0.05"
-               :aria-label="`Volume de ${name}`" />
+               :aria-label="t('stems.mixer.volume', { name })" />
       </li>
     </ul>
   </div>

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { Track } from '../track'
+import { t } from '@/shared/i18n'
 
 /** Ce dont le store a besoin d'un élément audio (HTMLAudioElement le satisfait ; un faux aussi). */
 export interface AudioLike {
@@ -38,7 +39,7 @@ export const usePlayerStore = defineStore('player', () => {
       }
     },
     error: () => {
-      error.value = 'Impossible de lire ce fichier.'
+      error.value = t('player.store.cannotPlay')
       isPlaying.value = false
     },
   }
@@ -72,8 +73,8 @@ export const usePlayerStore = defineStore('player', () => {
     } catch (e) {
       isPlaying.value = false
       error.value = e instanceof DOMException && e.name === 'NotAllowedError'
-        ? 'Le navigateur a bloqué la lecture automatique : cliquez sur Lecture.'
-        : 'Lecture impossible.'
+        ? t('player.store.autoplayBlocked')
+        : t('player.store.playFailed')
     }
   }
 

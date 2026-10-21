@@ -1,17 +1,18 @@
 import type { SongFile } from '@/features/files/types'
+import { labels } from '@/shared/i18n'
 
 // ---- Statuts (semaine 3) ----
 export const SONG_VERSION_STATUSES = ['Idea', 'Demo', 'Arrangement', 'Rehearsal', 'Studio', 'Final'] as const
 export type SongVersionStatus = (typeof SONG_VERSION_STATUSES)[number]
 
-export const statusLabels: Record<SongVersionStatus, string> = {
-  Idea: 'Idée',
-  Demo: 'Démo',
-  Arrangement: 'Arrangement',
-  Rehearsal: 'Répétition',
-  Studio: 'Studio',
-  Final: 'Finale',
-}
+export const statusLabels = labels<SongVersionStatus>({
+  Idea: 'versions.status.Idea',
+  Demo: 'versions.status.Demo',
+  Arrangement: 'versions.status.Arrangement',
+  Rehearsal: 'versions.status.Rehearsal',
+  Studio: 'versions.status.Studio',
+  Final: 'versions.status.Final',
+})
 
 // ---- Limites : les MÊMES que le domaine C# ----
 export const VERSION_TITLE_MAX = 200

@@ -1,4 +1,5 @@
 import type { ReleaseType } from '@/features/releases/types'
+import { labels } from '@/shared/i18n'
 
 export type ShareTargetType = 'Version' | 'Release'
 export type ShareLinkStatus = 'Active' | 'Expired' | 'Revoked'
@@ -81,14 +82,14 @@ export const SHARE_PASSWORD_MAX = 128
 export const SHARE_DURATIONS = [1, 7, 30, 90] as const
 export const SHARE_DEFAULT_DURATION = 30
 
-export const shareStatusLabels: Record<ShareLinkStatus, string> = {
-  Active: 'Actif',
-  Expired: 'Expiré',
-  Revoked: 'Révoqué',
-}
+export const shareStatusLabels = labels<ShareLinkStatus>({
+  Active: 'sharing.status.Active',
+  Expired: 'sharing.status.Expired',
+  Revoked: 'sharing.status.Revoked',
+})
 
-export const accessKindLabels: Record<ShareAccessKind, string> = {
-  Opened: 'Page ouverte',
-  Played: 'Écoute',
-  WrongPassword: 'Mauvais mot de passe',
-}
+export const accessKindLabels = labels<ShareAccessKind>({
+  Opened: 'sharing.access.Opened',
+  Played: 'sharing.access.Played',
+  WrongPassword: 'sharing.access.WrongPassword',
+})

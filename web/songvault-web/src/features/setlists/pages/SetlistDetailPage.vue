@@ -19,6 +19,7 @@ import ReorderableList from '@/shared/components/ReorderableList.vue'
 import { ApiError, getErrorMessage } from '@/shared/api/ApiError'
 import { useConfirm } from '@/shared/composables/useConfirm'
 import { useToast } from '@/shared/composables/useToast'
+import { t } from '@/shared/i18n'
 
 const props = defineProps<{ setlistId: string }>()
 const bands = useBandStore()
@@ -70,15 +71,15 @@ async function onDelete() {
   if (!setlist.value) return
   const { id, name } = setlist.value
   const confirmed = await confirm({
-    title: 'Supprimer cette setlist ?',
-    message: `« ${name} » sera supprimée. Les morceaux et leurs versions restent.`,
-    confirmLabel: 'Supprimer',
+    title: t('setlists.detail.deleteTitle'),
+    message: t('setlists.detail.deleteMessage', { name }),
+    confirmLabel: t('common.actions.delete'),
     danger: true,
   })
   if (!confirmed) return
   try {
     await setlistsApi.remove(id)
-    toast.success(`« ${name} » a été supprimée.`)
+    toast.success(t('setlists.detail.deleted', { name }))
     await router.push({ name: 'setlists' })
   } catch (e) {
     detailsError.value = getErrorMessage(e)
@@ -132,7 +133,7 @@ function onChangeDuration(item: SetlistItem, event: Event) {
   const input = event.target as HTMLInputElement
   const durationMs = parseDuration(input.value)
   if (durationMs === undefined) {
-    itemsError.value = `Durée invalide pour « ${item.songTitle} » : écrivez minutes:secondes, par exemple 3:45 (60 minutes au plus).`
+    itemsError.value = t('setlists.detail.badDuration', { songTitle: item.songTitle })
     input.value = formatDuration(item.manualDurationMs)
     return
   }
@@ -147,8 +148,8 @@ function onRemoveItem(item: SetlistItem) {
 
 function playedLabel(item: SetlistItem): string {
   const v = item.versions.find((x) => x.id === item.playedVersionId)
-  if (!v) return 'Pas de version'
-  return `${item.versionId ? '' : 'Dernière : '}v${v.number} · ${v.title}`
+  if (!v) return t('setlists.detail.noVersion')
+  return `${item.versionId ? '' : `${t('setlists.detail.latestPrefix')} `}v${v.number} · ${v.title}`
 }
 
 function musicLabel(item: SetlistItem): string {
@@ -183,11 +184,11 @@ function onAdd(song: Song) {
 <template>
   <section>
     <div class="print-hide">
-      <RouterLink :to="{ name: 'setlists' }">← Toutes les setlists</RouterLink>
+      <RouterLink :to="{ name: 'setlists' }">{{ t('setlists.detail.back') }}</RouterLink>
     </div>
 
     <LoadingState v-if="isLoading" />
-    <div v-else-if="isNotFound" class="card" role="alert"><p>Cette setlist n'existe pas ou a été supprimée.</p></div>
+    <div v-else-if="isNotFound" class="card" role="alert"><p>{{ t('setlists.detail.notFound') }}</p></div>
     <ErrorState v-else-if="error" :message="getErrorMessage(error)" @retry="load(setlistId)" />
 
     <template v-else-if="setlist">
@@ -198,31 +199,31 @@ function onAdd(song: Song) {
             <p class="muted">{{ formatSetlistDate(setlist.date) }}<template v-if="setlist.venue"> · {{ setlist.venue }}</template></p>
           </div>
           <div v-if="!isEditing" class="actions">
-            <button type="button" class="secondary" :disabled="setlist.items.length === 0" @click="onPrint">Imprimer</button>
+            <button type="button" class="secondary" :disabled="setlist.items.length === 0" @click="onPrint">{{ t('setlists.detail.print') }}</button>
             <template v-if="canWrite">
-              <button type="button" class="secondary" @click="isEditing = true">Modifier</button>
-              <button type="button" class="danger" @click="onDelete">Supprimer</button>
+              <button type="button" class="secondary" @click="isEditing = true">{{ t('setlists.detail.edit') }}</button>
+              <button type="button" class="danger" @click="onDelete">{{ t('common.actions.delete') }}</button>
             </template>
           </div>
         </header>
         <p v-if="detailsError && !isEditing" class="field-error" role="alert">{{ detailsError }}</p>
-        <SectionCard v-if="isEditing" title="Modifier la setlist">
+        <SectionCard v-if="isEditing" :title="t('setlists.detail.editTitle')">
           <SetlistForm :initial="{ name: setlist.name, date: setlist.date, venue: setlist.venue }"
-                       submit-label="Enregistrer" :submitting="savingDetails" :error="detailsError"
+                       :submit-label="t('common.actions.save')" :submitting="savingDetails" :error="detailsError"
                        @submit="onSaveDetails" @cancel="isEditing = false" />
         </SectionCard>
 
-        <SectionCard :title="`Morceaux (${setlist.items.length})`">
+        <SectionCard :title="t('setlists.detail.songs', { count: setlist.items.length })">
           <p class="total" data-testid="setlist-total">
-            Durée totale : <strong>{{ formatTotal(setlist.totalDurationMs) }}</strong>
-            <span v-if="setlist.missingDurationCount > 0" class="muted">
-              (+ {{ setlist.missingDurationCount }} {{ setlist.missingDurationCount > 1 ? 'morceaux' : 'morceau' }} sans durée)
+            {{ t('setlists.detail.total') }} <strong>{{ formatTotal(setlist.totalDurationMs) }}</strong> <span
+              v-if="setlist.missingDurationCount > 0" class="muted">
+              {{ t('setlists.missingDuration', { count: setlist.missingDurationCount }) }}
             </span>
           </p>
           <p v-if="itemsError" class="field-error" role="alert">{{ itemsError }}</p>
-          <p v-if="setlist.items.length === 0" class="muted">Aucun morceau pour l'instant.</p>
+          <p v-if="setlist.items.length === 0" class="muted">{{ t('setlists.detail.empty') }}</p>
           <ReorderableList v-else :items="setlist.items" :item-key="(i) => i.songId" :item-label="(i) => i.songTitle"
-                           label="Morceaux de la setlist" :disabled="!canWrite || savingItems" @move="onMove">
+                           :label="t('setlists.detail.itemsLabel')" :disabled="!canWrite || savingItems" @move="onMove">
             <template #default="{ item }">
               <div class="line" data-testid="setlist-line">
                 <span class="number">{{ item.position }}.</span>
@@ -230,42 +231,42 @@ function onAdd(song: Song) {
                 <span class="music muted">{{ musicLabel(item) }}</span>
                 <span v-if="!canWrite" class="duration">{{ formatDuration(item.durationMs) || '—' }}</span>
                 <label v-else class="duration">
-                  <span class="visually-hidden">Durée de {{ item.songTitle }} (minutes:secondes)</span>
+                  <span class="visually-hidden">{{ t('setlists.detail.durationOf', { songTitle: item.songTitle }) }}</span>
                   <input :value="formatDuration(item.manualDurationMs)" :placeholder="formatDuration(item.audioDurationMs) || 'm:ss'"
                          inputmode="numeric" :disabled="savingItems" :data-testid="`duration-${item.songId}`"
                          @change="onChangeDuration(item, $event)" />
                 </label>
 
                 <select v-if="canWrite" class="version" :value="item.versionId ?? ''" :disabled="savingItems"
-                        :aria-label="`Version de ${item.songTitle}`" @change="onChangeVersion(item, $event)">
-                  <option value="">Dernière version</option>
+                        :aria-label="t('setlists.detail.versionOf', { songTitle: item.songTitle })" @change="onChangeVersion(item, $event)">
+                  <option value="">{{ t('setlists.detail.latestVersion') }}</option>
                   <option v-for="v in item.versions" :key="v.id" :value="v.id">v{{ v.number }} · {{ v.title }}</option>
                 </select>
                 <span v-else class="version muted">{{ playedLabel(item) }}</span>
                 <input v-if="canWrite" class="notes" :value="item.notes ?? ''" :maxlength="SETLIST_NOTES_MAX"
-                       placeholder="Notes de scène" :disabled="savingItems" :aria-label="`Notes pour ${item.songTitle}`"
+                       :placeholder="t('setlists.detail.notesPlaceholder')" :disabled="savingItems" :aria-label="t('setlists.detail.notesFor', { songTitle: item.songTitle })"
                        @change="onChangeNotes(item, $event)" />
                 <span v-else class="notes">{{ item.notes }}</span>
                 <button v-if="canWrite" type="button" class="secondary" :disabled="savingItems"
-                        :aria-label="`Retirer ${item.songTitle} de la setlist`" @click="onRemoveItem(item)">Retirer</button>
+                        :aria-label="t('setlists.detail.removeItem', { songTitle: item.songTitle })" @click="onRemoveItem(item)">{{ t('setlists.detail.remove') }}</button>
               </div>
             </template>
           </ReorderableList>
-          <p v-if="savingItems" class="muted" role="status">Enregistrement…</p>
+          <p v-if="savingItems" class="muted" role="status">{{ t('common.actions.saving') }}</p>
 
           <form v-if="canWrite" class="add-item" role="search" @submit.prevent="onSearch">
-            <label for="setlist-search">Ajouter un morceau</label>
+            <label for="setlist-search">{{ t('setlists.detail.addSong') }}</label>
             <div class="search-row">
-              <input id="setlist-search" v-model="search" type="search" placeholder="Titre ou artiste" :disabled="isFull" />
-              <button type="submit" class="secondary" :disabled="isFull">Chercher</button>
+              <input id="setlist-search" v-model="search" type="search" :placeholder="t('setlists.detail.searchPlaceholder')" :disabled="isFull" />
+              <button type="submit" class="secondary" :disabled="isFull">{{ t('setlists.detail.search') }}</button>
             </div>
-            <p v-if="isFull" class="muted">Une setlist compte au plus {{ SETLIST_MAX_ITEMS }} morceaux.</p>
+            <p v-if="isFull" class="muted">{{ t('setlists.detail.maxItems', { setlistMaxItems: SETLIST_MAX_ITEMS }) }}</p>
             <ul v-if="searched" class="results">
               <li v-for="song in candidates" :key="song.id">
                 <span>{{ song.title }}<small v-if="song.artist" class="muted"> · {{ song.artist }}</small></span>
-                <button type="button" class="secondary" :disabled="savingItems || isFull" @click="onAdd(song)">Ajouter</button>
+                <button type="button" class="secondary" :disabled="savingItems || isFull" @click="onAdd(song)">{{ t('setlists.detail.add') }}</button>
               </li>
-              <li v-if="candidates.length === 0" class="muted">Aucun autre morceau trouvé.</li>
+              <li v-if="candidates.length === 0" class="muted">{{ t('setlists.detail.noOtherSong') }}</li>
             </ul>
           </form>
         </SectionCard>

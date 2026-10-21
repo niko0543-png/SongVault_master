@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { changeStarts, countChanges, diffLines } from '../diff'
+import { t } from '@/shared/i18n'
 
 /** Paroles ou notes, de A (before) vers B (after). */
 const props = defineProps<{ title: string; before: string | null; after: string | null }>()
@@ -12,22 +13,22 @@ const headingId = computed(() => `diff-${props.title.toLowerCase()}`)
 
 const summary = computed(() => {
   const { added, removed } = counts.value
-  if (lines.value.length === 0) return 'Vide des deux côtés'
-  if (added === 0 && removed === 0) return 'Identiques'
-  const plural = (n: number, word: string) => `${n} ligne${n > 1 ? 's' : ''} ${word}${n > 1 ? 's' : ''}`
-  return [added && plural(added, 'ajoutée'), removed && plural(removed, 'supprimée')].filter(Boolean).join(', ')
+  if (lines.value.length === 0) return t('versions.textDiff.emptyBoth')
+  if (added === 0 && removed === 0) return t('versions.textDiff.identical')
+  return [added && t('versions.textDiff.linesAdded', { count: added }), removed && t('versions.textDiff.linesRemoved', { count: removed })]
+    .filter(Boolean).join(', ')
 })
 </script>
 
 <template>
   <section class="text-diff" :aria-labelledby="headingId">
     <h3 :id="headingId">{{ title }} <small class="muted">· {{ summary }}</small></h3>
-    <ol v-if="counts.added + counts.removed > 0" class="diff" :aria-label="`Différences : ${title}`">
+    <ol v-if="counts.added + counts.removed > 0" class="diff" :aria-label="t('versions.textDiff.label', { title })">
       <!-- data-change : début d'un bloc modifié, cible des boutons « changement précédent / suivant » -->
       <li v-for="(line, i) in lines" :key="i" :class="`line line--${line.kind}`"
           :data-change="starts.has(i) ? '' : undefined" :tabindex="starts.has(i) ? -1 : undefined">
-        <ins v-if="line.kind === 'added'"><span class="sign" aria-hidden="true">+</span><span class="visually-hidden">Ajouté : </span>{{ line.text }}</ins>
-        <del v-else-if="line.kind === 'removed'"><span class="sign" aria-hidden="true">−</span><span class="visually-hidden">Supprimé : </span>{{ line.text }}</del>
+        <ins v-if="line.kind === 'added'"><span class="sign" aria-hidden="true">+</span><span class="visually-hidden">{{ t('versions.textDiff.added') }} </span>{{ line.text }}</ins>
+        <del v-else-if="line.kind === 'removed'"><span class="sign" aria-hidden="true">−</span><span class="visually-hidden">{{ t('versions.textDiff.removed') }} </span>{{ line.text }}</del>
         <span v-else><span class="sign" aria-hidden="true"> </span>{{ line.text }}</span>
       </li>
     </ol>

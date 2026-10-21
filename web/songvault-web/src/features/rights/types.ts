@@ -1,12 +1,14 @@
+import { labels } from '@/shared/i18n'
+
 /** Même liste que CreditRole côté C# (#22). */
 export type CreditRole = 'Author' | 'Composer' | 'Arranger' | 'Publisher'
 
-export const creditRoleLabels: Record<CreditRole, string> = {
-  Author: 'Auteur',
-  Composer: 'Compositeur',
-  Arranger: 'Arrangeur',
-  Publisher: 'Éditeur',
-}
+export const creditRoleLabels = labels<CreditRole>({
+  Author: 'rights.roles.Author',
+  Composer: 'rights.roles.Composer',
+  Arranger: 'rights.roles.Arranger',
+  Publisher: 'rights.roles.Publisher',
+})
 
 /** Mêmes limites que le domaine (Credit.NameMaxLength, Song.MaxCredits). */
 export const CREDIT_NAME_MAX = 200

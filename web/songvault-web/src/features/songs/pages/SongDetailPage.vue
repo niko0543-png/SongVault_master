@@ -18,6 +18,7 @@ import { useAsyncAction } from '@/shared/composables/useAsyncAction'
 import { formatDate } from '@/shared/utils/format'
 import { useConfirm } from '@/shared/composables/useConfirm'
 import { useToast } from '@/shared/composables/useToast'
+import { t } from '@/shared/i18n'
 
 const props = defineProps<{ songId: string }>()
 const router = useRouter()
@@ -98,9 +99,9 @@ async function onDelete() {
   if (!song.value) return
   const { id, title } = song.value
   const confirmed = await confirm({
-    title: 'Supprimer ce morceau ?',
-        message: `« ${title} », ses versions et ses fichiers vont à la corbeille du groupe : on pourra les restaurer pendant 30 jours.`,
-    confirmLabel: 'Supprimer',
+    title: t('songs.detail.deleteTitle'),
+    message: t('songs.detail.deleteMessage', { title }),
+    confirmLabel: t('common.actions.delete'),
     danger: true,
   })
   if (!confirmed) return
@@ -108,7 +109,7 @@ async function onDelete() {
   await deletion.run(id)
   if (!deletion.error.value) {
     store.remove(id)
-    toast.success(`« ${title} » est dans la corbeille.`)
+    toast.success(t('songs.detail.deleted', { title }))
     await router.push({ name: 'songs' })
   }
 }
@@ -116,10 +117,10 @@ async function onDelete() {
 
 <template>
   <section>
-    <RouterLink to="/">← Tous les morceaux</RouterLink>
+    <RouterLink to="/">{{ t('songs.detail.back') }}</RouterLink>
 
     <LoadingState v-if="isLoading" />
-    <div v-else-if="isNotFound" class="card" role="alert"><p>Ce morceau n'existe pas ou a été supprimé.</p></div>
+    <div v-else-if="isNotFound" class="card" role="alert"><p>{{ t('songs.detail.notFound') }}</p></div>
     <ErrorState v-else-if="error" :message="getErrorMessage(error)" @retry="load(songId)" />
 
     <template v-else-if="song">
@@ -129,19 +130,19 @@ async function onDelete() {
           <p v-if="song.artist" class="muted">{{ song.artist }}</p>
         </div>
         <div v-if="bands.can('write')" class="actions">
-          <RouterLink :to="{ name: 'song-edit', params: { songId: song.id } }">Modifier</RouterLink>
-          <button type="button" class="danger" :disabled="deletion.isLoading.value" @click="onDelete">Supprimer</button>
+          <RouterLink :to="{ name: 'song-edit', params: { songId: song.id } }">{{ t('songs.detail.edit') }}</RouterLink>
+          <button type="button" class="danger" :disabled="deletion.isLoading.value" @click="onDelete">{{ t('common.actions.delete') }}</button>
         </div>
       </header>
       <p v-if="deletion.error.value" class="field-error" role="alert">{{ getErrorMessage(deletion.error.value) }}</p>
       <p v-if="song.description">{{ song.description }}</p>
-      <p class="muted"><small>Créé le {{ formatDate(song.createdAt) }} · modifié le {{ formatDate(song.updatedAt) }}</small></p>
+      <p class="muted"><small>{{ t('songs.detail.dates', { createdAt: formatDate(song.createdAt), updatedAt: formatDate(song.updatedAt) }) }}</small></p>
 
-      <h2>Versions</h2>
+      <h2>{{ t('songs.detail.versions') }}</h2>
       <RouterLink v-if="versions.length >= 2" :to="{ name: 'version-compare', params: { songId: song.id } }">
-        Comparer des versions
+        {{ t('songs.detail.compare') }}
       </RouterLink>
-      <p v-if="lastCreated" class="muted" role="status">Version v{{ lastCreated }} créée.</p>
+      <p v-if="lastCreated" class="muted" role="status">{{ t('songs.detail.versionCreated', { lastCreated }) }}</p>
       <p v-if="statusError" class="field-error" role="alert">{{ statusError }}</p>
       <VersionTimeline :song-id="song.id" :versions="versions" :saving-id="savingId"
                        :readonly="!bands.can('write')" @change-status="onChangeStatus" />

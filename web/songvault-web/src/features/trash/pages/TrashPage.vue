@@ -12,6 +12,7 @@ import { getErrorMessage } from '@/shared/api/ApiError'
 import { formatDate, formatFileSize } from '@/shared/utils/format'
 import { useConfirm } from '@/shared/composables/useConfirm'
 import { useToast } from '@/shared/composables/useToast'
+import { t } from '@/shared/i18n'
 
 const auth = useAuthStore()
 const bands = useBandStore()
@@ -40,12 +41,12 @@ watch(() => bands.activeId, (id) => { if (id) void load() }, { immediate: true }
 
 function deletedBy(item: TrashItem): string {
   if (item.deletedById !== null && item.deletedById === auth.user?.id) return 'vous'
-  return item.deletedByEmail ?? 'un compte supprimé'
+  return item.deletedByEmail ?? t('trash.page.deletedAccount')
 }
 
 function remaining(item: TrashItem): string {
   const days = daysLeft(item)
-  return days <= 1 ? 'supprimé définitivement d’ici demain' : `encore ${days} jours`
+  return days <= 1 ? t('trash.page.purgeTomorrow') : t('trash.page.daysLeft', { count: days })
 }
 
 async function run(item: TrashItem, action: () => Promise<void>, done: string) {
@@ -65,38 +66,37 @@ async function run(item: TrashItem, action: () => Promise<void>, done: string) {
 }
 
 function onRestore(item: TrashItem) {
-  return run(item, () => trashApi.restore(item), `« ${trashLabel(item)} » est de retour.`)
+  return run(item, () => trashApi.restore(item), t('trash.page.restored', { item: trashLabel(item) }))
 }
 
 async function onPurge(item: TrashItem) {
   const confirmed = await confirm({
-    title: 'Supprimer définitivement ?',
-    message: `« ${trashLabel(item)} » et tous ses fichiers seront effacés tout de suite. On ne pourra plus les restaurer.`,
-    confirmLabel: 'Supprimer définitivement',
+    title: t('trash.page.purgeTitle'),
+    message: t('trash.page.purgeMessage', { item: trashLabel(item) }),
+    confirmLabel: t('trash.page.purge'),
     danger: true,
   })
   if (!confirmed) return
-  await run(item, () => trashApi.remove(item), `« ${trashLabel(item)} » est supprimé définitivement.`)
+  await run(item, () => trashApi.remove(item), t('trash.page.purged', { item: trashLabel(item) }))
 }
 </script>
 
 <template>
   <section>
     <header class="page-header">
-      <h1>Corbeille</h1>
+      <h1>{{ t('trash.page.title') }}</h1>
     </header>
     <p class="muted">
-      Morceaux, versions et fichiers supprimés : ils se restaurent pendant 30 jours, puis partent pour de bon.
-      Jusque-là, ils comptent dans le stockage du groupe.
+      {{ t('trash.page.intro') }}
     </p>
 
     <LoadingState v-if="isLoading" />
     <ErrorState v-else-if="error" :message="getErrorMessage(error)" @retry="load" />
-    <EmptyState v-else-if="items.length === 0" message="La corbeille est vide." />
+    <EmptyState v-else-if="items.length === 0" :message="t('trash.page.empty')" />
 
     <template v-else>
       <p v-if="actionError" class="field-error" role="alert">{{ actionError }}</p>
-      <ul class="trash" aria-label="Éléments de la corbeille">
+      <ul class="trash" :aria-label="t('trash.page.listLabel')">
         <li v-for="item in items" :key="item.id" class="trash-item" data-testid="trash-item">
           <div class="what">
             <p>
@@ -106,15 +106,15 @@ async function onPurge(item: TrashItem) {
             </p>
             <p class="muted">
               <small>
-                Supprimé par {{ deletedBy(item) }} le {{ formatDate(item.deletedAt) }} ·
+                {{ t('trash.page.deletedBy', { item: deletedBy(item), deletedAt: formatDate(item.deletedAt) }) }}
                 <time :datetime="item.purgeAt" :title="formatDate(item.purgeAt)">{{ remaining(item) }}</time>
               </small>
             </p>
           </div>
           <div class="actions">
-            <button type="button" class="secondary" :disabled="busyId === item.id" @click="onRestore(item)">Restaurer</button>
+            <button type="button" class="secondary" :disabled="busyId === item.id" @click="onRestore(item)">{{ t('trash.page.restore') }}</button>
             <button v-if="canPurge" type="button" class="danger" :disabled="busyId === item.id" @click="onPurge(item)">
-              Supprimer définitivement
+              {{ t('trash.page.purge') }}
             </button>
           </div>
         </li>

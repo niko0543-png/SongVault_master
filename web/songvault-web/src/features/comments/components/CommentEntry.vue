@@ -3,14 +3,15 @@ import { computed, ref } from 'vue'
 import { useAuthStore } from '@/features/auth/stores/authStore'
 import { COMMENT_BODY_MAX, type Comment } from '../types'
 import { formatDate } from '@/shared/utils/format'
+import { t } from '@/shared/i18n'
 
 const props = defineProps<{ comment: Comment; canEdit: boolean; canDelete: boolean; busy: boolean }>()
 const emit = defineEmits<{ save: [body: string]; remove: [] }>()
 
 const auth = useAuthStore()
 const author = computed(() => {
-  if (props.comment.authorId !== null && props.comment.authorId === auth.user?.id) return 'Vous'
-  return props.comment.authorEmail ?? 'Compte supprimé'
+  if (props.comment.authorId !== null && props.comment.authorId === auth.user?.id) return t('comments.entry.you')
+  return props.comment.authorEmail ?? t('comments.entry.deletedAccount')
 })
 
 // Modification sur place : le texte d'origine reste affiché tant qu'on n'a pas enregistré
@@ -35,23 +36,23 @@ function onSave() {
     <header class="comment-meta">
       <strong>{{ author }}</strong>
       <small class="muted">
-        {{ formatDate(comment.createdAt) }}<template v-if="comment.editedAt"> · modifié</template>
+        {{ formatDate(comment.createdAt) }}<template v-if="comment.editedAt"> {{ t('comments.entry.edited') }}</template>
       </small>
     </header>
 
     <form v-if="isEditing" class="comment-edit" @submit.prevent="onSave">
-      <textarea v-model="draft" rows="2" :maxlength="COMMENT_BODY_MAX" aria-label="Modifier le commentaire" />
+      <textarea v-model="draft" rows="2" :maxlength="COMMENT_BODY_MAX" :aria-label="t('comments.entry.editLabel')" />
       <div class="comment-actions">
-        <button type="button" class="secondary" @click="isEditing = false">Annuler</button>
-        <button type="submit" :disabled="busy || !draft.trim()">Enregistrer</button>
+        <button type="button" class="secondary" @click="isEditing = false">{{ t('common.actions.cancel') }}</button>
+        <button type="submit" :disabled="busy || !draft.trim()">{{ t('common.actions.save') }}</button>
       </div>
     </form>
     <p v-else class="comment-body">{{ comment.body }}</p>
 
     <div v-if="!isEditing" class="comment-actions">
       <slot name="actions" />
-      <button v-if="canEdit" type="button" class="secondary" :disabled="busy" @click="startEdit">Modifier</button>
-      <button v-if="canDelete" type="button" class="secondary" :disabled="busy" @click="$emit('remove')">Supprimer</button>
+      <button v-if="canEdit" type="button" class="secondary" :disabled="busy" @click="startEdit">{{ t('comments.entry.edit') }}</button>
+      <button v-if="canDelete" type="button" class="secondary" :disabled="busy" @click="$emit('remove')">{{ t('common.actions.delete') }}</button>
     </div>
   </article>
 </template>

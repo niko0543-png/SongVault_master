@@ -1,74 +1,59 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
 import { publisher } from '../publisher'
+import { locale, t } from '@/shared/i18n'
 </script>
 
 <!-- #16 : à faire relire avant d'ouvrir le paiement (ADR 0023) ; les crochets sont dans publisher.ts -->
 <template>
   <article class="legal">
-    <h1>Conditions générales de vente</h1>
-    <p class="muted">Dernière mise à jour : {{ publisher.updatedAt }}</p>
+    <h1>{{ t('legal.terms.title') }}</h1>
+    <p v-if="locale === 'en'" class="muted" data-testid="french-prevails">{{ t('legal.englishNote') }}</p>
+    <p class="muted">{{ t('legal.terms.updated', { updatedAt: publisher.updatedAt }) }}</p>
 
-    <h2>1. Vendeur</h2>
+    <h2>{{ t('legal.terms.seller') }}</h2>
     <p>
       {{ publisher.name }}, {{ publisher.address }}, {{ publisher.registration }}.
-      Contact : <a :href="`mailto:${publisher.email}`">{{ publisher.email }}</a>.
+      {{ t('legal.notice.contact') }} <a :href="`mailto:${publisher.email}`">{{ publisher.email }}</a>.
     </p>
 
-    <h2>2. Ce qui est vendu</h2>
+    <h2>{{ t('legal.terms.what') }}</h2>
     <p>
-      Un abonnement mensuel à une formule payante de SongVault, pour un groupe : il augmente la place
-      disponible pour les fichiers du groupe et le nombre de groupes dont vous pouvez être propriétaire.
-      Les formules, leurs limites et leurs prix sont sur la page <RouterLink :to="{ name: 'plans' }">Formules</RouterLink>.
+      {{ t('legal.terms.whatText') }} <RouterLink :to="{ name: 'plans' }">{{ t('legal.terms.plansLink') }}</RouterLink>.
     </p>
 
-    <h2>3. Prix et paiement</h2>
+    <h2>{{ t('legal.terms.price') }}</h2>
     <p>
-      Les prix sont indiqués en euros, toutes taxes comprises. Le paiement se fait par carte, chaque mois à la date
-      anniversaire de la souscription, par l'intermédiaire de Stripe. SongVault ne reçoit ni ne conserve vos
-      coordonnées bancaires. Une facture est disponible pour chaque paiement dans « Gérer l'abonnement ».
-      Un changement de prix est annoncé par e-mail au moins 30 jours avant de s'appliquer ; vous pouvez résilier
-      avant.
+      {{ t('legal.terms.priceText') }}
     </p>
 
-    <h2>4. Durée et résiliation</h2>
+    <h2>{{ t('legal.terms.duration') }}</h2>
     <p>
-      L'abonnement est sans engagement et se renouvelle chaque mois. Vous pouvez le résilier à tout moment depuis la
-      page Facturation du groupe, bouton « Gérer l'abonnement » : la formule reste en place jusqu'à la fin du mois
-      payé, puis le groupe repasse sur la formule gratuite. Aucun fichier n'est effacé ; au-delà du quota gratuit,
-      les nouveaux envois sont refusés.
+      {{ t('legal.terms.durationText') }}
     </p>
 
-    <h2>5. Paiement refusé</h2>
+    <h2>{{ t('legal.terms.declined') }}</h2>
     <p>
-      Si un paiement échoue, les propriétaires du groupe sont prévenus par e-mail et Stripe réessaie pendant quelques
-      jours. Sans paiement à l'issue de ces tentatives, l'abonnement prend fin et le groupe repasse sur la formule
-      gratuite, comme pour une résiliation.
+      {{ t('legal.terms.declinedText') }}
     </p>
 
-    <h2>6. Droit de rétractation</h2>
+    <h2>{{ t('legal.terms.withdrawal') }}</h2>
     <p>
-      Vous disposez de 14 jours après la souscription pour vous rétracter, en écrivant à
-      <a :href="`mailto:${publisher.email}`">{{ publisher.email }}</a>. En souscrivant, vous demandez que le
-      service commence tout de suite : en cas de rétractation, le montant correspondant aux jours déjà utilisés
-      reste dû et le reste vous est remboursé sous 14 jours, sur la carte utilisée.
+      {{ t('legal.terms.withdrawalBefore') }}
+      <a :href="`mailto:${publisher.email}`">{{ publisher.email }}</a>{{ t('legal.terms.withdrawalAfter') }}
     </p>
 
-    <h2>7. Service et responsabilité</h2>
+    <h2>{{ t('legal.terms.service') }}</h2>
     <p>
-      SongVault conserve les fichiers et les données du groupe avec des sauvegardes quotidiennes, sans garantie de
-      disponibilité permanente. Les contenus déposés restent la propriété de leurs auteurs ; vous garantissez
-      avoir le droit de les déposer.
+      {{ t('legal.terms.serviceText') }}
     </p>
 
-    <h2>8. Données personnelles</h2>
-    <p>Voir la <RouterLink :to="{ name: 'privacy' }">politique de confidentialité</RouterLink>.</p>
+    <h2>{{ t('legal.terms.personalData') }}</h2>
+    <p>{{ t('legal.terms.see') }} <RouterLink :to="{ name: 'privacy' }">{{ t('legal.terms.privacyLink') }}</RouterLink>.</p>
 
-    <h2>9. Litiges</h2>
+    <h2>{{ t('legal.terms.disputes') }}</h2>
     <p>
-      Les présentes conditions sont soumises au droit français. En cas de litige, écrivez-nous d'abord. Si vous êtes
-      consommateur, vous pouvez ensuite recourir gratuitement au médiateur de la consommation :
-      {{ publisher.mediator }}.
+      {{ t('legal.terms.disputesText', { mediator: publisher.mediator }) }}
     </p>
   </article>
 </template>

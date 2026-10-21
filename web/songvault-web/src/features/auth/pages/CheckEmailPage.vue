@@ -5,6 +5,7 @@ import { authApi } from '../api/authApi'
 import { loginQuery, peekAfterConfirm } from '../afterConfirm'
 import { getErrorMessage } from '@/shared/api/ApiError'
 import { useAsyncAction } from '@/shared/composables/useAsyncAction'
+import { t } from '@/shared/i18n'
 
 const route = useRoute()
 const email = computed(() => (typeof route.query.email === 'string' ? route.query.email : ''))
@@ -21,20 +22,20 @@ async function onResend() {
 
 <template>
   <section class="auth">
-    <h1>Vérifiez votre boîte mail</h1>
+    <h1>{{ t('auth.checkEmail.title') }}</h1>
     <div class="card">
       <p>
-        Un e-mail de confirmation vient de partir<template v-if="email"> à <strong>{{ email }}</strong></template>.
-        Cliquez sur le lien qu'il contient pour activer votre compte ; il est valable 24 heures.
+        {{ t('auth.checkEmail.sent') }}<template v-if="email"> {{ t('auth.checkEmail.to') }} <strong>{{ email }}</strong></template>.
+        {{ t('auth.checkEmail.activate') }}
       </p>
-      <p class="muted">Rien reçu ? Regardez dans les indésirables, ou demandez un nouvel e-mail.</p>
-      <p v-if="sent" role="status">Nouvel e-mail envoyé.</p>
+      <p class="muted">{{ t('auth.checkEmail.help') }}</p>
+      <p v-if="sent" role="status">{{ t('auth.checkEmail.resent') }}</p>
       <p v-if="error" class="field-error" role="alert">{{ getErrorMessage(error) }}</p>
       <button v-if="email" type="button" class="secondary" :disabled="isLoading" @click="onResend">
-        {{ isLoading ? 'Envoi…' : "Renvoyer l'e-mail" }}
+        {{ isLoading ? t('auth.checkEmail.sending') : t('auth.checkEmail.resend') }}
       </button>
     </div>
-    <p class="muted">Adresse confirmée ? <RouterLink :to="loginTo">Se connecter</RouterLink></p>
+    <p class="muted">{{ t('auth.checkEmail.confirmed') }} <RouterLink :to="loginTo">{{ t('auth.checkEmail.login') }}</RouterLink></p>
   </section>
 </template>
 

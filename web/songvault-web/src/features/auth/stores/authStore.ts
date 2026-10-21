@@ -5,6 +5,7 @@ import type { Credentials, CurrentUser } from '../types'
 import { useSongsStore } from '@/features/songs/stores/songsStore'
 import { usePlayerStore } from '@/features/player/stores/playerStore'
 import { useBandStore } from '@/features/bands/stores/bandStore' 
+import { isLocale, setLocale, type Locale } from '@/shared/i18n'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<CurrentUser | null>(null)
@@ -13,11 +14,26 @@ export const useAuthStore = defineStore('auth', () => {
 
   let pending: Promise<void> | null = null
 
+    /** #26 : la langue enregistrée sur le compte l'emporte sur celle de l'appareil. */
+  function signedIn(me: CurrentUser) {
+    user.value = me
+    if (isLocale(me.locale)) setLocale(me.locale)
+  }
+
+  /** #26 : change la langue tout de suite, puis l'enregistre sur le compte si l'on est connecté. */
+  async function changeLocale(next: Locale) {
+    setLocale(next)
+    if (!user.value) return
+    await authApi.saveLocale(next)
+    user.value = { ...user.value, locale: next }
+  }
+
+
   /** Interroge /me une seule fois (au premier passage dans la garde). */
   function ensureLoaded(): Promise<void> {
     if (isLoaded.value) return Promise.resolve()
     pending ??= authApi.me()
-      .then((me) => { user.value = me })
+      .then(signedIn)
       .catch(() => { user.value = null })          // 401 = anonyme
       .finally(() => {
         isLoaded.value = true
@@ -28,7 +44,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function login(credentials: Credentials) {
     await authApi.login(credentials)
-    user.value = await authApi.me()
+    signedIn(await authApi.me())
     isLoaded.value = true
   }
 
@@ -54,5 +70,5 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  return { user, isLoaded, isAuthenticated, ensureLoaded, login, register, logout, clearSession }
+  return { user, isLoaded, isAuthenticated, ensureLoaded, login, register, logout, clearSession, changeLocale }
 })

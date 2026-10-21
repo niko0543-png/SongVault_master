@@ -10,6 +10,7 @@ import ErrorState from '@/shared/components/ErrorState.vue'
 import EmptyState from '@/shared/components/EmptyState.vue'
 import { getErrorMessage } from '@/shared/api/ApiError'
 import { formatDate } from '@/shared/utils/format'
+import { t } from '@/shared/i18n'
 
 const auth = useAuthStore()
 const bands = useBandStore()
@@ -60,19 +61,18 @@ async function loadMore() {
 <template>
   <section>
     <header class="page-header">
-      <h1>Journal d’audit</h1>
+      <h1>{{ t('audit.log.title') }}</h1>
     </header>
     <p class="muted">
-      Qui a supprimé quoi, qui a invité, retiré ou changé le rôle de qui, pendant un an. Visible par les Owner seulement ;
-      personne ne peut le modifier.
+      {{ t('audit.log.intro') }}
     </p>
 
     <LoadingState v-if="isLoading" />
     <ErrorState v-else-if="error" :message="getErrorMessage(error)" @retry="load" />
-    <EmptyState v-else-if="items.length === 0" message="Rien pour l’instant : les suppressions et les changements de membres apparaîtront ici." />
+    <EmptyState v-else-if="items.length === 0" :message="t('audit.log.empty')" />
 
     <template v-else>
-      <ol ref="listEl" class="feed" aria-label="Journal d’audit du groupe">
+      <ol ref="listEl" class="feed" :aria-label="t('audit.log.listLabel')">
         <li v-for="item in items" :key="item.id" class="feed-item" tabindex="-1" data-testid="audit-item">
           <p>
             {{ describe(item, auth.user?.id ?? null) }}
@@ -84,9 +84,9 @@ async function loadMore() {
 
       <p v-if="moreError" class="field-error" role="alert">{{ moreError }}</p>
       <button v-if="nextCursor" type="button" class="secondary more" :disabled="isLoadingMore" @click="loadMore">
-        {{ isLoadingMore ? 'Chargement…' : 'Voir plus' }}
+        {{ isLoadingMore ? t('audit.log.loading') : t('audit.log.more') }}
       </button>
-      <p v-else class="muted"><small>C’est le début du journal.</small></p>
+      <p v-else class="muted"><small>{{ t('audit.log.end') }}</small></p>
     </template>
   </section>
 </template>

@@ -14,6 +14,7 @@ import LoadingState from '@/shared/components/LoadingState.vue'
 import ErrorState from '@/shared/components/ErrorState.vue'
 import { ApiError, getErrorMessage } from '@/shared/api/ApiError'
 import { formatDate } from '@/shared/utils/format'
+import { t } from '@/shared/i18n'
 
 const bands = useBandStore()
 const route = useRoute()
@@ -55,8 +56,8 @@ const period = computed(() => {
   const b = billing.value
   if (!b?.currentPeriodEnd || b.isGranted || b.usage.planId === 'free') return null
   return b.cancelAtPeriodEnd
-    ? `Résilié : la formule ${b.usage.planName} s'arrête le ${formatDate(b.currentPeriodEnd)}, rien ne sera effacé.`
-    : `Prochain paiement le ${formatDate(b.currentPeriodEnd)}.`
+    ? t('billing.page.canceled', { planName: b.usage.planName, currentPeriodEnd: formatDate(b.currentPeriodEnd) })
+    : t('billing.page.nextPayment', { currentPeriodEnd: formatDate(b.currentPeriodEnd) })
 })
 
 /** Le message de l'API pour un 503 (« pas encore ouvert », « Stripe injoignable »), plutôt que le générique. */
@@ -81,7 +82,7 @@ const checkout = (planId: string) => go(planId, () => billingApi.checkout(planId
 <template>
   <section>
     <header class="page-header">
-      <h1>Facturation</h1>
+      <h1>{{ t('billing.page.title') }}</h1>
     </header>
 
     <LoadingState v-if="isLoading" />
@@ -89,52 +90,50 @@ const checkout = (planId: string) => go(planId, () => billingApi.checkout(planId
 
     <template v-else-if="billing">
       <p v-if="isWaitingForStripe" role="status" class="card">
-        Paiement reçu. La formule s'applique dès que Stripe le confirme : cette page se met à jour toute seule.
+        {{ t('billing.page.paymentReceived') }}
       </p>
       <p v-else-if="isBackFromCheckout" role="status" class="card">
-        Merci ! Le groupe est maintenant sur la formule {{ billing.usage.planName }}.
+        {{ t('billing.page.thanks', { planName: billing.usage.planName }) }}
       </p>
 
       <StorageGauge :usage="billing.usage" />
 
-      <p v-if="billing.isGranted">Formule {{ billing.usage.planName }} offerte : rien à payer.</p>
+      <p v-if="billing.isGranted">{{ t('billing.page.granted', { planName: billing.usage.planName }) }}</p>
       <p v-else-if="billing.status">
-        Abonnement : <strong>{{ statusLabels[billing.status] }}</strong>.
+        {{ t('billing.page.subscription') }} <strong>{{ statusLabels[billing.status] }}</strong>.
         <template v-if="billing.status === 'PastDue'">
-          Le dernier paiement a été refusé : mettez à jour la carte, la formule reste en place pendant les nouvelles tentatives.
+          {{ t('billing.page.pastDue') }}
         </template>
       </p>
       <p v-if="period">{{ period }}</p>
 
       <p v-if="billing.canOpenPortal">
         <button type="button" :disabled="busy !== null" @click="openPortal">
-          Gérer l'abonnement
+          {{ t('billing.page.manage') }}
         </button>
-        <span class="muted"> Changer de formule ou de carte, voir les factures, résilier.</span>
+        <span class="muted"> {{ t('billing.page.manageHelp') }}</span>
       </p>
 
       <p v-if="!billing.onlinePayment" class="card" data-testid="payment-closed">
-        Le paiement en ligne n'est pas encore ouvert. Pour passer à une formule supérieure, écrivez à
+        {{ t('billing.page.closed') }}
         <a :href="`mailto:${publisher.email}`">{{ publisher.email }}</a>.
       </p>
 
       <p v-if="actionError" class="field-error" role="alert">{{ actionError }}</p>
 
-      <h2>Formules</h2>
+      <h2>{{ t('billing.page.plans') }}</h2>
       <PlanCards :plans="plans" :current-plan-id="billing.usage.planId">
         <template #action="{ plan }">
           <button v-if="billing.canCheckout && plan.monthlyPriceCents > 0" type="button" :disabled="busy !== null"
                  @click="checkout(plan.id)">
-            {{ busy === plan.id ? 'Ouverture du paiement…' : `Passer à ${plan.name}` }}
+            {{ busy === plan.id ? t('billing.page.opening') : t('billing.page.upgrade', { name: plan.name }) }}
           </button>
         </template>
       </PlanCards>
       <p v-if="billing.canCheckout" class="muted">
         <small>
-          Paiement par carte sur une page sécurisée de Stripe ; SongVault ne voit jamais votre numéro de carte.
-          En choisissant une formule, vous acceptez les
-          <RouterLink :to="{ name: 'terms-of-sale' }">conditions générales de vente</RouterLink>.
-          Sans engagement : résiliable à tout moment, effet à la fin du mois payé.
+          {{ t('billing.page.terms') }}
+          <RouterLink :to="{ name: 'terms-of-sale' }">{{ t('billing.page.termsLink') }}</RouterLink>{{ t('billing.page.termsAfter') }}
         </small>
       </p>
     </template>

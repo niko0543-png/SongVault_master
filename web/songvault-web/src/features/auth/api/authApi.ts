@@ -7,6 +7,8 @@ export const authApi = {
     request<void>('/auth/login?useCookies=true', { method: 'POST', body: credentials }),
   logout: () => request<void>('/auth/logout', { method: 'POST' }),
   me: () => request<CurrentUser>('/auth/me'),
+    /** #26 : la langue choisie suit le compte d'un appareil à l'autre. */
+  saveLocale: (locale: string) => request<void>('/me/locale', { method: 'PUT', body: { locale } }),
 
   // ---- #4 : endpoints fournis par MapIdentityApi ----
   /** params : userId, code (et changedEmail) repris du lien reçu par e-mail. */

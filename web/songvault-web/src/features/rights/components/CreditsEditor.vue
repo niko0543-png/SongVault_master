@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { CREDIT_NAME_MAX, MAX_CREDITS, creditRoleLabels, type CreditRole } from '../types'
 import { creditsError, formatPercent, formatShareInput, newRow, splitEvenly, totalCents, type CreditRow } from '../rules'
+import { t } from '@/shared/i18n'
 
 /** Les ayants droit d'un morceau, avec le total en direct (#22). Le parent enregistre. */
 const rows = defineModel<CreditRow[]>({ required: true })
@@ -29,29 +30,29 @@ function split() {
 
 <template>
   <fieldset class="credits-editor" :disabled="disabled">
-    <legend>Ayants droit</legend>
-    <p v-if="rows.length === 0" class="muted">Aucun crédit : ajoutez les auteurs, compositeurs, arrangeurs et éditeurs.</p>
+    <legend>{{ t('rights.editor.title') }}</legend>
+    <p v-if="rows.length === 0" class="muted">{{ t('rights.editor.empty') }}</p>
     <div v-for="(row, index) in rows" :key="row.key" class="credit-row" data-testid="credit-row">
-      <input v-model="row.name" :maxlength="CREDIT_NAME_MAX" :aria-label="`Nom de l'ayant droit ${index + 1}`"
-             placeholder="Nom" autocomplete="off" />
-      <select v-model="row.role" :aria-label="`Rôle de l'ayant droit ${index + 1}`">
+      <input v-model="row.name" :maxlength="CREDIT_NAME_MAX" :aria-label="t('rights.editor.name', { index: index + 1 })"
+             :placeholder="t('rights.editor.namePlaceholder')" autocomplete="off" />
+      <select v-model="row.role" :aria-label="t('rights.editor.role', { index: index + 1 })">
         <option v-for="[value, label] in roles" :key="value" :value="value">{{ label }}</option>
       </select>
       <span class="share">
-        <input v-model="row.share" inputmode="decimal" :aria-label="`Part de l'ayant droit ${index + 1}, en pourcentage`"
+        <input v-model="row.share" inputmode="decimal" :aria-label="t('rights.editor.share', { index: index + 1 })"
                placeholder="0" autocomplete="off" />
         <span aria-hidden="true">%</span>
       </span>
-      <button type="button" class="secondary" :aria-label="`Retirer l'ayant droit ${index + 1}`" @click="remove(row.key)">
-        Retirer
+      <button type="button" class="secondary" :aria-label="t('rights.editor.remove', { index: index + 1 })" @click="remove(row.key)">
+        {{ t('rights.editor.removeShort') }}
       </button>
     </div>
     <div class="buttons">
-      <button type="button" class="secondary" :disabled="rows.length >= MAX_CREDITS" @click="add">Ajouter un ayant droit</button>
-      <button v-if="rows.length >= 2" type="button" class="secondary" @click="split">Répartir à parts égales</button>
+      <button type="button" class="secondary" :disabled="rows.length >= MAX_CREDITS" @click="add">{{ t('rights.editor.add') }}</button>
+      <button v-if="rows.length >= 2" type="button" class="secondary" @click="split">{{ t('rights.editor.split') }}</button>
     </div>
     <p v-if="rows.length" class="total" :class="{ wrong: total !== 10000 }" role="status" data-testid="credits-total">
-      Total : <strong>{{ formatPercent(total) }}</strong>
+      {{ t('rights.editor.total') }} <strong>{{ formatPercent(total) }}</strong>
     </p>
     <p v-if="problem" class="field-error" data-testid="credits-error">{{ problem }}</p>
   </fieldset>

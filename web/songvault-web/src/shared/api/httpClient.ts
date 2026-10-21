@@ -1,5 +1,6 @@
 import { ApiError } from './ApiError'
 import { isProblemDetails, type ProblemDetails } from './problemDetails'
+import { locale, t } from '@/shared/i18n'
 
 export interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
@@ -15,7 +16,8 @@ export function setUnauthorizedHandler(handler: (() => void) | null) {
 
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { method = 'GET', body } = options
-  const headers: Record<string, string> = { Accept: 'application/json' }
+  // #26 : l'API répond dans la langue de l'interface (messages d'erreur)
+  const headers: Record<string, string> = { Accept: 'application/json', 'Accept-Language': locale.value }
   let payload: BodyInit | undefined
 
   if (body instanceof FormData) {
@@ -29,7 +31,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   try {
     response = await fetch(`/api${path}`, { method, headers, body: payload })
   } catch {
-    throw new ApiError(0, { title: 'Serveur injoignable', status: 0 })
+    throw new ApiError(0, { title: t('common.errors.unreachableTitle'), status: 0 })
   }
 
   if (!response.ok) {
@@ -52,5 +54,5 @@ async function readProblem(response: Response): Promise<ProblemDetails> {
   } catch {
     // corps vide ou non JSON
   }
-  return { title: response.statusText || `Erreur HTTP ${response.status}`, status: response.status }
+  return { title: response.statusText || t('common.errors.http', { status: response.status }), status: response.status }
 }

@@ -4,6 +4,7 @@ import { RouterLink } from 'vue-router'
 import type { BandUsage } from '../types'
 import { usageRatio } from '../format'
 import { formatFileSize } from '@/shared/utils/format'
+import { t } from '@/shared/i18n'
 
 const props = defineProps<{
   usage: BandUsage
@@ -18,16 +19,16 @@ const level = computed(() => (ratio.value >= 1 ? 'full' : ratio.value >= 0.8 ? '
 <template>
   <div class="storage-gauge" :class="`storage-gauge--${level}`" data-testid="storage-gauge">
     <label for="storage-meter">
-      Stockage : {{ formatFileSize(usage.usedBytes) }} sur {{ formatFileSize(usage.quotaBytes) }}
-      <span class="muted">(formule {{ usage.planName }})</span>
+      {{ t('billing.gauge.usage', { usedBytes: formatFileSize(usage.usedBytes), quotaBytes: formatFileSize(usage.quotaBytes) }) }}
+      <span class="muted">{{ t('billing.gauge.plan', { plan: usage.planName }) }}</span>
     </label>
     <meter id="storage-meter" min="0" max="1" low="0.8" high="0.99" optimum="0" :value="ratio" />
     <p v-if="level !== 'ok'" class="storage-hint">
       {{ level === 'full'
-        ? 'Stockage plein : les nouveaux fichiers sont refusés.'
-        : 'Stockage presque plein.' }}
-      <RouterLink v-if="billingLink" :to="{ name: 'billing' }">Changer de formule</RouterLink>
-      <template v-else>Le propriétaire du groupe peut changer de formule.</template>
+        ? t('billing.gauge.full')
+        : t('billing.gauge.almostFull') }}
+      <RouterLink v-if="billingLink" :to="{ name: 'billing' }">{{ t('billing.gauge.changePlan') }}</RouterLink>
+      <template v-else>{{ t('billing.gauge.ownerOnly') }}</template>
     </p>
   </div>
 </template>

@@ -9,6 +9,7 @@ import { mapProblemErrors } from '@/shared/api/mapProblemErrors'
 import { getErrorMessage } from '@/shared/api/ApiError'
 import LoadingState from '@/shared/components/LoadingState.vue'
 import ErrorState from '@/shared/components/ErrorState.vue'
+import { t } from '@/shared/i18n'
 
 const props = defineProps<{ songId: string }>()
 const router = useRouter()
@@ -35,7 +36,7 @@ onMounted(() => loader.run(props.songId))
 
 <template>
   <section>
-    <h1>Modifier le morceau</h1>
+    <h1>{{ t('songs.edit.title') }}</h1>
     <LoadingState v-if="loader.isLoading.value" />
     <ErrorState v-else-if="loader.error.value" :message="getErrorMessage(loader.error.value)" @retry="loader.run(songId)" />
     <template v-else-if="song">

@@ -8,6 +8,7 @@ import { useAsyncAction } from '@/shared/composables/useAsyncAction'
 import { mapProblemErrors } from '@/shared/api/mapProblemErrors'
 import { getErrorMessage } from '@/shared/api/ApiError'
 import { useSongsStore } from '../stores/songsStore'
+import { t } from '@/shared/i18n'
 
 const router = useRouter()
 const store = useSongsStore()
@@ -30,10 +31,10 @@ async function onSubmit(input: SongInput) {
 
 <template>
   <section>
-    <h1>Nouveau morceau</h1>
+    <h1>{{ t('songs.create.title') }}</h1>
     <p v-if="globalError" class="field-error" role="alert">{{ globalError }}</p>
     <SongForm
-      submit-label="Créer"
+      :submit-label="t('songs.create.submit')"
       :submitting="isLoading"
       :server-errors="fieldErrors"
       @submit="onSubmit"

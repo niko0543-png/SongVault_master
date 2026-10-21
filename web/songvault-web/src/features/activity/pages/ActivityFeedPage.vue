@@ -11,6 +11,7 @@ import ErrorState from '@/shared/components/ErrorState.vue'
 import EmptyState from '@/shared/components/EmptyState.vue'
 import { getErrorMessage } from '@/shared/api/ApiError'
 import { formatDate } from '@/shared/utils/format'
+import { t } from '@/shared/i18n'
 
 const auth = useAuthStore()
 const bands = useBandStore()
@@ -61,15 +62,15 @@ async function loadMore() {
 <template>
   <section>
     <header class="page-header">
-      <h1>Activité</h1>
+      <h1>{{ t('activity.feed.title') }}</h1>
     </header>
 
     <LoadingState v-if="isLoading" />
     <ErrorState v-else-if="error" :message="getErrorMessage(error)" @retry="load" />
-    <EmptyState v-else-if="items.length === 0" message="Rien pour l'instant : les ajouts et modifications des membres apparaîtront ici." />
+    <EmptyState v-else-if="items.length === 0" :message="t('activity.feed.empty')" />
 
     <template v-else>
-      <ol ref="listEl" class="feed" aria-label="Activité du groupe">
+      <ol ref="listEl" class="feed" :aria-label="t('activity.feed.listLabel')">
         <li v-for="item in items" :key="item.id" class="feed-item" tabindex="-1" data-testid="activity-item">
           <p>
             <template v-for="(part, i) in describe(item, auth.user?.id ?? null)" :key="i">
@@ -83,9 +84,9 @@ async function loadMore() {
 
       <p v-if="moreError" class="field-error" role="alert">{{ moreError }}</p>
       <button v-if="nextCursor" type="button" class="secondary more" :disabled="isLoadingMore" @click="loadMore">
-        {{ isLoadingMore ? 'Chargement…' : 'Voir plus' }}
+        {{ isLoadingMore ? t('activity.feed.loading') : t('activity.feed.more') }}
       </button>
-      <p v-else class="muted"><small>C'est le début du fil.</small></p>
+      <p v-else class="muted"><small>{{ t('activity.feed.end') }}</small></p>
     </template>
   </section>
 </template>

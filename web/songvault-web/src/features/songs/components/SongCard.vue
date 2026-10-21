@@ -2,6 +2,7 @@
 import type { Song } from '../types'
 import SongBadgeTag from './SongBadgeTag.vue'
 import { formatDate } from '@/shared/utils/format'
+import { t } from '@/shared/i18n'
 
 defineProps<{ song: Song }>()
 defineEmits<{ select: [id: string] }>()
@@ -14,7 +15,7 @@ defineEmits<{ select: [id: string] }>()
         <SongBadgeTag :badge="song.badge" />
     </h2>
     <p v-if="song.artist" class="muted">{{ song.artist }}</p>
-    <p class="muted"><small>Modifié le {{ formatDate(song.updatedAt) }}</small></p>
+    <p class="muted"><small>{{ t('songs.card.updated', { updatedAt: formatDate(song.updatedAt) }) }}</small></p>
   </article>
 </template>
 

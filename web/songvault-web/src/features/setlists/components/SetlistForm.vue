@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { reactive } from 'vue'
 import { SETLIST_NAME_MAX, SETLIST_VENUE_MAX, type SetlistInput } from '../types'
+import { t } from '@/shared/i18n'
 
 /** Nom, date et lieu d'une setlist : création (liste) et modification (détail). */
 const props = defineProps<{
@@ -27,21 +28,21 @@ function onSubmit() {
 <template>
   <form class="setlist-form" @submit.prevent="onSubmit">
     <div class="field">
-      <label for="setlist-name">Nom</label>
+      <label for="setlist-name">{{ t('setlists.form.name') }}</label>
       <input id="setlist-name" v-model="form.name" required :maxlength="SETLIST_NAME_MAX" autocomplete="off" />
     </div>
     <div class="field">
-      <label for="setlist-date">Date <small class="muted">(facultative)</small></label>
+      <label for="setlist-date">{{ t('setlists.form.date') }} <small class="muted">{{ t('setlists.form.optionalDate') }}</small></label>
       <input id="setlist-date" v-model="form.date" type="date" />
     </div>
     <div class="field">
-      <label for="setlist-venue">Lieu <small class="muted">(facultatif)</small></label>
+      <label for="setlist-venue">{{ t('setlists.form.venue') }} <small class="muted">{{ t('setlists.form.optionalVenue') }}</small></label>
       <input id="setlist-venue" v-model="form.venue" :maxlength="SETLIST_VENUE_MAX" autocomplete="off" />
     </div>
     <p v-if="error" class="field-error" role="alert">{{ error }}</p>
     <div class="buttons">
       <button type="submit" :disabled="submitting">{{ submitLabel }}</button>
-      <button v-if="initial" type="button" class="secondary" @click="emit('cancel')">Annuler</button>
+      <button v-if="initial" type="button" class="secondary" @click="emit('cancel')">{{ t('common.actions.cancel') }}</button>
     </div>
   </form>
 </template>

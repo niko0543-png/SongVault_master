@@ -5,6 +5,7 @@ import { getErrorMessage } from '@/shared/api/ApiError'
 import { formatDate, formatFileSize } from '@/shared/utils/format'
 import { releaseExportsApi } from '../api/releaseExportsApi'
 import type { ReleaseExport } from '../types'
+import { t } from '@/shared/i18n'
 
 const POLL_MS = 5000
 
@@ -55,22 +56,21 @@ onBeforeUnmount(() => clearTimeout(timer))
 </script>
 
 <template>
-  <SectionCard title="Archive pour le distributeur">
+  <SectionCard :title="t('releases.export.title')">
     <p class="muted">
-      Un ZIP avec les fichiers audio des versions choisies, les pistes séparées, les paroles, les crédits et la pochette.
-      Un e-mail prévient quand il est prêt ; il reste disponible 24 heures.
+      {{ t('releases.export.intro') }}
     </p>
-    <p v-if="isPending" role="status">Préparation en cours…</p>
+    <p v-if="isPending" role="status">{{ t('releases.export.preparing') }}</p>
     <p v-else-if="current?.status === 'Ready'">
-      Archive prête ({{ formatFileSize(current.sizeBytes ?? 0) }}), disponible jusqu’au {{ formatDate(current.expiresAt!) }}.
-      <a :href="releaseExportsApi.archiveUrl(releaseId, current.id)" download>Télécharger l’archive</a>
+      {{ t('releases.export.ready', { sizeBytes: formatFileSize(current.sizeBytes ?? 0), expiresAt: formatDate(current.expiresAt!) }) }}
+      <a :href="releaseExportsApi.archiveUrl(releaseId, current.id)" download>{{ t('releases.export.download') }}</a>
     </p>
     <p v-else-if="current?.status === 'Failed'" class="field-error">
-      La préparation a échoué. Réessayez ; si cela se reproduit, écrivez-nous.
+      {{ t('releases.export.failed') }}
     </p>
     <p v-if="error" class="field-error" role="alert">{{ error }}</p>
     <button v-if="canWrite" type="button" :disabled="isPending || isRequesting" @click="requestArchive">
-      {{ current ? 'Préparer une nouvelle archive' : 'Préparer l’archive' }}
+      {{ current ? t('releases.export.prepareNew') : t('releases.export.prepare') }}
     </button>
   </SectionCard>
 </template>
