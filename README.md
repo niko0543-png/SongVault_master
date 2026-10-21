@@ -152,6 +152,9 @@ docker compose down -v       # supprime aussi la base et les fichiers
 - **Archive pour le distributeur** : un ZIP de la sortie (fichiers audio des versions choisies,
   pistes séparées, paroles, crédits et pochette) préparé en arrière-plan, annoncé par e-mail et
   téléchargeable 24 heures ([ADR 0031](docs/adr/0031-archive-complete-d-une-sortie.md)).
+- **Paroles avec accords** : les accords au-dessus des paroles (`[Am]Je marche…`), lisibles sur
+  téléphone, et la transposition par demi-tons sans jamais toucher au texte enregistré
+  ([ADR 0032](docs/adr/0032-paroles-avec-accords.md)).
 
 ---
 
@@ -358,6 +361,7 @@ npm ci
 npm run test:unit -- --run                    # front
 npx playwright test                           # E2E (application lancée sur :8080)
 npx playwright test e2e/stems-drift.spec.ts   # dérive du mélangeur, sans l'application
+npx playwright test e2e/chords-mobile.spec.ts # accords à 360 px, sans l'application
 ```
 
 ---
