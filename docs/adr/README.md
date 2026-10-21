@@ -38,3 +38,4 @@ l'ancien, qui passe au statut « remplacé par ADR NNNN ».
 | [0030](0030-pistes-separees-et-melangeur.md) | Pistes séparées : la piste portée par le fichier, mélangeur Web Audio calé sur l'horloge audio | accepté |
 | [0031](0031-archive-complete-d-une-sortie.md) | Archive complète d'une sortie : ZIP écrit en flux dans le stockage, téléchargeable 24 h après connexion | accepté |
 | [0032](0032-paroles-avec-accords.md) | Paroles avec accords : ChordPro dans le champ paroles, transposition à l'affichage | accepté |
+| [0033](0033-interface-multilingue.md) | Interface multilingue : catalogues TypeScript, erreurs de l'API traduites à la sortie | accepté |
