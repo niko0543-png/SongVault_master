@@ -1,0 +1,65 @@
+import { fileURLToPath } from 'node:url'
+import { expect, test, type Page } from '@playwright/test'
+import { createServer, type ViteDevServer } from 'vite'
+import vue from '@vitejs/plugin-vue'
+import { alphaTab } from '@coderline/alphatab-vite'
+
+/**
+ * #28 : la tablature s'affiche et se joue dans Chromium, sous la même politique de sécurité (CSP) que nginx.
+ * Pas besoin de la pile Docker : Vite sert le lecteur seul (e2e/harness/guitar-pro.html) et les fichiers d'essai.
+ */
+const CSP = "default-src 'self'; connect-src 'self'; img-src 'self' data:; media-src 'self'; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'"
+
+const root = fileURLToPath(new URL('..', import.meta.url))
+let server: ViteDevServer
+
+test.beforeAll(async () => {
+  server = await createServer({
+    configFile: false, root, logLevel: 'error',
+    plugins: [vue(), alphaTab()],
+    worker: { format: 'es' },
+    resolve: { alias: { '@': fileURLToPath(new URL('../src', import.meta.url)) } },
+    server: { port: 0, host: '127.0.0.1', headers: { 'Content-Security-Policy': CSP } },
+  })
+  await server.listen()
+})
+test.afterAll(async () => server?.close())
+
+/** Ouvre le banc d'essai et note toute règle CSP enfreinte. */
+async function open(page: Page, file: string) {
+  const violations: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error' && /Content Security Policy/i.test(message.text())) violations.push(message.text())
+  })
+  await page.goto(`${server.resolvedUrls!.local[0]}e2e/harness/guitar-pro.html?file=${file}`)
+  return violations
+}
+
+for (const file of ['demo.gp5', 'demo.gp']) {
+  test(`${file} : la tablature s’affiche et le bouton lecture répond, sans entorse à la CSP`, async ({ page }) => {
+    const violations = await open(page, file)
+
+    const play = page.getByTestId('tab-play')
+    await expect(play).toBeEnabled({ timeout: 30_000 })                 // partition dessinée et sons chargés
+    await expect(page.getByTestId('tab-score').locator('svg').first()).toBeVisible()
+
+    // Le curseur de lecture avance : le son est vraiment parti
+    const cursor = page.locator('.at-cursor-beat')
+    const start = await cursor.boundingBox()
+    await play.click()
+    await expect(play).toHaveAccessibleName('Mettre en pause')
+    await expect.poll(async () => (await cursor.boundingBox())?.x, { timeout: 10_000 }).not.toBe(start?.x)
+    await play.click()
+    await expect(play).toHaveAccessibleName('Lire la tablature')
+    expect(violations).toEqual([])
+  })
+}
+
+test('à 360 px, la partition suit la largeur de l’écran', async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 360, height: 780 }, isMobile: true, hasTouch: true })
+  await open(page, 'demo.gp5')
+  await expect(page.getByTestId('tab-play')).toBeEnabled({ timeout: 30_000 })
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+  expect(overflow).toBeLessThanOrEqual(0)
+  await page.close()
+})
