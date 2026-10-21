@@ -7,7 +7,7 @@ import StatusSelect from '../components/StatusSelect.vue'
 import {
   MUSICAL_KEY_MAX, MUSICAL_KEY_PATTERN,
   VERSION_BPM_MAX, VERSION_BPM_MIN,
-  VERSION_LYRICS_MAX, VERSION_NOTES_MAX, VERSION_TITLE_MAX,
+  VERSION_NOTES_MAX, VERSION_TITLE_MAX,
   type SongVersionStatus,
 } from '../types'
 import FileList from '@/features/files/components/FileList.vue'
@@ -19,6 +19,7 @@ import { versionsApi } from '../api/versionsApi'
 import CommentsPanel from '@/features/comments/components/CommentsPanel.vue'
 import ShareLinksPanel from '@/features/sharing/components/ShareLinksPanel.vue'
 import StemsSection from '@/features/stems/components/StemsSection.vue'
+import LyricsPanel from '@/features/chords/components/LyricsPanel.vue'
 import { usePlayerStore } from '@/features/player/stores/playerStore'
 import { toTrack, type Track } from '@/features/player/track'
 import { useBandStore } from '@/features/bands/stores/bandStore'
@@ -110,6 +111,13 @@ async function onSave() {
     bpm: form.bpm === '' ? null : form.bpm,               // NOUVEAU
     key: form.key.trim() || null,                         // NOUVEAU
   })
+}
+
+/** #25 : « Enregistrer dans cette tonalité » réécrit les accords (et la tonalité, si la version en a une). */
+async function onSaveTransposed(lyrics: string, key: string | null) {
+  form.lyrics = lyrics
+  if (key) form.key = key
+  await onSave()
 }
 
 // ================= Modifications non enregistrées =================
@@ -334,10 +342,13 @@ const commentedFile = computed(() =>
             <textarea v-model="form.notes" rows="4" :maxlength="VERSION_NOTES_MAX" aria-label="Notes" />
           </SectionCard>
 
-          <SectionCard title="Paroles">
-            <textarea v-model="form.lyrics" class="lyrics" rows="14" :maxlength="VERSION_LYRICS_MAX" aria-label="Paroles" />
-          </SectionCard>
-        </fieldset>
+    </fieldset>
+
+        <!-- #25 : hors du fieldset, pour qu'un invité puisse transposer ; le panneau désactive lui-même le texte -->
+        <SectionCard title="Paroles">
+          <LyricsPanel :key="version.id" v-model="form.lyrics" :musical-key="form.key" :can-write="canWrite"
+                       :dirty="isDirty" @save-transposed="onSaveTransposed" />
+        </SectionCard>
         <div v-if="canWrite" class="save-bar">
           <span v-if="isDirty" class="muted" role="status">Modifications non enregistrées</span>
           <p v-if="globalSaveError" class="field-error" role="alert">{{ globalSaveError }}</p>
