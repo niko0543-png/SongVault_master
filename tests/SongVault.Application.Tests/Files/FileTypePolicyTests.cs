@@ -9,6 +9,8 @@ public sealed class FileTypePolicyTests
     [InlineData("maquette.mp3", SongFileType.Audio)]
     [InlineData("MAQUETTE.MP3", SongFileType.Audio)]      // insensible à la casse
     [InlineData("solo.gp5", SongFileType.Tablature)]
+    [InlineData("riff.gp3", SongFileType.Tablature)]       // #28
+    [InlineData("riff.gp4", SongFileType.Tablature)]
     [InlineData("paroles.pdf", SongFileType.Document)]
     public void Extensions_autorisees(string fileName, SongFileType expected)
         => Assert.Equal(expected, FileTypePolicy.Resolve(fileName)?.FileType);
@@ -125,13 +127,15 @@ public sealed class FileTypePolicyTests
         Assert.Contains(".wav", allowed);
         Assert.Contains(".flac", allowed);
         Assert.Contains(".gp", allowed);
+        Assert.Contains(".gp3", allowed);
+        Assert.Contains(".gp4", allowed);
         Assert.Contains(".gp5", allowed);
         Assert.Contains(".gpx", allowed);
         Assert.Contains(".pdf", allowed);
         Assert.Contains(".txt", allowed);
 
-        // Vérifie que la collection a au minimum 8 éléments
-        Assert.Equal(8, allowed.Count);
+        // Vérifie que la collection a exactement 10 éléments (#28 : .gp3 et .gp4)
+        Assert.Equal(10, allowed.Count);
     }
 
     [Theory]

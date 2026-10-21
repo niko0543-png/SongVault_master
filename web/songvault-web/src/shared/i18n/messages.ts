@@ -9,6 +9,7 @@ import { billingMessages } from '@/features/billing/locale'
 import { chordsMessages } from '@/features/chords/locale'
 import { commentsMessages } from '@/features/comments/locale'
 import { filesMessages } from '@/features/files/locale'
+import { guitarproMessages } from '@/features/guitarpro/locale'
 import { invitationsMessages } from '@/features/invitations/locale'
 import { legalMessages } from '@/features/legal/locale'
 import { notificationsMessages } from '@/features/notifications/locale'
@@ -39,6 +40,7 @@ export const fr = {
   chords: chordsMessages.fr,
   comments: commentsMessages.fr,
   files: filesMessages.fr,
+guitarpro: guitarproMessages.fr,
   invitations: invitationsMessages.fr,
   legal: legalMessages.fr,
   notifications: notificationsMessages.fr,
@@ -68,6 +70,7 @@ export const en: Widen<typeof fr> = {
   chords: chordsMessages.en,
   comments: commentsMessages.en,
   files: filesMessages.en,
+  guitarpro: guitarproMessages.en,
   invitations: invitationsMessages.en,
   legal: legalMessages.en,
   notifications: notificationsMessages.en,

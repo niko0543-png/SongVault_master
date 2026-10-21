@@ -15,6 +15,8 @@ const fr = {
     previewFailed: " Aperçu indisponible : l'écoute utilise le fichier original.",
     play: '▶ Écouter',
     download: 'Télécharger',
+    showTablature: 'Afficher la tablature',
+    hideTablature: 'Masquer la tablature',
   },
   uploader: {
     tooLarge: 'Fichier trop volumineux pour le serveur.',
@@ -50,6 +52,8 @@ const en: Widen<typeof fr> = {
     previewFailed: ' Preview unavailable: playback uses the original file.',
     play: '▶ Listen',
     download: 'Download',
+    showTablature: 'Show the tablature',
+    hideTablature: 'Hide the tablature',
   },
   uploader: {
     tooLarge: 'File too large for the server.',

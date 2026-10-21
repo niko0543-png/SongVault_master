@@ -19,6 +19,9 @@ public sealed class FileSignatureValidatorTests
     { ".gp",   [0x50, 0x4B, 0x03, 0x04, 0x14] },                   // PK ETX EOT DC4, comme votre fichier
     { ".gpx",  Bytes("BCFZ\u0000\u0001") },
     { ".gp5",  Bytes("\u0018FICHIER GUITAR PRO v5.00") },
+    { ".gp3",  Bytes("\u0018FICHIER GUITAR PRO v3.00") },           // #28
+    { ".gp4",  Bytes("\u0018FICHIER GUITAR PRO v4.06") },
+    { ".GP5",  Bytes("\u0018FICHIER GUITAR PRO v5.10") },
     { ".txt",  Bytes("Couplet 1\nRefrain") },
     { ".MP3",  Bytes("ID3\u0003") },
     { ".jpg",  [0xFF, 0xD8, 0xFF, 0xE0] },                          // pochettes (#10)
@@ -38,6 +41,10 @@ public sealed class FileSignatureValidatorTests
     { ".exe",  Bytes("MZ") },
     { ".png",  [0xFF, 0xD8, 0xFF, 0xE0] },                          // vrai JPEG, mauvaise extension
     { ".webp", Bytes("RIFF$\u0008\u0000\u0000WAVEfmt ") },  // RIFF mais pas WEBP
+    { ".gp5",  [0x50, 0x4B, 0x03, 0x04, 0x14] },                   // #28 : un .gp (GP7) renommé en .gp5
+    { ".gp",   Bytes("\u0018FICHIER GUITAR PRO v5.00") },           // l'inverse
+    { ".gp4",  Bytes("FICHIER GUITAR PRO v4.06") },                // sans l'octet de longueur
+    { ".gpx",  Bytes("PK\u0003\u0004") },
 };
 
     [Theory, MemberData(nameof(Valides))]

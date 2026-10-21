@@ -3,7 +3,18 @@
 ###############################################################################
 * text=auto eol=lf
 *.{cmd,bat,ps1} text eol=crlf
-*.{png,jpg,mp3,wav,flac,pdf,gp,gp5,gpx} binary
+# #28 : git ne comprend pas les accolades, une ligne par extension
+*.png binary
+*.jpg binary
+*.mp3 binary
+*.wav binary
+*.flac binary
+*.pdf binary
+*.gp binary
+*.gp3 binary
+*.gp4 binary
+*.gp5 binary
+*.gpx binary
 
 ###############################################################################
 # Set default behavior for command prompt diff.
