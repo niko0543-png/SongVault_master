@@ -10,6 +10,9 @@ import { useSongsStore } from '@/features/songs/stores/songsStore'
 import { usePlayerStore } from '@/features/player/stores/playerStore'
 import ToastHost from '@/shared/components/ToastHost.vue'          // S8
 import ConfirmDialog from '@/shared/components/ConfirmDialog.vue'  // S8
+import LocaleSwitcher from '@/shared/i18n/LocaleSwitcher.vue'
+import { locale, t, type Locale } from '@/shared/i18n'
+import { useToast } from '@/shared/composables/useToast'
 
 const auth = useAuthStore()
 const { user, isAuthenticated } = storeToRefs(auth)
@@ -26,6 +29,15 @@ watch(() => bands.activeId, (next, prev) => {
   if (prev && next !== prev) { useSongsStore().reset(); usePlayerStore().stop() }
 })
 
+// #26 : la langue change tout de suite ; si le compte ne l'enregistre pas, elle reste choisie sur cet appareil
+async function onLocaleChange(next: Locale) {
+  try {
+    await auth.changeLocale(next)
+  } catch {
+    useToast().error(t('common.language.saveFailed'))
+  }
+}
+
 async function onLogout() {
   isMenuOpen.value = false
   await auth.logout()
@@ -35,40 +47,42 @@ async function onLogout() {
 
 <template>
   <!-- S8 : premier élément de la page, donc premier atteint avec Tab -->
-  <a href="#main-content" class="skip-link">Aller au contenu</a>
+  <a href="#main-content" class="skip-link">{{ t('layout.skipLink') }}</a>
 
   <header class="app-header">
     <RouterLink to="/" class="brand">🎸 SongVault</RouterLink>
     <!-- #14 : visible sous 720 px seulement (CSS) ; au-dessus, la navigation est toujours affichée -->
     <button v-if="isAuthenticated" type="button" class="secondary menu-toggle" aria-controls="app-nav"
             :aria-expanded="isMenuOpen" @click="isMenuOpen = !isMenuOpen">
-      {{ isMenuOpen ? 'Fermer' : 'Menu' }}
+      {{ isMenuOpen ? t('layout.menu.close') : t('layout.menu.open') }}
     </button>
-    <nav v-if="isAuthenticated" id="app-nav" class="session" :class="{ open: isMenuOpen }" aria-label="Navigation principale">
+    <nav v-if="isAuthenticated" id="app-nav" class="session" :class="{ open: isMenuOpen }" :aria-label="t('layout.nav.label')">
       <BandSwitcher v-if="bands.isLoaded" />
-      <RouterLink v-if="bands.activeId" :to="{ name: 'releases', params: { bandId: bands.activeId } }">Sorties</RouterLink>
-      <RouterLink v-if="bands.activeId" :to="{ name: 'setlists', params: { bandId: bands.activeId } }">Setlists</RouterLink>      
-      <RouterLink v-if="bands.activeId" :to="{ name: 'activity', params: { bandId: bands.activeId } }">Activité</RouterLink>
-      <RouterLink v-if="bands.activeId" :to="{ name: 'band-members', params: { bandId: bands.activeId } }">Membres</RouterLink>
-      <RouterLink v-if="bands.activeId && bands.can('write')" :to="{ name: 'trash', params: { bandId: bands.activeId } }">Corbeille</RouterLink>
-      <RouterLink v-if="bands.activeId && bands.can('admin')" :to="{ name: 'billing', params: { bandId: bands.activeId } }">Facturation</RouterLink>
-      <RouterLink v-if="bands.activeId && bands.can('admin')" :to="{ name: 'audit', params: { bandId: bands.activeId } }">Journal</RouterLink>
-      <RouterLink :to="{ name: 'account' }" class="muted account-link" title="Mon compte">{{ user?.email }}</RouterLink>
-      <button type="button" class="secondary" @click="onLogout">Se déconnecter</button>
+      <RouterLink v-if="bands.activeId" :to="{ name: 'releases', params: { bandId: bands.activeId } }">{{ t('layout.nav.releases') }}</RouterLink>
+      <RouterLink v-if="bands.activeId" :to="{ name: 'setlists', params: { bandId: bands.activeId } }">{{ t('layout.nav.setlists') }}</RouterLink>
+      <RouterLink v-if="bands.activeId" :to="{ name: 'activity', params: { bandId: bands.activeId } }">{{ t('layout.nav.activity') }}</RouterLink>
+      <RouterLink v-if="bands.activeId" :to="{ name: 'band-members', params: { bandId: bands.activeId } }">{{ t('layout.nav.members') }}</RouterLink>
+      <RouterLink v-if="bands.activeId && bands.can('write')" :to="{ name: 'trash', params: { bandId: bands.activeId } }">{{ t('layout.nav.trash') }}</RouterLink>
+      <RouterLink v-if="bands.activeId && bands.can('admin')" :to="{ name: 'billing', params: { bandId: bands.activeId } }">{{ t('layout.nav.billing') }}</RouterLink>
+      <RouterLink v-if="bands.activeId && bands.can('admin')" :to="{ name: 'audit', params: { bandId: bands.activeId } }">{{ t('layout.nav.audit') }}</RouterLink>
+      <RouterLink :to="{ name: 'account' }" class="muted account-link" :title="t('layout.nav.account')">{{ user?.email }}</RouterLink>
+      <button type="button" class="secondary" @click="onLogout">{{ t('layout.nav.logout') }}</button>
     </nav>
   </header>
 
   <!-- S8 : id = cible du lien et du focus après navigation ; tabindex="-1" = focalisable par le code seulement -->
-  <main id="main-content" class="app-main" tabindex="-1">
+  <!-- #26 : :key recrée la page quand la langue change, pour les textes calculés une fois au montage -->
+  <main id="main-content" :key="locale" class="app-main" tabindex="-1">
     <RouterView />
   </main>
 
   <footer class="app-footer">
-    <RouterLink :to="{ name: 'legal-notice' }">Mentions légales</RouterLink>
-    <RouterLink :to="{ name: 'privacy' }">Confidentialité</RouterLink>
-    <RouterLink :to="{ name: 'plans' }">Formules</RouterLink>
-    <RouterLink :to="{ name: 'terms-of-sale' }">CGV</RouterLink>
-    <RouterLink :to="{ name: 'status' }">État du service</RouterLink>
+    <RouterLink :to="{ name: 'legal-notice' }">{{ t('layout.footer.legalNotice') }}</RouterLink>
+    <RouterLink :to="{ name: 'privacy' }">{{ t('layout.footer.privacy') }}</RouterLink>
+    <RouterLink :to="{ name: 'plans' }">{{ t('layout.footer.plans') }}</RouterLink>
+    <RouterLink :to="{ name: 'terms-of-sale' }">{{ t('layout.footer.termsOfSale') }}</RouterLink>
+    <RouterLink :to="{ name: 'status' }">{{ t('layout.footer.status') }}</RouterLink>
+    <LocaleSwitcher @change="onLocaleChange" />
   </footer>
 
   <AudioPlayer v-if="isAuthenticated" />
