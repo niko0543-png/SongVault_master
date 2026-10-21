@@ -1,9 +1,9 @@
 ﻿using System.Text;
-
 using SongVault.Application.Common.Exceptions;
 using SongVault.Application.Songs.Rights;
 using SongVault.Domain.Files;
 using SongVault.Domain.Songs;
+using SongVault.Application.Versions;
 
 namespace SongVault.Application.Releases.Exports;
 
@@ -25,7 +25,8 @@ public sealed record ReleaseArchiveEntry(string Path, string? StorageKey, byte[]
 /// Titre de la sortie/
 ///   01 - Premier morceau/fichiers audio de la version choisie
 ///   01 - Premier morceau/Pistes séparées/1 - Voix.wav   (pistes du mélangeur, #23)
-///   01 - Premier morceau/paroles.txt                     (si la version a des paroles)
+///   01 - Premier morceau/paroles.txt                     (si la version a des paroles, sans les accords)
+///   01 - Premier morceau/accords.txt                     (#25 : les paroles avec leurs accords, s'il y en a)
 ///   credits.csv                                          (#22)
 ///   pochette.jpg                                         (si la sortie en a une)
 /// </code>
@@ -66,7 +67,7 @@ public static class ReleaseArchive
         foreach (var track in source.Release.Tracks)
         {
             var folder = $"{root}/{track.TrackNumber:00} - {CleanName(track.SongTitle)}";
-            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "paroles.txt", StemsFolder };
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "paroles.txt", "accords.txt", StemsFolder };
             var files = source.Files.Where(f => f.VersionId == track.VersionId).ToList();
 
             foreach (var file in files.Where(f => f.StemPosition is null))
@@ -81,7 +82,12 @@ public static class ReleaseArchive
 
             var lyrics = songs.GetValueOrDefault(track.SongId)?.FindVersion(track.VersionId)?.Lyrics;
             if (!string.IsNullOrWhiteSpace(lyrics))
-                entries.Add(new($"{folder}/paroles.txt", null, Utf8WithBom(lyrics)));
+            {
+                var withChords = ChordPro.HasChords(lyrics);          // #25 : paroles.txt reste lisible sans les [Am]
+                entries.Add(new($"{folder}/paroles.txt", null, Utf8WithBom(withChords ? ChordPro.StripChords(lyrics) : lyrics)));
+                if (withChords)
+                    entries.Add(new($"{folder}/accords.txt", null, Utf8WithBom(lyrics)));
+            }
         }
 
         entries.Add(new($"{root}/credits.csv", null, CreditsCsv.ForRelease(source.Release, source.Songs)));
