@@ -41,6 +41,24 @@ public sealed class ReleaseArchiveTests
         Assert.Equal("Couplet 1\r\nRefrain", Encoding.UTF8.GetString(lyrics[3..]));
     }
 
+
+    [Fact]
+    public async Task Des_paroles_avec_accords_donnent_paroles_txt_sans_accords_et_accords_txt()
+    {
+        _data.First.Update("Mix final", SongVault.Domain.Songs.SongVersionStatus.Final, null,
+            "{c: Couplet 1}\n[Am]Je mar[G]che seul\n[F] [E7]", ReleaseExportTestData.Now);
+
+        var entries = ReleaseArchive.Plan(await SourceAsync()).Where(e => e.Path.StartsWith("Nuits blanches/01 - ")).ToList();
+        string Text(string name) => Encoding.UTF8.GetString(entries.Single(e => e.Path.EndsWith(name)).Content![3..]);
+
+        Assert.Equal("Couplet 1\r\nJe marche seul", Text("/paroles.txt"));
+        Assert.Equal("{c: Couplet 1}\r\n[Am]Je mar[G]che seul\r\n[F] [E7]", Text("/accords.txt"));
+    }
+
+    [Fact]
+    public async Task Des_paroles_sans_accords_ne_donnent_pas_d_accords_txt()
+
+        => Assert.DoesNotContain(ReleaseArchive.Plan(await SourceAsync()), e => e.Path.EndsWith("accords.txt"));
     [Fact]
     public async Task Le_csv_des_credits_est_celui_de_la_sortie()
     {
