@@ -798,6 +798,12 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<Guid?>("SyncAudioFileId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("SyncPoints")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTimeOffset>("UploadedAt")
                         .HasColumnType("datetimeoffset");
 
@@ -814,6 +820,8 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                     b.ToTable("SongFiles", null, t =>
                         {
                             t.HasCheckConstraint("CK_SongFiles_Stem", "([StemName] IS NULL AND [StemPosition] IS NULL) OR ([StemName] IS NOT NULL AND [StemPosition] >= 0)");
+
+                            t.HasCheckConstraint("CK_SongFiles_Sync", "([SyncAudioFileId] IS NULL AND [SyncPoints] IS NULL) OR ([SyncAudioFileId] IS NOT NULL AND [SyncPoints] IS NOT NULL)");
                         });
                 });
 

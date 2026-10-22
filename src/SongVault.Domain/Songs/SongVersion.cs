@@ -13,7 +13,8 @@ public sealed class SongVersion : ISoftDeletable
     public const int MaxBpm = 300;
     /// <summary>Pistes du mélangeur (#23) : chaque piste est décodée en entier dans la mémoire du navigateur.</summary>
     public const int MaxStems = 8;
-
+    /// <summary>Points de synchronisation d'une tablature (#29) : un par mesure d'un long morceau, avec de la marge.</summary>
+    public const int MaxSyncPoints = 2000;
     private readonly List<SongFile> _files = [];
 
     private SongVersion() { }
@@ -130,6 +131,54 @@ public sealed class SongVersion : ISoftDeletable
             chosen[i].File.SetStem(chosen[i].Name, i);
         UpdatedAt = now;
     }
+
+    /// <summary>
+    /// Cale une tablature de cette version sur une maquette de cette version (#29, ADR 0036) ; remplace l'ancien calage.
+    /// Les points sont dans l'ordre de la lecture : leurs instants se suivent, et un même endroit n'est pas calé deux fois.
+    /// </summary>
+    public void SetTablatureSync(Guid tablatureFileId, Guid audioFileId, IReadOnlyList<TabSyncPoint> points, DateTimeOffset now)
+    {
+        // 1. TOUT valider…
+        var tablature = LiveFile(tablatureFileId, "La tablature doit être un fichier de cette version.");
+        if (tablature.FileType != SongFileType.Tablature)
+            throw new DomainException($"« {tablature.OriginalFileName} » n'est pas une tablature.");
+        var audio = LiveFile(audioFileId, "La maquette doit être un fichier de cette version.");
+        if (audio.FileType != SongFileType.Audio)
+            throw new DomainException($"« {audio.OriginalFileName} » n'est pas un fichier audio.");
+        if (points.Count is 0 or > MaxSyncPoints)
+            throw new DomainException($"Un calage compte de 1 à {MaxSyncPoints} points.");
+        foreach (var p in points)
+        {
+            if (p.BarIndex is < 0 or > TabSyncPoint.MaxBarIndex || p.BarOccurence is < 0 or > TabSyncPoint.MaxBarOccurence
+                || p.BarPosition is < 0 or > 1 || double.IsNaN(p.BarPosition)
+                || p.MillisecondOffset is < 0 or > TabSyncPoint.MaxMillisecondOffset)
+                throw new DomainException("Un point de synchronisation sort des limites (mesure, passage, place ou instant).");
+        }
+        for (var i = 1; i < points.Count; i++)
+        {
+            if (points[i].MillisecondOffset <= points[i - 1].MillisecondOffset)
+                throw new DomainException("Les points de synchronisation doivent se suivre dans le temps.");
+        }
+        if (points.Select(p => (p.BarIndex, p.BarOccurence, p.BarPosition)).Distinct().Count() != points.Count)
+            throw new DomainException("Un même endroit de la tablature ne peut pas être calé deux fois.");
+
+        // 2. … PUIS affecter
+        tablature.SetSync(audio.Id, [.. points]);
+        UpdatedAt = now;
+    }
+
+    /// <summary>Retire le calage d'une tablature (#29) ; false si elle n'était pas calée ou n'est pas dans cette version.</summary>
+    public bool ClearTablatureSync(Guid tablatureFileId, DateTimeOffset now)
+    {
+        var file = _files.SingleOrDefault(f => f.Id == tablatureFileId && !f.IsDeleted);
+        if (file?.SyncAudioFileId is null) return false;
+        file.ClearSync();
+        UpdatedAt = now;
+        return true;
+    }
+
+    private SongFile LiveFile(Guid fileId, string missing)
+        => _files.SingleOrDefault(f => f.Id == fileId && !f.IsDeleted) ?? throw new DomainException(missing);
 
     // La version et ses fichiers en place partent avec la même date : la restauration retrouve exactement cet ensemble
     internal void MoveToTrash(string userId, DateTimeOffset now)

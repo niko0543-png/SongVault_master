@@ -164,6 +164,9 @@ docker compose down -v       # supprime aussi la base et les fichiers
 - **Comparaison Guitar Pro** : dans l'écran A/B, les notes ajoutées et modifiées entre deux
   fichiers Guitar Pro sont colorées dans la partition et listées mesure par mesure ; un changement
   d'accordage est annoncé en une ligne ([ADR 0035](docs/adr/0035-comparaison-guitar-pro.md)).  
+- **Tablature calée sur la maquette** : on tape le début de chaque mesure pendant que la maquette
+  joue ; ensuite, le curseur de la tablature suit l'enregistrement
+  ([ADR 0036](docs/adr/0036-tablature-calee-sur-la-maquette.md)).
 
 ---
 
@@ -373,6 +376,7 @@ npx playwright test e2e/stems-drift.spec.ts   # dérive du mélangeur, sans l'ap
 npx playwright test e2e/chords-mobile.spec.ts # accords à 360 px, sans l'application
 npx playwright test e2e/guitar-pro.spec.ts    # lecteur Guitar Pro, sans l'application
 npx playwright test e2e/guitar-pro-compare.spec.ts # comparaison Guitar Pro, sans l'application
+npx playwright test e2e/guitar-pro-sync.spec.ts # tablature calée sur la maquette, sans l'application
 ```
 
 ---
