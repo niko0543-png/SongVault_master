@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { versionsApi } from '../api/versionsApi'
 import type { SongVersion, SongVersionSummary } from '../types'
@@ -14,6 +14,10 @@ import ErrorState from '@/shared/components/ErrorState.vue'
 import { getErrorMessage } from '@/shared/api/ApiError'
 import { formatDate } from '@/shared/utils/format'
 import { t } from '@/shared/i18n'
+import { guitarProFiles } from '@/features/guitarpro/compare/files'
+
+// #30 : alphaTab n'est téléchargé que si les deux versions ont un fichier Guitar Pro
+const GuitarProCompare = defineAsyncComponent(() => import('@/features/guitarpro/components/GuitarProCompare.vue'))
 
 type Side = 'a' | 'b'
 
@@ -138,6 +142,8 @@ async function listen(side: Side) {
 
       <!-- Notes, paroles et fichiers ne sont plus affichés deux fois : seulement leurs différences (#9) -->
       <VersionDiff v-if="sides.a && sides.b" :a="sides.a" :b="sides.b" class="card diff-card" />
+            <GuitarProCompare v-if="sides.a && sides.b && guitarProFiles(sides.a.files).length > 0 && guitarProFiles(sides.b.files).length > 0"
+                        :key="`${sides.a.id}-${sides.b.id}`" :song-id="songId" :a="sides.a" :b="sides.b" class="card diff-card" />
     </template>
   </section>
 </template>
