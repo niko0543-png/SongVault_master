@@ -26,6 +26,10 @@ public sealed class SongFile : ISoftDeletable
     /// <summary>Place de la piste dans le mélangeur, à partir de 0 ; null si le fichier n'est pas une piste.</summary>
     public int? StemPosition { get; private set; }
     public bool IsStem => StemPosition is not null;
+    /// <summary>Tablature calée sur une maquette (#29, ADR 0036) : le fichier audio de la même version ; null sinon.</summary>
+    public Guid? SyncAudioFileId { get; private set; }
+    /// <summary>Les points de synchronisation, dans l'ordre de la lecture ; null si la tablature n'est pas calée.</summary>
+    public IReadOnlyList<TabSyncPoint>? SyncPoints { get; private set; }
 
     internal static SongFile Create(Guid versionId, string originalFileName, string storageKey,
         string contentType, long sizeBytes, SongFileType fileType, DateTimeOffset now)
@@ -56,6 +60,18 @@ public sealed class SongFile : ISoftDeletable
     {
         StemName = null;
         StemPosition = null;
+    }
+
+    internal void SetSync(Guid audioFileId, IReadOnlyList<TabSyncPoint> points)
+    {
+        SyncAudioFileId = audioFileId;
+        SyncPoints = points;
+    }
+
+    internal void ClearSync()
+    {
+        SyncAudioFileId = null;
+        SyncPoints = null;
     }
 
     // #20 : la corbeille passe par la version ou le morceau, qui marquent tout avec la même date
