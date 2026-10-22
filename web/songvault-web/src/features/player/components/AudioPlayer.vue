@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useTemplateRef } from 'vue'
+import { useTemplateRef, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { usePlayerStore } from '../stores/playerStore'
 import { useAudioPlayer } from '../composables/useAudioPlayer'
@@ -29,13 +29,33 @@ function onKeydown(event: KeyboardEvent) {
 }
 onMounted(() => window.addEventListener('keydown', onKeydown))
 onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
+
+// #31 : la hauteur de la barre, pour que le panneau des pistes de la tablature se pose juste au-dessus
+const bar = useTemplateRef<HTMLElement>('player-bar')
+let observer: ResizeObserver | null = null
+const rootStyle = () => document.documentElement.style
+watch(bar, (element) => {
+  observer?.disconnect()
+  observer = null
+  if (!element) {
+    rootStyle().removeProperty('--audio-player-height')
+    return
+  }
+  if (typeof ResizeObserver === 'undefined') return
+  observer = new ResizeObserver(() => rootStyle().setProperty('--audio-player-height', `${element.offsetHeight}px`))
+  observer.observe(element)
+})
+onBeforeUnmount(() => {
+  observer?.disconnect()
+  rootStyle().removeProperty('--audio-player-height')
+})
 </script>
 
 <template>
   <!-- TOUJOURS rendu (même sans piste) : c'est l'unique <audio> de l'application -->
   <audio ref="audio-element" preload="metadata" />
 
-  <div v-if="track" class="player" role="region" :aria-label="t('player.audio.label')">
+  <div v-if="track" ref="player-bar" class="player" role="region" :aria-label="t('player.audio.label')">
     <div class="controls">
       <button type="button" class="secondary skip" :aria-label="t('player.audio.back', { skipSeconds: SKIP_SECONDS })"
               :disabled="!duration" @click="player.skip(-SKIP_SECONDS)">−{{ SKIP_SECONDS }}</button>

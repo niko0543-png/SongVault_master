@@ -7,14 +7,18 @@ import { usePlayerStore } from '@/features/player/stores/playerStore'
 /** #28 : un faux alphaTab, pour vérifier ce que le lecteur lui demande sans dessiner ni jouer. */
 const fake = vi.hoisted(() => {
   type Handler = (arg?: unknown) => void
+  type FakeStaff = { isStringed: boolean; showStandardNotation: boolean; showTablature: boolean; bars: unknown[] }
   const emitter = () => {
     const handlers: Handler[] = []
     return { on: (h: Handler) => { handlers.push(h) }, fire: (arg?: unknown) => handlers.forEach((h) => h(arg)) }
   }
   class FakeApi {
     static last: FakeApi
-    settings = { notation: { transpositionPitches: [] as number[] }, player: { playerMode: 2 } }
-    score: { tracks: { name: string }[]; masterBars: unknown[]; applyFlatSyncPoints: (p: unknown[]) => void } | null = null
+    settings = { notation: { transpositionPitches: [] as number[] }, player: { playerMode: 2 }, display: { scale: 1, layoutMode: 0 } }
+    score: { tracks: { name: string; staves: FakeStaff[] }[]; masterBars: unknown[]; applyFlatSyncPoints: (p: unknown[]) => void } | null = null
+    // #31 : métronome et décompte
+    metronomeVolume = 0
+    countInVolume = 0
     playbackSpeed = 1
     isLooping = false
     scoreLoaded = emitter()
@@ -38,6 +42,7 @@ const fake = vi.hoisted(() => {
     renderTracks = vi.fn()
     changeTrackMute = vi.fn()
     changeTrackSolo = vi.fn()
+    changeTrackVolume = vi.fn()
     changeTrackTranspositionPitch = vi.fn()
     // #30 : partition donnée toute prête, et placement sur une mesure
     renderScore = vi.fn()
@@ -48,7 +53,8 @@ const fake = vi.hoisted(() => {
     constructor(public element: HTMLElement, public options: unknown) { FakeApi.last = this }
     /** Ce que fait alphaTab après load() : partition lue, dessinée, sons chargés. */
     ready(names: string[]) {
-      this.score = { tracks: names.map((name) => ({ name })), masterBars: [{}, {}, {}], applyFlatSyncPoints: vi.fn() }
+      const staves = () => [{ isStringed: true, showStandardNotation: true, showTablature: true, bars: [] }]
+      this.score = { tracks: names.map((name) => ({ name, staves: staves() })), masterBars: [{}, {}, {}], applyFlatSyncPoints: vi.fn() }
       this.scoreLoaded.fire(this.score)
       this.renderFinished.fire()
       this.playerReady.fire()
@@ -58,7 +64,7 @@ const fake = vi.hoisted(() => {
 })
 vi.mock('@coderline/alphatab', () => ({
   AlphaTabApi: fake.FakeApi,
-  LayoutMode: { Page: 0 },
+  LayoutMode: { Page: 0, Horizontal: 1, Parchment: 2 },
   PlayerMode: { EnabledSynthesizer: 2, EnabledExternalMedia: 4 },
   synth: { PlayerState: { Paused: 0, Playing: 1 } },
 }))
@@ -166,7 +172,56 @@ describe('GuitarProViewer (#28)', () => {
 
   it('ne montre pas la liste des pistes pour un fichier à une seule piste', async () => {
     const wrapper = await mountViewer(['Guitare'])
-    expect(wrapper.find('fieldset').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="tab-tracks"]').exists()).toBe(false)
+  })
+})
+
+describe('GuitarProViewer façon Guitar Pro (#31)', () => {
+  it('dessine avec la mise en page du fichier sur grand écran, les couleurs de Guitar Pro, sur une page blanche', async () => {
+    const wrapper = await mountViewer()
+
+    expect(api().options).toMatchObject({ display: { layoutMode: 2, resources: { staffLineColor: '#6b6b6b' } } })
+    expect(wrapper.find('.desk [data-testid="tab-score"]').exists()).toBe(true)
+  })
+
+  it('zoome, change les portées montrées et revient à celles du fichier, sans toucher au fichier', async () => {
+    const wrapper = await mountViewer()
+    const staff = api().score!.tracks[0]!.staves[0]!
+
+    await wrapper.get('[data-testid="tab-zoom"]').setValue('1.25')
+    expect(api().settings.display.scale).toBe(1.25)
+    expect(api().updateSettings).toHaveBeenCalled()
+
+    await wrapper.get('[data-testid="tab-staves"]').setValue('tab')
+    expect(staff).toMatchObject({ showStandardNotation: false, showTablature: true })
+    await wrapper.get('[data-testid="tab-staves"]').setValue('score')
+    expect(staff).toMatchObject({ showStandardNotation: true, showTablature: false })
+    await wrapper.get('[data-testid="tab-staves"]').setValue('file')
+    expect(staff).toMatchObject({ showStandardNotation: true, showTablature: true })
+    expect(api().render).toHaveBeenCalledTimes(4)
+    expect(fetchMock).toHaveBeenCalledTimes(1)                      // rien n'est renvoyé à l'API
+  })
+
+  it('règle le volume d’une piste et place la partition depuis la vue d’ensemble des mesures', async () => {
+    const wrapper = await mountViewer(['Guitare', 'Basse'])
+    const [, bass] = api().score!.tracks
+    api().score!.masterBars = [0, 3840, 7680].map((start, index) => ({ index, start }))
+    api().tracks = [{ staves: [{ bars: [{}, { voices: [{ beats: [{}] }] }, {}] }] }]
+
+    await byLabel(wrapper, 'Volume de Basse').setValue('0.5')
+    expect(api().changeTrackVolume).toHaveBeenLastCalledWith([bass], 0.5)
+    await wrapper.findAll('[data-testid="tab-overview"] .lane')[1]!.findAll('.cell')[1]!.trigger('click')
+    expect(api().tickPosition).toBe(3840)                           // la lecture partira de la mesure 2
+  })
+
+  it('active le métronome et le décompte', async () => {
+    const wrapper = await mountViewer()
+
+    await wrapper.get('[data-testid="tab-metronome"]').setValue(true)
+    await wrapper.get('[data-testid="tab-count-in"]').setValue(true)
+    expect([api().metronomeVolume, api().countInVolume]).toEqual([1, 1])
+    await wrapper.get('[data-testid="tab-metronome"]').setValue(false)
+    expect(api().metronomeVolume).toBe(0)
   })
 })
 
@@ -174,7 +229,7 @@ describe('GuitarProViewer dans la comparaison (#30)', () => {
   const beat = (n: number) => ({ n })
   const bar = (start: number) => ({ index: start / 3840, start })
   const score = {
-    tracks: [{ name: 'Guitare' }, { name: 'Basse' }],
+    tracks: [{ name: 'Guitare', staves: [] }, { name: 'Basse', staves: [] }],
     masterBars: [bar(0), bar(3840), bar(7680)],
   }
 
@@ -196,7 +251,7 @@ describe('GuitarProViewer dans la comparaison (#30)', () => {
 
     expect(fetchMock).not.toHaveBeenCalled()
     expect(api().renderScore).toHaveBeenCalledWith(score, [1])
-    expect(wrapper.find('fieldset').exists()).toBe(false)            // la piste se choisit dans la comparaison
+    expect(wrapper.find('[data-testid="tab-tracks"]').exists()).toBe(false)   // la piste se choisit dans la comparaison
     await wrapper.setProps({ track: 0 })
     expect(api().renderTracks).toHaveBeenLastCalledWith([score.tracks[0]])
   })

@@ -63,3 +63,46 @@ test('à 360 px, la partition suit la largeur de l’écran', async ({ browser }
   expect(overflow).toBeLessThanOrEqual(0)
   await page.close()
 })
+
+test('#31 : la page blanche façon Guitar Pro, avec seulement la tablature et un zoom à 150 %', async ({ page }) => {
+  const violations = await open(page, 'demo.gp5')
+  await expect(page.getByTestId('tab-play')).toBeEnabled({ timeout: 30_000 })
+  const score = page.getByTestId('tab-score')
+  const full = (await score.boundingBox())!.height
+
+  await page.getByTestId('tab-staves').selectOption('tab')                  // la portée disparaît
+  await expect.poll(async () => (await score.boundingBox())!.height).toBeLessThan(full)
+  const tabOnly = (await score.boundingBox())!.height
+  await page.getByTestId('tab-zoom').selectOption('1.5')                    // tout grossit
+  await expect.poll(async () => (await score.boundingBox())!.height).toBeGreaterThan(tabOnly)
+  expect(violations).toEqual([])
+})
+
+test('#31 : le panneau des pistes reste en bas de l’écran pendant que la partition défile, et coupe une piste en pleine lecture', async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 700 } })
+  const violations = await open(page, 'demo-tracks.gp')
+  const play = page.getByTestId('tab-play')
+  await expect(play).toBeEnabled({ timeout: 30_000 })
+  const panel = page.getByTestId('tab-tracks')
+  await expect(panel).toBeVisible()
+
+  // La page défile jusqu'au milieu de la partition (sans molette : la même distance quel que soit le système)
+  await page.getByTestId('tab-score').evaluate((score) => {
+    const box = score.getBoundingClientRect()
+    window.scrollTo(0, window.scrollY + box.top + box.height / 2 - window.innerHeight / 2)
+  })
+  // La partition continue sous le bord de l'écran, et le panneau reste collé en bas (à un pixel près : arrondis)
+  await expect.poll(async () => (await page.getByTestId('tab-score').boundingBox())!.y + (await page.getByTestId('tab-score').boundingBox())!.height)
+    .toBeGreaterThan(700)
+  await expect.poll(async () => {
+    const box = (await panel.boundingBox())!
+    return Math.abs(box.y + box.height - 700)
+  }).toBeLessThanOrEqual(1)
+  await play.click()
+  await page.getByRole('button', { name: 'Couper Basse' }).click()
+  await expect(page.getByRole('button', { name: 'Couper Basse' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(play).toHaveAccessibleName('Mettre en pause')               // la lecture continue
+  await play.click()
+  expect(violations).toEqual([])
+  await page.close()
+})
