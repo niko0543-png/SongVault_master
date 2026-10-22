@@ -2,6 +2,14 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref, shallowRef, watch } from 'vue'
 import { AlphaTabApi, LayoutMode, PlayerMode, synth, type model } from '@coderline/alphatab'
 import { usePlayerStore } from '@/features/player/stores/playerStore'
+import { filesApi } from '@/features/files/api/filesApi'
+import { getErrorMessage } from '@/shared/api/ApiError'
+import { useConfirm } from '@/shared/composables/useConfirm'
+import TabSyncRecorder from './TabSyncRecorder.vue'
+import { syncApi } from '../sync/syncApi'
+import { playOrder, pointsFromTaps } from '../sync/syncPoints'
+import { connectExternalMedia } from '../sync/externalMedia'
+import type { PlayedBar, SyncContext, TabSync } from '../sync/types'
 import { t } from '@/shared/i18n'
 
 /**
@@ -10,16 +18,19 @@ import { t } from '@/shared/i18n'
  * Lecture seule : tempo, boucle, pistes et transposition ne changent que l'écoute, jamais le fichier.
  * #30 : la comparaison lui donne une partition déjà lue et colorée (`score`), la piste à montrer (`track`),
  * et le fait se placer sur une mesure (`goToBar`).
+ * #29 : avec `sync` (FileList), la tablature peut suivre une maquette de la même version au lieu de son propre son :
+ * le curseur suit alors l'enregistrement, grâce aux points de synchronisation enregistrés (ADR 0036).
  */
-const props = defineProps<{ src?: string; score?: model.Score | null; track?: number; label: string }>()
+const props = defineProps<{ src?: string; score?: model.Score | null; track?: number; label: string; sync?: SyncContext }>()
 const player = usePlayerStore()
+const { confirm } = useConfirm()
 
 const SPEEDS = [0.5, 0.75, 0.9, 1] as const
 const MAX_TRANSPOSE = 12
 
 const host = ref<HTMLElement | null>(null)
 const status = ref<'loading' | 'ready' | 'error'>('loading')
-const canPlay = ref(false)
+const playerReady = ref(false)
 const isPlaying = ref(false)
 const speed = ref<number>(1)
 const loop = ref(false)
@@ -28,6 +39,25 @@ const tracks = shallowRef<model.Track[]>([])
 const shown = ref<number[]>([0])
 const mixer = reactive<{ mute: boolean[]; solo: boolean[] }>({ mute: [], solo: [] })
 let api: AlphaTabApi | null = null
+
+// #29 : la mesure jouée, et le calage sur une maquette
+const barCount = ref(0)
+const currentBar = ref(1)
+const saved = ref<TabSync | null>(null)
+const source = ref<'synth' | 'audio'>('synth')
+const recording = ref(false)
+const saving = ref(false)
+const syncError = ref<string | null>(null)
+const order = shallowRef<PlayedBar[]>([])
+const media = ref<HTMLAudioElement | null>(null)
+/** La maquette connaît sa durée : avant, alphaTab croirait le morceau fini dès le premier instant. */
+const mediaReady = ref(false)
+let disconnect: (() => void) | null = null
+let sourceChosen = false
+const savedAudio = computed(() => props.sync?.audios.find((a) => a.id === saved.value?.audioFileId) ?? null)
+const followsAudio = computed(() => source.value === 'audio')
+const canPlay = computed(() => playerReady.value && (!followsAudio.value || mediaReady.value))
+const listenUrl = (audioFileId: string) => filesApi.listenUrl(props.sync!.songId, props.sync!.versionId, audioFileId)
 
 const transposeText = computed(() =>
   t('guitarpro.viewer.semitones', { count: transpose.value > 0 ? `+${transpose.value}` : String(transpose.value) }))
@@ -42,9 +72,11 @@ onMounted(async () => {
     tracks.value = score.tracks
     mixer.mute = score.tracks.map(() => false)
     mixer.solo = score.tracks.map(() => false)
+    barCount.value = score.masterBars.length
   })
+  api.playedBeatChanged.on((beat) => { currentBar.value = beat.voice.bar.index + 1 })
   api.renderFinished.on(() => { status.value = 'ready' })
-  api.playerReady.on(() => { canPlay.value = true })
+  api.playerReady.on(() => { playerReady.value = true })
   api.playerStateChanged.on((e) => {
     isPlaying.value = e.state === synth.PlayerState.Playing
     if (isPlaying.value) player.pause()                       // un seul son à la fois : le lecteur du bas se tait
@@ -55,6 +87,7 @@ onMounted(async () => {
     api.renderScore(props.score, shown.value)
     return
   }
+  void loadSync()
   try {
     const response = await fetch(props.src!)                   // suit la redirection vers le stockage (ADR 0012)
     if (!response.ok) throw new Error(String(response.status))
@@ -66,9 +99,101 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  disconnect?.()
   api?.destroy()
   api = null
 })
+
+async function loadSync() {
+  const sync = props.sync
+  if (!sync) return
+  try {
+    saved.value = (await syncApi.get(sync.songId, sync.versionId, sync.fileId)) ?? null
+  } catch (e) {
+    syncError.value = getErrorMessage(e)                     // la tablature se joue quand même, avec son propre son
+  }
+}
+
+// #29 : une tablature calée suit sa maquette dès l'ouverture ; « Son » permet de revenir au son de la tablature
+watch([savedAudio, status], () => {
+  if (sourceChosen || status.value !== 'ready' || !savedAudio.value) return
+  sourceChosen = true
+  source.value = 'audio'
+})
+// Après le rendu : l'élément <audio> de la maquette doit exister avant d'être branché
+watch(source, () => applySource(), { flush: 'post' })
+
+/** Change le lecteur d'alphaTab : son propre son (synthétiseur), ou la maquette, suivie par les points du calage. */
+function applySource() {
+  const score = api?.score
+  if (!api || !score) return
+  api.stop()
+  disconnect?.()
+  disconnect = null
+  playerReady.value = false
+  const sync = followsAudio.value ? saved.value : null
+  score.applyFlatSyncPoints(sync?.points ?? [])
+  api.settings.player.playerMode = sync ? PlayerMode.EnabledExternalMedia : PlayerMode.EnabledSynthesizer
+  api.updateSettings()
+  if (sync && media.value) disconnect = connectExternalMedia(api, media.value)
+  api.loadMidiForScore()
+}
+
+function startRecording() {
+  api?.pause()
+  syncError.value = null
+  order.value = playOrder(api?.tickCache?.masterBars ?? [])
+  recording.value = order.value.length > 0
+}
+
+/** Le calage montre la mesure à taper : sélectionnée, et la page défile jusqu'à elle. */
+function showNext(index: number) {
+  const bar = order.value[index]
+  if (bar) goToBar(bar.barIndex)
+}
+
+function stopRecording() {
+  recording.value = false
+  if (api) api.playbackRange = null                         // la sélection posée pendant le calage
+}
+
+async function saveSync(audioFileId: string, tapsMs: number[]) {
+  const sync = props.sync
+  if (!sync) return
+  saving.value = true
+  syncError.value = null
+  try {
+    saved.value = await syncApi.save(sync.songId, sync.versionId, sync.fileId, audioFileId, pointsFromTaps(order.value, tapsMs))
+    stopRecording()
+    sourceChosen = true
+    if (followsAudio.value) applySource()                    // déjà sur la maquette : les nouveaux points s'appliquent
+    else source.value = 'audio'
+  } catch (e) {
+    syncError.value = getErrorMessage(e)
+  } finally {
+    saving.value = false
+  }
+}
+
+async function removeSync() {
+  const sync = props.sync
+  if (!sync) return
+  const confirmed = await confirm({
+    title: t('guitarpro.sync.removeTitle'),
+    message: t('guitarpro.sync.removeMessage'),
+    confirmLabel: t('guitarpro.sync.remove'),
+    danger: true,
+  })
+  if (!confirmed) return
+  syncError.value = null
+  try {
+    await syncApi.remove(sync.songId, sync.versionId, sync.fileId)
+    saved.value = null
+    source.value = 'synth'
+  } catch (e) {
+    syncError.value = getErrorMessage(e)
+  }
+}
 
 // Le lecteur du bas repart (autre fichier écouté) : la tablature se met en pause
 watch(() => player.isPlaying, (playing) => { if (playing && isPlaying.value) api?.pause() })
@@ -161,12 +286,34 @@ defineExpose({ goToBar })
         <label class="inline"><input v-model="loop" type="checkbox"> {{ t('guitarpro.viewer.loop') }}</label>
         <span class="inline" role="group" :aria-label="t('guitarpro.viewer.transpose')">
           <button type="button" class="secondary" :aria-label="t('guitarpro.viewer.transposeDown')"
-                  :disabled="transpose <= -MAX_TRANSPOSE" @click="step(-1)">−</button>
+                  :disabled="followsAudio || transpose <= -MAX_TRANSPOSE" @click="step(-1)">−</button>
           <output data-testid="tab-transpose">{{ transposeText }}</output>
           <button type="button" class="secondary" :aria-label="t('guitarpro.viewer.transposeUp')"
-                  :disabled="transpose >= MAX_TRANSPOSE" @click="step(1)">+</button>
+                  :disabled="followsAudio || transpose >= MAX_TRANSPOSE" @click="step(1)">+</button>
         </span>
+        <output class="muted" data-testid="tab-bar">{{ t('guitarpro.viewer.bar', { bar: currentBar, total: barCount }) }}</output>
       </div>
+
+      <!-- #29 : suivre une maquette de la version, et la caler (Member ou Owner) -->
+      <div v-if="sync && !score" class="sync" data-testid="tab-sync">
+        <label v-if="savedAudio" class="inline">
+          {{ t('guitarpro.sync.source') }}
+          <select v-model="source" data-testid="tab-source" :disabled="recording">
+            <option value="synth">{{ t('guitarpro.sync.synth') }}</option>
+            <option value="audio">{{ t('guitarpro.sync.followAudio', { name: savedAudio.name }) }}</option>
+          </select>
+        </label>
+        <template v-if="sync.canEdit && sync.audios.length > 0 && !recording">
+          <button type="button" class="secondary" data-testid="sync-start" :disabled="!canPlay" @click="startRecording">
+            {{ saved ? t('guitarpro.sync.redo') : t('guitarpro.sync.start') }}
+          </button>
+          <button v-if="saved" type="button" class="secondary" data-testid="sync-remove" @click="removeSync">{{ t('guitarpro.sync.remove') }}</button>
+        </template>
+        <small v-if="followsAudio" class="muted">{{ t('guitarpro.sync.audioHint') }}</small>
+        <p v-if="syncError" class="field-error" role="alert">{{ syncError }}</p>
+      </div>
+      <TabSyncRecorder v-if="recording && sync" :audios="sync.audios" :initial-audio-id="saved?.audioFileId" :src="listenUrl"
+                       :bars="order.length" :saving="saving" @next="showNext" @save="saveSync" @cancel="stopRecording" />
 
       <fieldset v-if="tracks.length > 1 && !score" class="tracks">
         <legend>{{ t('guitarpro.viewer.tracks') }}</legend>
@@ -176,15 +323,19 @@ defineExpose({ goToBar })
                    @change="toggleShown(i)">
             {{ track.name }}
           </label>
-          <button type="button" class="secondary" :aria-pressed="mixer.mute[i]"
+          <button type="button" class="secondary" :aria-pressed="mixer.mute[i]" :disabled="followsAudio"
                   :aria-label="t('guitarpro.viewer.muteTrack', { name: track.name })" @click="toggleMute(i)">{{ t('guitarpro.viewer.mute') }}</button>
-          <button type="button" class="secondary" :aria-pressed="mixer.solo[i]"
+          <button type="button" class="secondary" :aria-pressed="mixer.solo[i]" :disabled="followsAudio"
                   :aria-label="t('guitarpro.viewer.soloTrack', { name: track.name })" @click="toggleSolo(i)">{{ t('guitarpro.viewer.solo') }}</button>
         </div>
       </fieldset>
 
       <p class="muted hint"><small>{{ t('guitarpro.viewer.loopHint') }} {{ t('guitarpro.viewer.readOnly') }}</small></p>
     </template>
+
+    <!-- #29 : la maquette suivie ; alphaTab la commande (lecture, pause, déplacement, tempo) -->
+    <audio v-if="savedAudio" ref="media" :src="listenUrl(savedAudio.id)" preload="auto" data-testid="tab-audio"
+           @loadedmetadata="mediaReady = true" @emptied="mediaReady = false" />
 
     <!-- alphaTab dessine ici ; caché tant que la partition n'est pas prête, mais présent pour mesurer la largeur -->
     <div ref="host" class="score" :class="{ pending: status !== 'ready' }" data-testid="tab-score" />
@@ -201,6 +352,8 @@ defineExpose({ goToBar })
 .track { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
 .track button[aria-pressed='true'] { background: var(--primary); color: #fff; }
 .hint { margin: 0; }
+.sync { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.sync p { margin: 0; flex-basis: 100%; }
 /* #14 : la partition suit la largeur, sans défilement horizontal à 360 px */
 .score { width: 100%; max-width: 100%; overflow: hidden; background: #fff; color: #000; border-radius: 4px; }
 .score.pending { height: 0; }

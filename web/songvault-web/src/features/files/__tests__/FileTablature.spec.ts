@@ -14,8 +14,8 @@ vi.mock('@/features/guitarpro/components/GuitarProViewer.vue', () => {
     __esModule: true,                                              // defineAsyncComponent prend alors default
     default: defineComponent({
       name: 'GuitarProViewer',
-      props: { src: String, label: String },
-      setup: (props) => () => h('div', { 'data-testid': 'viewer' }, props.src),
+      props: { src: String, label: String, sync: Object },
+      setup: (props) => () => h('div', { 'data-testid': 'viewer', 'data-sync': JSON.stringify(props.sync) }, props.src),
     }),
   }
 })
@@ -61,5 +61,25 @@ describe('FileList, tablatures Guitar Pro (#28)', () => {
     const audio: SongFile = { ...tab('maquette'), originalFileName: 'maquette.mp3', fileType: 'Audio' }
     const wrapper = mount(FileList, { props: { songId: 's1', versionId: 'v1', files: [audio] }, global: { stubs: { FileWaveform: true } } })
     expect(wrapper.find('[data-testid="show-tablature"]').exists()).toBe(false)
+  })
+})
+
+describe('FileList, calage sur une maquette (#29)', () => {
+  const audio = (id: string, scan: SongFile['scan'] = 'Clean'): SongFile =>
+    ({ ...tab(id, scan), originalFileName: `${id}.mp3`, fileType: 'Audio' })
+
+  it('donne au lecteur les maquettes lisibles de la version, et le droit de caler selon le rôle', async () => {
+    for (const readonly of [false, true]) {
+      const wrapper = mount(FileList, {
+        props: { songId: 's1', versionId: 'v1', files: [tab('riff'), audio('demo'), audio('virus', 'Infected')], readonly },
+        global: { stubs: { FileWaveform: true } },
+      })
+      await wrapper.get('[data-testid="show-tablature"]').trigger('click')
+      await flushPromises()
+
+      expect(JSON.parse(wrapper.get('[data-testid="viewer"]').attributes('data-sync')!)).toEqual({
+        songId: 's1', versionId: 'v1', fileId: 'riff', audios: [{ id: 'demo', name: 'demo.mp3' }], canEdit: !readonly,
+      })
+    }
   })
 })

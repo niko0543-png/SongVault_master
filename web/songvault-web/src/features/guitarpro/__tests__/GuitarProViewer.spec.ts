@@ -13,8 +13,8 @@ const fake = vi.hoisted(() => {
   }
   class FakeApi {
     static last: FakeApi
-    settings = { notation: { transpositionPitches: [] as number[] } }
-    score: { tracks: { name: string }[] } | null = null
+    settings = { notation: { transpositionPitches: [] as number[] }, player: { playerMode: 2 } }
+    score: { tracks: { name: string }[]; masterBars: unknown[]; applyFlatSyncPoints: (p: unknown[]) => void } | null = null
     playbackSpeed = 1
     isLooping = false
     scoreLoaded = emitter()
@@ -22,6 +22,12 @@ const fake = vi.hoisted(() => {
     playerReady = emitter()
     playerStateChanged = emitter()
     error = emitter()
+    // #29 : mesure jouée, changement de lecteur (son de la tablature ou maquette), table de temps
+    playedBeatChanged = emitter()
+    loadMidiForScore = vi.fn()
+    player = { output: {} as { handler?: unknown; updatePosition?: (ms: number) => void } }
+    tickCache: { masterBars: { masterBar: { index: number } }[] } | null = null
+    playbackRange: unknown = null
     load = vi.fn((_bytes: Uint8Array) => true)
     playPause = vi.fn()
     pause = vi.fn()
@@ -42,7 +48,7 @@ const fake = vi.hoisted(() => {
     constructor(public element: HTMLElement, public options: unknown) { FakeApi.last = this }
     /** Ce que fait alphaTab après load() : partition lue, dessinée, sons chargés. */
     ready(names: string[]) {
-      this.score = { tracks: names.map((name) => ({ name })) }
+      this.score = { tracks: names.map((name) => ({ name })), masterBars: [{}, {}, {}], applyFlatSyncPoints: vi.fn() }
       this.scoreLoaded.fire(this.score)
       this.renderFinished.fire()
       this.playerReady.fire()
@@ -53,7 +59,7 @@ const fake = vi.hoisted(() => {
 vi.mock('@coderline/alphatab', () => ({
   AlphaTabApi: fake.FakeApi,
   LayoutMode: { Page: 0 },
-  PlayerMode: { EnabledSynthesizer: 2 },
+  PlayerMode: { EnabledSynthesizer: 2, EnabledExternalMedia: 4 },
   synth: { PlayerState: { Paused: 0, Playing: 1 } },
 }))
 
@@ -208,5 +214,115 @@ describe('GuitarProViewer dans la comparaison (#30)', () => {
     expect(api().tickPosition).toBe(3840)
     expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'smooth' }))
     scrollTo.mockRestore()
+  })
+})
+
+describe('GuitarProViewer calé sur une maquette (#29)', () => {
+  const syncUrl = '/api/bands/b1/songs/s/versions/v/files/f/sync'
+  const points = [
+    { barIndex: 0, barOccurence: 0, barPosition: 0, millisecondOffset: 1000 },
+    { barIndex: 1, barOccurence: 0, barPosition: 0, millisecondOffset: 2500 },
+  ]
+  const json = (body: unknown) => new Response(JSON.stringify(body), { headers: { 'Content-Type': 'application/json' } })
+
+  /** La tablature, puis l'API du calage : rien d'enregistré, ou la maquette a1 et ses points. */
+  function routes(saved: unknown) {
+    fetchMock.mockImplementation(async (input, init) => {
+      const url = String(input)
+      if (url.endsWith('/content')) return new Response(new Uint8Array([0x18, 0x46, 0x49]))
+      if (url === syncUrl && init?.method === 'PUT') return json({ audioFileId: 'a1', audioFileName: 'maquette.wav', ...JSON.parse(String(init.body)) })
+      if (url === syncUrl && init?.method === 'DELETE') return new Response(null, { status: 204 })
+      if (url === syncUrl) return saved ? json(saved) : new Response(null, { status: 204 })
+      return new Response('', { status: 404 })
+    })
+  }
+
+  async function mountSynced(saved: unknown, canEdit = true) {
+    routes(saved)
+    const wrapper = mount(GuitarProViewer, {
+      props: {
+        src: '/api/bands/b1/songs/s/versions/v/files/f/content', label: 'riff.gp5',
+        sync: { songId: 's', versionId: 'v', fileId: 'f', audios: [{ id: 'a1', name: 'maquette.wav' }], canEdit },
+      },
+      global: { plugins: [createTestingPinia({ createSpy: vi.fn, stubActions: false, initialState: { band: { activeId: 'b1' } } })] },
+      attachTo: document.body,
+    })
+    await flushPromises()
+    api().ready(['Guitare'])
+    await flushPromises()
+    return wrapper
+  }
+
+  it('sans calage, la tablature garde son propre son ; un Member peut la caler, un Guest non', async () => {
+    const wrapper = await mountSynced(null)
+
+    expect(api().settings.player.playerMode).toBe(2)
+    expect(wrapper.find('[data-testid="tab-source"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="sync-start"]').text()).toBe('Caler sur une maquette')
+    wrapper.unmount()
+
+    const guest = await mountSynced(null, false)
+    expect(guest.find('[data-testid="sync-start"]').exists()).toBe(false)
+  })
+
+  it('avec un calage, suit la maquette dès l’ouverture, et revient au son de la tablature à la demande', async () => {
+    const wrapper = await mountSynced({ audioFileId: 'a1', audioFileName: 'maquette.wav', points })
+
+    expect(wrapper.get('[data-testid="tab-audio"]').attributes('src')).toBe('/api/bands/b1/songs/s/versions/v/files/a1/listen')
+    expect(api().settings.player.playerMode).toBe(4)
+    expect(api().score!.applyFlatSyncPoints).toHaveBeenLastCalledWith(points)
+    expect(api().loadMidiForScore).toHaveBeenCalled()
+    expect(api().player.output.handler).toBeDefined()                  // l'élément <audio> commande alphaTab
+    expect(byLabel(wrapper, 'Un demi-ton plus haut').attributes('disabled')).toBeDefined()
+
+    // Lecture possible quand le nouveau lecteur est prêt ET que la maquette connaît sa durée
+    api().playerReady.fire()
+    await nextTick()
+    expect(wrapper.get('[data-testid="tab-play"]').attributes('disabled')).toBeDefined()
+    await wrapper.get('[data-testid="tab-audio"]').trigger('loadedmetadata')
+    expect(wrapper.get('[data-testid="tab-play"]').attributes('disabled')).toBeUndefined()
+
+    await wrapper.get('[data-testid="tab-source"]').setValue('synth')
+    await flushPromises()
+    expect(api().settings.player.playerMode).toBe(2)
+    expect(api().score!.applyFlatSyncPoints).toHaveBeenLastCalledWith([])
+    expect(api().player.output.handler).toBeUndefined()
+  })
+
+  it('montre la mesure jouée', async () => {
+    const wrapper = await mountSynced(null)
+
+    api().playedBeatChanged.fire({ voice: { bar: { index: 1 } } })
+    await nextTick()
+
+    expect(wrapper.get('[data-testid="tab-bar"]').text()).toBe('Mesure 2 sur 3')
+  })
+
+  it('enregistre un calage au tapé, dans l’ordre de lecture (reprises comprises), puis suit la maquette', async () => {
+    const wrapper = await mountSynced(null)
+    const index = (i: number) => ({ masterBar: { index: i } })
+    api().tickCache = { masterBars: [index(0), index(1), index(0), index(1), index(2)] }   // mesures 1-2 reprises
+    api().playerReady.fire()
+    await nextTick()
+
+    await wrapper.get('[data-testid="sync-start"]').trigger('click')
+    const recorder = wrapper.findComponent({ name: 'TabSyncRecorder' })
+    expect(recorder.props('bars')).toBe(5)
+    recorder.vm.$emit('save', 'a1', [500, 1500, 2500, 3500])
+    await flushPromises()
+
+    const put = fetchMock.mock.calls.find(([, init]) => init?.method === 'PUT')!
+    expect(JSON.parse(String(put[1]!.body))).toEqual({
+      audioFileId: 'a1',
+      points: [
+        { barIndex: 0, barOccurence: 0, barPosition: 0, millisecondOffset: 500 },
+        { barIndex: 1, barOccurence: 0, barPosition: 0, millisecondOffset: 1500 },
+        { barIndex: 0, barOccurence: 1, barPosition: 0, millisecondOffset: 2500 },
+        { barIndex: 1, barOccurence: 1, barPosition: 0, millisecondOffset: 3500 },
+      ],
+    })
+    expect(wrapper.findComponent({ name: 'TabSyncRecorder' }).exists()).toBe(false)
+    expect(api().settings.player.playerMode).toBe(4)
+    expect((wrapper.get('[data-testid="tab-source"]').element as HTMLSelectElement).value).toBe('audio')
   })
 })

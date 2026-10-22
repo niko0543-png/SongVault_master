@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { defineAsyncComponent, ref } from 'vue'
+import { computed, defineAsyncComponent, ref } from 'vue'
 import { isReadable, type SongFile, type SongFileType } from '../types'
 import { filesApi } from '../api/filesApi'
 import FileWaveform from './FileWaveform.vue'
 import { formatDate, formatFileSize } from '@/shared/utils/format'
 import { t } from '@/shared/i18n'
 
-defineProps<{
+const props = defineProps<{
   songId: string
   versionId: string
   files: SongFile[]
@@ -28,6 +28,10 @@ const icons: Record<SongFileType, string> = { Audio: '🎵', Tablature: '🎸', 
 // #28 : alphaTab (plus d'un mégaoctet) n'est téléchargé qu'à l'ouverture d'une tablature
 const GuitarProViewer = defineAsyncComponent(() => import('@/features/guitarpro/components/GuitarProViewer.vue'))
 const openTablature = ref<string | null>(null)
+// #29 : les maquettes sur lesquelles une tablature peut se caler, les fichiers audio lisibles de la version
+const audios = computed(() => props.files
+  .filter((f) => f.fileType === 'Audio' && isReadable(f))
+  .map((f) => ({ id: f.id, name: f.originalFileName })))
 
 function toggleTablature(file: SongFile) {
   openTablature.value = openTablature.value === file.id ? null : file.id
@@ -74,7 +78,8 @@ function toggleTablature(file: SongFile) {
                     :progress="playing?.fileId === file.id ? playing.progress : 0"
                     @seek="(seconds) => $emit('seek', file, seconds)" />
       <GuitarProViewer v-if="openTablature === file.id && isReadable(file)" class="file-tablature"
-                       :src="filesApi.contentUrl(songId, versionId, file.id)" :label="file.originalFileName" />
+                       :src="filesApi.contentUrl(songId, versionId, file.id)" :label="file.originalFileName"
+                       :sync="{ songId, versionId, fileId: file.id, audios, canEdit: !readonly }" />
     </li>
   </ul>
 </template>
