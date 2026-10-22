@@ -33,6 +33,12 @@ const fake = vi.hoisted(() => {
     changeTrackMute = vi.fn()
     changeTrackSolo = vi.fn()
     changeTrackTranspositionPitch = vi.fn()
+    // #30 : partition donnée toute prête, et placement sur une mesure
+    renderScore = vi.fn()
+    highlightPlaybackRange = vi.fn()
+    tickPosition = 0
+    tracks: unknown[] = []
+    boundsLookup: { findMasterBarByIndex: (i: number) => { realBounds: { y: number } } | null } | null = null
     constructor(public element: HTMLElement, public options: unknown) { FakeApi.last = this }
     /** Ce que fait alphaTab après load() : partition lue, dessinée, sons chargés. */
     ready(names: string[]) {
@@ -155,5 +161,52 @@ describe('GuitarProViewer (#28)', () => {
   it('ne montre pas la liste des pistes pour un fichier à une seule piste', async () => {
     const wrapper = await mountViewer(['Guitare'])
     expect(wrapper.find('fieldset').exists()).toBe(false)
+  })
+})
+
+describe('GuitarProViewer dans la comparaison (#30)', () => {
+  const beat = (n: number) => ({ n })
+  const bar = (start: number) => ({ index: start / 3840, start })
+  const score = {
+    tracks: [{ name: 'Guitare' }, { name: 'Basse' }],
+    masterBars: [bar(0), bar(3840), bar(7680)],
+  }
+
+  async function mountWithScore() {
+    const wrapper = mount(GuitarProViewer, {
+      props: { score: score as never, track: 1, label: 'riff.gp' },
+      global: { plugins: [createTestingPinia({ createSpy: vi.fn, stubActions: false })] },
+    })
+    await flushPromises()
+    api().score = score as never
+    api().scoreLoaded.fire(score)
+    api().renderFinished.fire()
+    await nextTick()
+    return wrapper
+  }
+
+  it('montre la partition donnée par la comparaison, sans rien télécharger, et change de piste', async () => {
+    const wrapper = await mountWithScore()
+
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(api().renderScore).toHaveBeenCalledWith(score, [1])
+    expect(wrapper.find('fieldset').exists()).toBe(false)            // la piste se choisit dans la comparaison
+    await wrapper.setProps({ track: 0 })
+    expect(api().renderTracks).toHaveBeenLastCalledWith([score.tracks[0]])
+  })
+
+  it('se place sur une mesure : sélection, départ de la lecture et défilement', async () => {
+    const wrapper = await mountWithScore()
+    const beats = [beat(1), beat(2), beat(3)]
+    api().tracks = [{ staves: [{ bars: [{}, { voices: [{ beats }] }, {}] }] }]
+    api().boundsLookup = { findMasterBarByIndex: (i) => (i === 1 ? { realBounds: { y: 400 } } : null) }
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+
+    ;(wrapper.vm as unknown as { goToBar: (i: number) => void }).goToBar(1)
+
+    expect(api().highlightPlaybackRange).toHaveBeenCalledWith(beats[0], beats[2])
+    expect(api().tickPosition).toBe(3840)
+    expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'smooth' }))
+    scrollTo.mockRestore()
   })
 })

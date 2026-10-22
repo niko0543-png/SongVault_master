@@ -8,8 +8,10 @@ import { t } from '@/shared/i18n'
  * #28 : partition et tablature d'un fichier Guitar Pro, jouées dans le navigateur par alphaTab (ADR 0034).
  * Ce composant est chargé à la demande (FileList) : alphaTab n'est téléchargé qu'à l'ouverture d'une tablature.
  * Lecture seule : tempo, boucle, pistes et transposition ne changent que l'écoute, jamais le fichier.
+ * #30 : la comparaison lui donne une partition déjà lue et colorée (`score`), la piste à montrer (`track`),
+ * et le fait se placer sur une mesure (`goToBar`).
  */
-const props = defineProps<{ src: string; label: string }>()
+const props = defineProps<{ src?: string; score?: model.Score | null; track?: number; label: string }>()
 const player = usePlayerStore()
 
 const SPEEDS = [0.5, 0.75, 0.9, 1] as const
@@ -48,8 +50,13 @@ onMounted(async () => {
     if (isPlaying.value) player.pause()                       // un seul son à la fois : le lecteur du bas se tait
   })
   api.error.on(() => { status.value = 'error' })
+  if (props.score) {                                        // #30 : partition déjà lue par la comparaison
+    shown.value = [props.track ?? 0]
+    api.renderScore(props.score, shown.value)
+    return
+  }
   try {
-    const response = await fetch(props.src)                   // suit la redirection vers le stockage (ADR 0012)
+    const response = await fetch(props.src!)                   // suit la redirection vers le stockage (ADR 0012)
     if (!response.ok) throw new Error(String(response.status))
     const bytes = new Uint8Array(await response.arrayBuffer())
     if (!api?.load(bytes, [0])) throw new Error('format')
@@ -65,6 +72,14 @@ onBeforeUnmount(() => {
 
 // Le lecteur du bas repart (autre fichier écouté) : la tablature se met en pause
 watch(() => player.isPlaying, (playing) => { if (playing && isPlaying.value) api?.pause() })
+
+// #30 : la comparaison change de piste
+watch(() => props.track, (index) => {
+  const track = index === undefined ? undefined : props.score?.tracks[index]
+  if (!api || !track) return
+  shown.value = [index!]
+  api.renderTracks([track])
+})
 
 watch(speed, (value) => { if (api) api.playbackSpeed = value })
 watch(loop, (value) => { if (api) api.isLooping = value })
@@ -102,6 +117,26 @@ function toggleSolo(index: number) {
   mixer.solo[index] = !mixer.solo[index]
   api?.changeTrackSolo([tracks.value[index]!], mixer.solo[index]!)
 }
+
+/**
+ * #30 : place la partition sur une mesure (0 = la première) : la page défile jusqu'à elle, la mesure est
+ * sélectionnée (« Boucler la sélection » la rejoue) et la lecture partira de là.
+ */
+function goToBar(index: number) {
+  const score = api?.score
+  const master = score?.masterBars[Math.max(0, Math.min(index, score.masterBars.length - 1))]
+  if (!api || !master) return
+  const beats = api.tracks[0]?.staves[0]?.bars[master.index]?.voices[0]?.beats ?? []
+  if (beats.length > 0) api.highlightPlaybackRange(beats[0]!, beats[beats.length - 1]!)
+  api.tickPosition = master.start
+  const bounds = api.boundsLookup?.findMasterBarByIndex(master.index)
+  if (bounds && host.value) {
+    const top = host.value.getBoundingClientRect().top + window.scrollY + bounds.realBounds.y - 16
+    window.scrollTo({ top, behavior: 'smooth' })
+  }
+}
+
+defineExpose({ goToBar })
 </script>
 
 <template>
@@ -133,7 +168,7 @@ function toggleSolo(index: number) {
         </span>
       </div>
 
-      <fieldset v-if="tracks.length > 1" class="tracks">
+      <fieldset v-if="tracks.length > 1 && !score" class="tracks">
         <legend>{{ t('guitarpro.viewer.tracks') }}</legend>
         <div v-for="(track, i) in tracks" :key="i" class="track">
           <label class="inline">

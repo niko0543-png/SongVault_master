@@ -52,9 +52,9 @@ jobs:
       - run: npm run type-check
       - run: npm run test:unit -- --run
       - run: npm run build
-     # #23 : dérive du mélangeur ; #25 : accords à 360 px ; #28 : tablature Guitar Pro. Dans le vrai Chromium (sans la pile Docker)
+     # #23 : dérive du mélangeur ; #25 : accords à 360 px ; #28 et #30 : tablature et comparaison Guitar Pro. Dans le vrai Chromium (sans la pile Docker)
       - run: npx playwright install --with-deps chromium
-      - run: npx playwright test e2e/stems-drift.spec.ts e2e/chords-mobile.spec.ts e2e/guitar-pro.spec.ts
+      - run: npx playwright test e2e/stems-drift.spec.ts e2e/chords-mobile.spec.ts e2e/guitar-pro.spec.ts e2e/guitar-pro-compare.spec.ts
 
   docker:
     name: docker
