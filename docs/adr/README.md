@@ -42,3 +42,4 @@ l'ancien, qui passe au statut « remplacé par ADR NNNN ».
 | [0034](0034-lecteur-guitar-pro.md) | Lecteur Guitar Pro : alphaTab chargé à la demande, en lecture seule | accepté |
 | [0035](0035-comparaison-guitar-pro.md) | Comparaison de deux fichiers Guitar Pro : empreintes de mesures, diff dans un Web Worker | accepté |
 | [0036](0036-tablature-calee-sur-la-maquette.md) | Tablature calée sur la maquette : points de synchronisation d'alphaTab, enregistrés par fichier | accepté |
+| [0037](0037-rendu-facon-guitar-pro.md) | Rendu de la tablature façon Guitar Pro : réglages d'alphaTab, sans nouvelle bibliothèque | accepté |

@@ -63,3 +63,17 @@ test('à 360 px, la partition suit la largeur de l’écran', async ({ browser }
   expect(overflow).toBeLessThanOrEqual(0)
   await page.close()
 })
+
+test('#31 : la page blanche façon Guitar Pro, avec seulement la tablature et un zoom à 150 %', async ({ page }) => {
+  const violations = await open(page, 'demo.gp5')
+  await expect(page.getByTestId('tab-play')).toBeEnabled({ timeout: 30_000 })
+  const score = page.getByTestId('tab-score')
+  const full = (await score.boundingBox())!.height
+
+  await page.getByTestId('tab-staves').selectOption('tab')                  // la portée disparaît
+  await expect.poll(async () => (await score.boundingBox())!.height).toBeLessThan(full)
+  const tabOnly = (await score.boundingBox())!.height
+  await page.getByTestId('tab-zoom').selectOption('1.5')                    // tout grossit
+  await expect.poll(async () => (await score.boundingBox())!.height).toBeGreaterThan(tabOnly)
+  expect(violations).toEqual([])
+})

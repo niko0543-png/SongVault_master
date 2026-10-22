@@ -52,6 +52,7 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) — versions :
 - Lecteur Guitar Pro dans la liste des fichiers (« Afficher la tablature ») : partition et tablature des fichiers `.gp3` à `.gp5`, `.gpx` et `.gp`, lecture avec curseur, tempo ralenti, boucle sur une sélection, transposition, choix des pistes, muet et solo, sans jamais modifier le fichier ; alphaTab chargé seulement à l'ouverture ; le lecteur du bas se met en pause quand la tablature joue, et inversement ; `.gp3` et `.gp4` acceptés à l'envoi, avec leur signature vérifiée ; test Playwright dans Chromium par la CI (ADR 0034).
 - Comparaison des fichiers Guitar Pro de deux versions dans l'écran A/B (section « Différences de la tablature ») : partition de B avec les notes ajoutées en vert et modifiées en orange, liste des différences mesure par mesure (ajoutée, supprimée, notes modifiées) où un clic place la partition sur la mesure ; une mesure insérée ne décale rien d'autre ; accordage, capodastre, tempo et pistes ajoutées ou supprimées annoncés en une ligne ; pistes associées par nom et instrument ; calcul dans un Web Worker ; test Playwright dans Chromium par la CI (ADR 0035).
 - Tablature calée sur la maquette : « Caler sur une maquette » dans le lecteur Guitar Pro, en tapant le début de chaque mesure pendant que la maquette joue (reprises comprises) ; le calage est enregistré par tablature (`GET`, `PUT` et `DELETE …/files/{id}/sync`, Member ou Owner pour modifier) ; une tablature calée suit sa maquette dès l'ouverture, y compris après un déplacement, et « Son » revient au son de la tablature ; la mesure jouée s'affiche ; test Playwright dans Chromium par la CI (ADR 0036).
+- Lecteur Guitar Pro façon Guitar Pro : mise en page du fichier sur grand écran, page blanche, zoom de 75 à 150 %, choix des portées (partition, tablature ou les deux), métronome et décompte (ADR 0037).
 ### Modifié
 - Section « Paroles » d'une version : lecture par défaut, saisie par « Modifier le texte ». Dans l'archive d'une sortie, `paroles.txt` est sans accords et `accords.txt` garde la source ChordPro.
 - Les journaux de l'API ne nomment plus le destinataire d'un e-mail non parti, et une erreur 500 y est écrite avec un chemin sans jeton.
@@ -74,6 +75,7 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) — versions :
 ### Supprimé
 - `Song.OwnerId`, remplacé par `Song.BandId`. Les morceaux sans propriétaire valide sont supprimés par la migration `BackfillBands`.
 ### Corrigé
+- Une tablature calée sur sa maquette ne se met plus en pause dès le départ quand les sons du lecteur arrivent tard.
 - Un délai dépassé chez le fournisseur d'e-mails n'arrête plus l'API.
 - La page Facturation avait perdu sa route : le lien « Facturation » des Owner y mène de nouveau.
 - Sur Azure, les pochettes des sorties s'affichent : la CSP du front autorise les images du stockage objet.
