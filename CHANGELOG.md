@@ -55,6 +55,7 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) — versions :
 - Lecteur Guitar Pro façon Guitar Pro : mise en page du fichier sur grand écran, page blanche, zoom de 75 à 150 %, choix des portées (partition, tablature ou les deux), métronome et décompte, panneau des pistes collé en bas de l'écran (afficher, muet, solo, volume, vue d'ensemble des mesures) (ADR 0037).
 - Une tablature calée sur sa maquette ne se met plus en pause dès le départ quand les sons du lecteur arrivent tard.
 - Page du lecteur Guitar Pro : la tablature s'ouvre en plein écran, en un seul bloc (commandes en haut, partition qui défile seule, pistes en bas), avec un lien de retour, le plein écran du navigateur, les raccourcis Espace, ← →, L et Échap, et un tempo réglable de 25 à 150 % (ADR 0038).
+- Lecteur Guitar Pro : boucle par numéros de mesures (« Début ici », « Fin ici »), zoom, portées, tempo et mix gardés sur l'appareil, progression du chargement des sons, réglages repliés derrière « Réglages » sur téléphone, aide repliée (ADR 0039).
 ### Modifié
 - Section « Paroles » d'une version : lecture par défaut, saisie par « Modifier le texte ». Dans l'archive d'une sortie, `paroles.txt` est sans accords et `accords.txt` garde la source ChordPro.
 - Les journaux de l'API ne nomment plus le destinataire d'un e-mail non parti, et une erreur 500 y est écrite avec un chemin sans jeton.

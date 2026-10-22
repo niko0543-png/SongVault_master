@@ -44,3 +44,4 @@ l'ancien, qui passe au statut « remplacé par ADR NNNN ».
 | [0036](0036-tablature-calee-sur-la-maquette.md) | Tablature calée sur la maquette : points de synchronisation d'alphaTab, enregistrés par fichier | accepté |
 | [0037](0037-rendu-facon-guitar-pro.md) | Rendu de la tablature façon Guitar Pro : réglages d'alphaTab, sans nouvelle bibliothèque | accepté |
 | [0038](0038-page-du-lecteur-guitar-pro.md) | Page du lecteur Guitar Pro : un seul bloc en plein écran, piloté au clavier | accepté |
+| [0039](0039-confort-du-lecteur-guitar-pro.md) | Confort du lecteur Guitar Pro : boucle par mesures, réglages gardés sur l'appareil | accepté |

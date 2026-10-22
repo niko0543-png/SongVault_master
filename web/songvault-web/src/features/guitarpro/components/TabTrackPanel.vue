@@ -31,7 +31,8 @@ const emit = defineEmits<{
 /** Largeur d'une case de la vue d'ensemble, en px (la même que dans le CSS). */
 const CELL = 16
 
-const open = ref(true)
+/** #33 : replié ou non ; GuitarProViewer le garde sur l'appareil. */
+const open = defineModel<boolean>('open', { default: true })
 const overview = ref<HTMLElement | null>(null)
 const anySolo = computed(() => props.solo.some(Boolean))
 const bars = computed(() => Array.from({ length: props.barCount }, (_, i) => i))

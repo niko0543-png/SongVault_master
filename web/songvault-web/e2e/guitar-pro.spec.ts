@@ -140,3 +140,27 @@ test('#32 : sur la page du lecteur, seule la partition défile ; commandes et pi
   expect(violations).toEqual([])
   await page.close()
 })
+
+test('#33 : boucle par numéros de mesures, et réglages repliés sur téléphone', async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 700 } })
+  const violations = await open(page, 'demo-tracks.gp', '&fill=1')
+  await expect(page.getByTestId('tab-play')).toBeEnabled({ timeout: 30_000 })
+  await page.getByTestId('tab-loop-from').fill('3')
+  await page.getByTestId('tab-loop-from').press('Tab')
+  await page.getByTestId('tab-loop-to').fill('4')
+  await page.getByTestId('tab-loop-to').press('Tab')
+  await expect(page.locator('.at-selection div').first()).toBeVisible()      // alphaTab montre la sélection
+  await expect(page.getByTestId('tab-loop-clear')).toBeVisible()
+  expect(violations).toEqual([])
+  await page.close()
+
+  const phone = await browser.newPage({ viewport: { width: 360, height: 780 }, isMobile: true, hasTouch: true })
+  await open(phone, 'demo-tracks.gp', '&fill=1')
+  await expect(phone.getByTestId('tab-play')).toBeEnabled({ timeout: 30_000 })
+  await expect(phone.getByTestId('tab-settings')).toBeHidden()
+  await phone.getByTestId('tab-settings-toggle').click()
+  await expect(phone.getByTestId('tab-zoom')).toBeVisible()
+  const overflow = await phone.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+  expect(overflow).toBeLessThanOrEqual(0)
+  await phone.close()
+})

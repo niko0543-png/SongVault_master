@@ -28,6 +28,11 @@ const fake = vi.hoisted(() => {
     error = emitter()
     // #29 : mesure jouée, changement de lecteur (son de la tablature ou maquette), table de temps
     playedBeatChanged = emitter()
+    // #33 : téléchargement des sons, boucle
+    soundFontLoad = emitter()
+    playbackRangeChanged = emitter()
+    applyPlaybackRangeFromHighlight = vi.fn()
+    clearPlaybackRangeHighlight = vi.fn()
     loadMidiForScore = vi.fn()
     player = { output: {} as { handler?: unknown; updatePosition?: (ms: number) => void } }
     tickCache: { masterBars: { masterBar: { index: number } }[] } | null = null
@@ -52,12 +57,12 @@ const fake = vi.hoisted(() => {
     boundsLookup: { findMasterBarByIndex: (i: number) => { realBounds: { y: number } } | null } | null = null
     constructor(public element: HTMLElement, public options: unknown) { FakeApi.last = this }
     /** Ce que fait alphaTab après load() : partition lue, dessinée, sons chargés. */
-    ready(names: string[]) {
+    ready(names: string[], withSound = true) {
       const staves = () => [{ isStringed: true, showStandardNotation: true, showTablature: true, bars: [] }]
       this.score = { tracks: names.map((name) => ({ name, staves: staves() })), masterBars: [{}, {}, {}], applyFlatSyncPoints: vi.fn() }
       this.scoreLoaded.fire(this.score)
       this.renderFinished.fire()
-      this.playerReady.fire()
+      if (withSound) this.playerReady.fire()
     }
   }
   return { FakeApi }
@@ -75,6 +80,7 @@ const api = () => fake.FakeApi.last
 const fetchMock = vi.fn<typeof fetch>()
 
 beforeEach(() => {
+  localStorage.clear()                                           // #33 : les réglages gardés d'un test à l'autre
   fetchMock.mockReset().mockResolvedValue(new Response(new Uint8Array([0x18, 0x46, 0x49])))
   vi.stubGlobal('fetch', fetchMock)
 })
@@ -288,6 +294,120 @@ describe('GuitarProViewer sur la page du lecteur (#32)', () => {
     expect(wrapper.get('[data-testid="tab-tempo-value"]').text()).toBe('60 %')
     await wrapper.get('[data-testid="tab-tempo-reset"]').trigger('click')
     expect(api().playbackSpeed).toBe(1)
+    wrapper.unmount()
+  })
+})
+
+describe('GuitarProViewer, confort de travail (#33)', () => {
+  /** Une tablature de la version (fichier f ou autre), sans calage enregistré. */
+  async function mountFile(fileId = 'f', tracks = ['Guitare', 'Basse'], withSound = true) {
+    fetchMock.mockImplementation(async (input) =>
+      String(input).endsWith('/content') ? new Response(new Uint8Array([0x18, 0x46, 0x49])) : new Response(null, { status: 204 }))
+    const wrapper = mount(GuitarProViewer, {
+      props: { src: '/content', label: 'riff.gp', fill: true, sync: { songId: 's', versionId: 'v', fileId, audios: [], canEdit: true } },
+      global: { plugins: [createTestingPinia({ createSpy: vi.fn, stubActions: false, initialState: { band: { activeId: 'b1' } } })] },
+      attachTo: document.body,
+    })
+    await flushPromises()
+    api().ready(tracks, withSound)
+    await flushPromises()
+    return wrapper
+  }
+  const bars = (count: number) => Array.from({ length: count }, (_, i) => ({ voices: [{ beats: [{ bar: i, n: 0 }, { bar: i, n: 1 }] }] }))
+
+  it('boucle des mesures données par leur numéro, par « Début ici » et « Fin ici », ou glissées sur la partition', async () => {
+    const wrapper = await mountFile()
+    api().score!.masterBars = [0, 3840, 7680, 11520].map((start, index) => ({ index, start }))
+    api().tracks = [{ staves: [{ bars: bars(4) }] }]
+    api().scoreLoaded.fire(api().score)                                 // quatre mesures
+    const beatsOf = (bar: number) => (api().tracks[0] as { staves: { bars: { voices: { beats: unknown[] }[] }[] }[] }).staves[0]!.bars[bar]!.voices[0]!.beats
+    const value = (id: string) => (wrapper.get(`[data-testid="${id}"]`).element as HTMLInputElement).value
+
+    api().playedBeatChanged.fire({ voice: { bar: { index: 2 } } })     // la mesure 3 joue
+    await nextTick()
+    await wrapper.get('[data-testid="tab-loop-start"]').trigger('click')
+    expect(api().highlightPlaybackRange).toHaveBeenLastCalledWith(beatsOf(2)[0], beatsOf(2)[1])
+    expect(api().applyPlaybackRangeFromHighlight).toHaveBeenCalled()
+    expect([value('tab-loop-from'), value('tab-loop-to')]).toEqual(['3', '3'])
+
+    api().playedBeatChanged.fire({ voice: { bar: { index: 3 } } })
+    await nextTick()
+    await wrapper.get('[data-testid="tab-loop-end"]').trigger('click')
+    expect(api().highlightPlaybackRange).toHaveBeenLastCalledWith(beatsOf(2)[0], beatsOf(3)[1])
+
+    await wrapper.get('[data-testid="tab-loop-from"]').setValue('1')
+    expect(api().highlightPlaybackRange).toHaveBeenLastCalledWith(beatsOf(0)[0], beatsOf(3)[1])
+
+    api().playbackRangeChanged.fire({ playbackRange: { startTick: 3840, endTick: 7700 } })   // glissé sur la partition
+    await nextTick()
+    expect([value('tab-loop-from'), value('tab-loop-to')]).toEqual(['2', '3'])
+
+    await wrapper.get('[data-testid="tab-loop-clear"]').trigger('click')
+    expect(api().clearPlaybackRangeHighlight).toHaveBeenCalled()
+    expect(api().playbackRange).toBeNull()
+    expect(wrapper.find('[data-testid="tab-loop-clear"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('garde sur l’appareil zoom, portées et panneau pour toutes les tablatures, tempo et mix par fichier', async () => {
+    const first = await mountFile('f')
+    await first.get('[data-testid="tab-zoom"]').setValue('1.25')
+    await first.get('[data-testid="tab-staves"]').setValue('tab')
+    await first.get('[data-testid="tab-tempo"]').setValue('0.6')
+    await byLabel(first, 'Couper Basse').trigger('click')
+    await byLabel(first, 'Volume de Guitare').setValue('1.5')
+    await first.get('[data-testid="tab-tracks-toggle"]').trigger('click')
+    first.unmount()
+
+    const again = await mountFile('f')
+    const [guitar, bass] = api().score!.tracks
+    expect(api().options).toMatchObject({ display: { scale: 1.25 } })
+    expect((again.get('[data-testid="tab-staves"]').element as HTMLSelectElement).value).toBe('tab')
+    expect(api().score!.tracks[0]!.staves[0]).toMatchObject({ showStandardNotation: false, showTablature: true })
+    expect(api().render).not.toHaveBeenCalled()                       // posées avant le premier rendu
+    expect(again.get('[data-testid="tab-tempo-value"]').text()).toBe('60 %')
+    expect(api().playbackSpeed).toBe(0.6)
+    expect(api().changeTrackMute).toHaveBeenCalledWith([bass], true)
+    expect(api().changeTrackVolume).toHaveBeenCalledWith([guitar], 1.5)
+    expect(again.get('[data-testid="tab-tracks-toggle"]').attributes('aria-expanded')).toBe('false')
+    again.unmount()
+
+    const other = await mountFile('g')                                   // un autre fichier : son tempo et son mix à lui
+    expect(other.get('[data-testid="tab-tempo-value"]').text()).toBe('100 %')
+    expect(api().changeTrackMute).not.toHaveBeenCalled()
+    expect(api().options).toMatchObject({ display: { scale: 1.25 } })
+    other.unmount()
+  })
+
+  it('ignore des réglages abîmés ou un mix d’un autre nombre de pistes', async () => {
+    localStorage.setItem('songvault.tab.view', '{"zoom":7,"staffView":"x"')
+    localStorage.setItem('songvault.tab.file.f', JSON.stringify({ speed: 9, mute: [true], solo: [false], volume: [1] }))
+    const wrapper = await mountFile('f')
+    expect(api().options).toMatchObject({ display: { scale: 1 } })
+    expect(wrapper.get('[data-testid="tab-tempo-value"]').text()).toBe('100 %')
+    expect(api().changeTrackMute).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it('montre l’avancement du téléchargement des sons', async () => {
+    const wrapper = await mountFile('f', ['Guitare'], false)
+    api().soundFontLoad.fire({ loaded: 450, total: 1000 })
+    await nextTick()
+    expect(wrapper.get('[data-testid="tab-sound-loading"]').text()).toBe('Chargement des sons… 45 %')
+    api().playerReady.fire()
+    await nextTick()
+    expect(wrapper.find('[data-testid="tab-sound-loading"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('replie les réglages derrière un bouton (affiché sur téléphone)', async () => {
+    const wrapper = await mountFile()
+    const toggle = wrapper.get('[data-testid="tab-settings-toggle"]')
+    expect(toggle.attributes('aria-expanded')).toBe('false')
+    expect(wrapper.get('[data-testid="tab-settings"]').classes()).not.toContain('open')
+    await toggle.trigger('click')
+    expect(toggle.attributes('aria-expanded')).toBe('true')
+    expect(wrapper.get('[data-testid="tab-settings"]').classes()).toContain('open')
     wrapper.unmount()
   })
 })
