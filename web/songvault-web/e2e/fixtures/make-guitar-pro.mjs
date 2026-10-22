@@ -1,5 +1,6 @@
 // #28 : fabrique les fichiers Guitar Pro des tests, demo.gp5 et demo.gp, à partir d'un riff écrit ici.
 // #30 : et demo-b.gp, le même riff retouché, pour la comparaison (une mesure insérée au début, une note changée).
+// #31 : et demo-tracks.gp, le riff répété sur 16 mesures avec une basse, pour le panneau des pistes.
 // Lancer depuis web/songvault-web : node e2e/fixtures/make-guitar-pro.mjs (les fichiers produits sont versionnés).
 // demo.gp5 est écrit octet par octet au format Guitar Pro 5.00 (le minimum que lisent Guitar Pro et alphaTab) ;
 // demo.gp (Guitar Pro 7 et 8) est exporté par alphaTab depuis le même riff.
@@ -87,8 +88,15 @@ const gp = toGp(BARS)
 const BARS_B = [[[1, 12], [1, 10], [1, 8], [1, 7]], BARS[0], BARS[1].map((n, i) => (i === 2 ? [3, 2] : n)), BARS[2], BARS[3]]
 const gpB = toGp(BARS_B)
 
+// #31 : deux pistes ; la basse ne joue qu'à partir de la mesure 5
+const RIFF16 = [0, 1, 2, 3].flatMap(() => BARS)
+const BASS = [...Array(4).fill('r.1'), ...Array(12).fill('0.4.4 0.4.4 3.4.4 2.4.4')]
+const texTracks = `\\title "${TITLE}" \\tempo 90 \\track "Guitare" ` +
+  RIFF16.map((bar) => bar.map(([s, f]) => `${f}.${s}.4`).join(' ')).join(' | ') + ` \\track "Basse" ` + BASS.join(' | ')
+const gpTracks = new alphaTab.exporter.Gp7Exporter().export(alphaTab.importer.ScoreLoader.loadAlphaTex(texTracks, settings), settings)
+writeFileSync(fileURLToPath(new URL('demo-tracks.gp', import.meta.url)), gpTracks)
 // ---- Vérification : alphaTab relit les trois fichiers
-for (const [name, data, bars] of [['demo.gp5', gp5, BARS], ['demo.gp', gp, BARS], ['demo-b.gp', gpB, BARS_B]]) {
+for (const [name, data, bars] of [['demo.gp5', gp5, BARS], ['demo.gp', gp, BARS], ['demo-b.gp', gpB, BARS_B], ['demo-tracks.gp', gpTracks, RIFF16]]) {
   const read = alphaTab.importer.ScoreLoader.loadScoreFromBytes(data, settings)
   const notes = read.tracks[0].staves[0].bars.flatMap((b) => b.voices[0].beats.flatMap((beat) => beat.notes)).length
   if (read.title !== TITLE || read.masterBars.length !== bars.length || notes !== bars.length * 4) throw new Error(`${name} illisible`)

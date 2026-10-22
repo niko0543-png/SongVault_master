@@ -6,6 +6,7 @@ import { filesApi } from '@/features/files/api/filesApi'
 import { getErrorMessage } from '@/shared/api/ApiError'
 import { useConfirm } from '@/shared/composables/useConfirm'
 import TabSyncRecorder from './TabSyncRecorder.vue'
+import TabTrackPanel from './TabTrackPanel.vue'
 import { syncApi } from '../sync/syncApi'
 import { playOrder, pointsFromTaps } from '../sync/syncPoints'
 import { connectExternalMedia } from '../sync/externalMedia'
@@ -22,7 +23,7 @@ import { t } from '@/shared/i18n'
  * #29 : avec `sync` (FileList), la tablature peut suivre une maquette de la même version au lieu de son propre son :
  * le curseur suit alors l'enregistrement, grâce aux points de synchronisation enregistrés (ADR 0036).
  * #31 : rendu proche de Guitar Pro : mise en page du fichier sur grand écran, page blanche, zoom, portées,
- * métronome et décompte (ADR 0037).
+ * métronome et décompte, et le panneau des pistes collé en bas de l'écran (TabTrackPanel) (ADR 0037).
  */
 const props = defineProps<{ src?: string; score?: model.Score | null; track?: number; label: string; sync?: SyncContext }>()
 const player = usePlayerStore()
@@ -40,7 +41,7 @@ const loop = ref(false)
 const transpose = ref(0)
 const tracks = shallowRef<model.Track[]>([])
 const shown = ref<number[]>([0])
-const mixer = reactive<{ mute: boolean[]; solo: boolean[] }>({ mute: [], solo: [] })
+const mixer = reactive<{ mute: boolean[]; solo: boolean[]; volume: number[] }>({ mute: [], solo: [], volume: [] })
 let api: AlphaTabApi | null = null
 
 // #31 : affichage façon Guitar Pro
@@ -84,6 +85,7 @@ onMounted(async () => {
     tracks.value = score.tracks
     mixer.mute = score.tracks.map(() => false)
     mixer.solo = score.tracks.map(() => false)
+    mixer.volume = score.tracks.map(() => 1)
     barCount.value = score.masterBars.length
     staves = fileStaves(score)
     staffView.value = 'file'
@@ -284,6 +286,12 @@ function toggleSolo(index: number) {
   api?.changeTrackSolo([tracks.value[index]!], mixer.solo[index]!)
 }
 
+/** #31 : volume d'une piste, de 0 à 2 fois celui du fichier (alphaTab : 1 = tel quel). */
+function setVolume(index: number, value: number) {
+  mixer.volume[index] = value
+  api?.changeTrackVolume([tracks.value[index]!], value)
+}
+
 /**
  * #30 : place la partition sur une mesure (0 = la première) : la page défile jusqu'à elle, la mesure est
  * sélectionnée (« Boucler la sélection » la rejoue) et la lecture partira de là.
@@ -374,21 +382,6 @@ defineExpose({ goToBar })
       <TabSyncRecorder v-if="recording && sync" :audios="sync.audios" :initial-audio-id="saved?.audioFileId" :src="listenUrl"
                        :bars="order.length" :saving="saving" @next="showNext" @save="saveSync" @cancel="stopRecording" />
 
-      <fieldset v-if="tracks.length > 1 && !score" class="tracks">
-        <legend>{{ t('guitarpro.viewer.tracks') }}</legend>
-        <div v-for="(track, i) in tracks" :key="i" class="track">
-          <label class="inline">
-            <input type="checkbox" :checked="shown.includes(i)" :aria-label="t('guitarpro.viewer.show', { name: track.name })"
-                   @change="toggleShown(i)">
-            {{ track.name }}
-          </label>
-          <button type="button" class="secondary" :aria-pressed="mixer.mute[i]" :disabled="followsAudio"
-                  :aria-label="t('guitarpro.viewer.muteTrack', { name: track.name })" @click="toggleMute(i)">{{ t('guitarpro.viewer.mute') }}</button>
-          <button type="button" class="secondary" :aria-pressed="mixer.solo[i]" :disabled="followsAudio"
-                  :aria-label="t('guitarpro.viewer.soloTrack', { name: track.name })" @click="toggleSolo(i)">{{ t('guitarpro.viewer.solo') }}</button>
-        </div>
-      </fieldset>
-
       <p class="muted hint"><small>{{ t('guitarpro.viewer.loopHint') }} {{ t('guitarpro.viewer.readOnly') }}</small></p>
     </template>
 
@@ -401,6 +394,11 @@ defineExpose({ goToBar })
     <div class="desk" :class="{ pending: status !== 'ready' }">
       <div ref="host" class="score" data-testid="tab-score" />
     </div>
+     <!-- #31 : les pistes, collées en bas de l'écran pendant que la partition défile -->
+    <TabTrackPanel v-if="status === 'ready' && tracks.length > 1 && !score" :tracks="tracks" :shown="shown"
+                   :mute="mixer.mute" :solo="mixer.solo" :volume="mixer.volume" :current-bar="currentBar" :bar-count="barCount"
+                   :disabled="followsAudio" @toggle-shown="toggleShown" @toggle-mute="toggleMute" @toggle-solo="toggleSolo"
+                   @volume="setVolume" @go-to-bar="goToBar" />
   </section>
 </template>
 
@@ -411,9 +409,6 @@ defineExpose({ goToBar })
 .inline { display: inline-flex; gap: .35rem; align-items: center; width: auto; }
 .inline select { width: auto; }
 .play { min-width: 44px; min-height: 44px; }
-.tracks { display: grid; gap: .25rem; }
-.track { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
-.track button[aria-pressed='true'] { background: var(--primary); color: #fff; }
 .hint { margin: 0; }
 .sync { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
 .sync p { margin: 0; flex-basis: 100%; }
