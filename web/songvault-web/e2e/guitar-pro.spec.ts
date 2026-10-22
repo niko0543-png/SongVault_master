@@ -84,9 +84,20 @@ test('#31 : le panneau des pistes reste en bas de l’écran pendant que la part
   const play = page.getByTestId('tab-play')
   await expect(play).toBeEnabled({ timeout: 30_000 })
   const panel = page.getByTestId('tab-tracks')
+  await expect(panel).toBeVisible()
 
-  await page.mouse.wheel(0, 400)                                            // la partition défile, le panneau reste collé en bas
-  await expect.poll(async () => Math.round((await panel.boundingBox())!.y + (await panel.boundingBox())!.height)).toBe(700)
+  // La page défile jusqu'au milieu de la partition (sans molette : la même distance quel que soit le système)
+  await page.getByTestId('tab-score').evaluate((score) => {
+    const box = score.getBoundingClientRect()
+    window.scrollTo(0, window.scrollY + box.top + box.height / 2 - window.innerHeight / 2)
+  })
+  // La partition continue sous le bord de l'écran, et le panneau reste collé en bas (à un pixel près : arrondis)
+  await expect.poll(async () => (await page.getByTestId('tab-score').boundingBox())!.y + (await page.getByTestId('tab-score').boundingBox())!.height)
+    .toBeGreaterThan(700)
+  await expect.poll(async () => {
+    const box = (await panel.boundingBox())!
+    return Math.abs(box.y + box.height - 700)
+  }).toBeLessThanOrEqual(1)
   await play.click()
   await page.getByRole('button', { name: 'Couper Basse' }).click()
   await expect(page.getByRole('button', { name: 'Couper Basse' })).toHaveAttribute('aria-pressed', 'true')
