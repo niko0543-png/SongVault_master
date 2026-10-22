@@ -1,23 +1,15 @@
 import { describe, expect, it, vi } from 'vitest'
-import { flushPromises, mount } from '@vue/test-utils'
-import { defineComponent, h } from 'vue'
+import { mount, RouterLinkStub } from '@vue/test-utils'
 import FileList from '../components/FileList.vue'
 import type { SongFile } from '../types'
 
 vi.mock('../api/filesApi', () => ({ filesApi: { contentUrl: (_s: string, _v: string, id: string) => `/content/${id}`, waveform: vi.fn() } }))
 
-// #28 : le lecteur et alphaTab ne doivent être importés qu'au clic. Le faux le note quand il est chargé.
+// #28 : alphaTab ne doit pas être importé par la page de la version. Le faux le note s'il est chargé.
 const loaded = vi.hoisted(() => ({ count: 0 }))
 vi.mock('@/features/guitarpro/components/GuitarProViewer.vue', () => {
   loaded.count++
-  return {
-    __esModule: true,                                              // defineAsyncComponent prend alors default
-    default: defineComponent({
-      name: 'GuitarProViewer',
-      props: { src: String, label: String, sync: Object },
-      setup: (props) => () => h('div', { 'data-testid': 'viewer', 'data-sync': JSON.stringify(props.sync) }, props.src),
-    }),
-  }
+  return { default: {} }
 })
 
 const tab = (id: string, scan: SongFile['scan'] = 'Clean'): SongFile => ({
@@ -25,61 +17,24 @@ const tab = (id: string, scan: SongFile['scan'] = 'Clean'): SongFile => ({
   fileType: 'Tablature', uploadedAt: '2026-10-21T10:00:00Z', preview: null, scan,
 })
 
-describe('FileList, tablatures Guitar Pro (#28)', () => {
-  it('ne charge le lecteur qu’au clic sur « Afficher la tablature », et le referme', async () => {
-    const wrapper = mount(FileList, { props: { songId: 's1', versionId: 'v1', files: [tab('riff')] } })
-    await flushPromises()
-    expect(loaded.count).toBe(0)
-
-    const button = wrapper.get('[data-testid="show-tablature"]')
-    expect(button.text()).toBe('Afficher la tablature')
-    expect(button.attributes('aria-expanded')).toBe('false')
-
-    await button.trigger('click')
-    await flushPromises()
-    expect(loaded.count).toBe(1)
-    expect(wrapper.get('[data-testid="viewer"]').text()).toBe('/content/riff')
-    expect(button.text()).toBe('Masquer la tablature')
-    expect(button.attributes('aria-expanded')).toBe('true')
-
-    await button.trigger('click')
-    expect(wrapper.find('[data-testid="viewer"]').exists()).toBe(false)
-  })
-
-  it('n’ouvre qu’une tablature à la fois, et aucune pour un fichier non déclaré sain', async () => {
-    const wrapper = mount(FileList, { props: { songId: 's1', versionId: 'v1', files: [tab('a'), tab('b'), tab('c', 'Infected')] } })
-    const buttons = wrapper.findAll('[data-testid="show-tablature"]')
-    expect(buttons).toHaveLength(2)                                  // le fichier infecté n'a pas le bouton
-
-    await buttons[0]!.trigger('click')
-    await buttons[1]!.trigger('click')
-    await flushPromises()
-    expect(wrapper.findAll('[data-testid="viewer"]').map((v) => v.text())).toEqual(['/content/b'])
-  })
-
-  it('ne propose pas de tablature pour un fichier audio', () => {
-    const audio: SongFile = { ...tab('maquette'), originalFileName: 'maquette.mp3', fileType: 'Audio' }
-    const wrapper = mount(FileList, { props: { songId: 's1', versionId: 'v1', files: [audio] }, global: { stubs: { FileWaveform: true } } })
-    expect(wrapper.find('[data-testid="show-tablature"]').exists()).toBe(false)
-  })
+const mountList = (files: SongFile[]) => mount(FileList, {
+  props: { songId: 's1', versionId: 'v1', files },
+  global: { stubs: { RouterLink: RouterLinkStub, FileWaveform: true } },
 })
 
-describe('FileList, calage sur une maquette (#29)', () => {
-  const audio = (id: string, scan: SongFile['scan'] = 'Clean'): SongFile =>
-    ({ ...tab(id, scan), originalFileName: `${id}.mp3`, fileType: 'Audio' })
+describe('FileList, tablatures Guitar Pro (#28, #32)', () => {
+  it('ouvre la tablature sur la page du lecteur, sans charger alphaTab ici', () => {
+    const wrapper = mountList([tab('riff')])
 
-  it('donne au lecteur les maquettes lisibles de la version, et le droit de caler selon le rôle', async () => {
-    for (const readonly of [false, true]) {
-      const wrapper = mount(FileList, {
-        props: { songId: 's1', versionId: 'v1', files: [tab('riff'), audio('demo'), audio('virus', 'Infected')], readonly },
-        global: { stubs: { FileWaveform: true } },
-      })
-      await wrapper.get('[data-testid="show-tablature"]').trigger('click')
-      await flushPromises()
+    const link = wrapper.getComponent(RouterLinkStub)
+    expect(link.text()).toBe('Ouvrir la tablature')
+    expect(link.props('to')).toEqual({ name: 'tablature', params: { songId: 's1', versionId: 'v1', fileId: 'riff' } })
+    expect(loaded.count).toBe(0)
+  })
 
-      expect(JSON.parse(wrapper.get('[data-testid="viewer"]').attributes('data-sync')!)).toEqual({
-        songId: 's1', versionId: 'v1', fileId: 'riff', audios: [{ id: 'demo', name: 'demo.mp3' }], canEdit: !readonly,
-      })
-    }
+  it('ne propose pas de tablature pour un fichier non déclaré sain, ni pour un fichier audio', () => {
+    const audio: SongFile = { ...tab('maquette'), originalFileName: 'maquette.mp3', fileType: 'Audio' }
+    const wrapper = mountList([tab('a'), tab('b', 'Infected'), audio])
+    expect(wrapper.findAll('[data-testid="show-tablature"]')).toHaveLength(1)
   })
 })

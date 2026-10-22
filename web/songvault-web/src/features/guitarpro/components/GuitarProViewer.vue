@@ -12,6 +12,7 @@ import { playOrder, pointsFromTaps } from '../sync/syncPoints'
 import { connectExternalMedia } from '../sync/externalMedia'
 import type { PlayedBar, SyncContext, TabSync } from '../sync/types'
 import { GUITAR_PRO_RESOURCES, STAFF_VIEWS, WIDE_SCREEN, ZOOMS, applyStaffView, fileStaves, layoutFor, type StaffView } from '../display'
+import { isGlobalShortcut } from '@/shared/utils/keyboard'
 import { t } from '@/shared/i18n'
 
 /**
@@ -24,15 +25,23 @@ import { t } from '@/shared/i18n'
  * le curseur suit alors l'enregistrement, grâce aux points de synchronisation enregistrés (ADR 0036).
  * #31 : rendu proche de Guitar Pro : mise en page du fichier sur grand écran, page blanche, zoom, portées,
  * métronome et décompte, et le panneau des pistes collé en bas de l'écran (TabTrackPanel) (ADR 0037).
+ * #32 : avec `fill` (TablaturePage), le lecteur occupe tout son parent, en un seul bloc : commandes en haut,
+ * partition qui défile seule dans son cadre, pistes en bas ; et le clavier le pilote (ADR 0038).
  */
-const props = defineProps<{ src?: string; score?: model.Score | null; track?: number; label: string; sync?: SyncContext }>()
+const props = defineProps<{
+  src?: string; score?: model.Score | null; track?: number; label: string; sync?: SyncContext; fill?: boolean
+}>()
 const player = usePlayerStore()
 const { confirm } = useConfirm()
 
-const SPEEDS = [0.5, 0.75, 0.9, 1] as const
+/** #32 : tempo de 25 à 150 %, par pas de 5 % (alphaTab : 1 = celui du fichier). */
+const SPEED_MIN = 0.25
+const SPEED_MAX = 1.5
+const SPEED_STEP = 0.05
 const MAX_TRANSPOSE = 12
 
 const host = ref<HTMLElement | null>(null)
+const desk = ref<HTMLElement | null>(null)
 const status = ref<'loading' | 'ready' | 'error'>('loading')
 const playerReady = ref(false)
 const isPlaying = ref(false)
@@ -72,6 +81,7 @@ const followsAudio = computed(() => source.value === 'audio')
 const canPlay = computed(() => playerReady.value && (!followsAudio.value || mediaReady.value))
 const listenUrl = (audioFileId: string) => filesApi.listenUrl(props.sync!.songId, props.sync!.versionId, audioFileId)
 
+const speedText = computed(() => `${Math.round(speed.value * 100)} %`)
 const transposeText = computed(() =>
   t('guitarpro.viewer.semitones', { count: transpose.value > 0 ? `+${transpose.value}` : String(transpose.value) }))
 
@@ -79,7 +89,11 @@ onMounted(async () => {
   api = new AlphaTabApi(host.value!, {
     core: { fontDirectory: '/font/' },                       // copiés à la racine du site par le plugin Vite
     display: { layoutMode: layoutFor(wideScreen?.matches ?? true), resources: GUITAR_PRO_RESOURCES },
-    player: { playerMode: PlayerMode.EnabledSynthesizer, soundFont: '/soundfont/sonivox.sf2' },
+    player: {
+      playerMode: PlayerMode.EnabledSynthesizer, soundFont: '/soundfont/sonivox.sf2',
+      // #32 : alphaTab retient l'élément qui défile à sa création : en plein cadre, c'est la partition, pas la page
+      ...(props.fill ? { scrollElement: desk.value! } : {}),
+    },
   })
   api.scoreLoaded.on((score) => {
     tracks.value = score.tracks
@@ -91,6 +105,7 @@ onMounted(async () => {
     staffView.value = 'file'
   })
   wideScreen?.addEventListener('change', relayout)
+  if (props.fill) window.addEventListener('keydown', onKeydown, { capture: true })
   api.playedBeatChanged.on((beat) => { currentBar.value = beat.voice.bar.index + 1 })
   api.renderFinished.on(() => { status.value = 'ready' })
   api.playerReady.on(() => { playerReady.value = true })
@@ -117,6 +132,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   wideScreen?.removeEventListener('change', relayout)
+  window.removeEventListener('keydown', onKeydown, { capture: true })
   disconnect?.()
   api?.destroy()
   api = null
@@ -295,44 +311,79 @@ function setVolume(index: number, value: number) {
 /**
  * #30 : place la partition sur une mesure (0 = la première) : la page défile jusqu'à elle, la mesure est
  * sélectionnée (« Boucler la sélection » la rejoue) et la lecture partira de là.
+ * #32 : `select: false` (flèches du clavier) déplace seulement ; en plein cadre, c'est la partition qui défile.
  */
-function goToBar(index: number) {
+function goToBar(index: number, select = true) {
   const score = api?.score
   const master = score?.masterBars[Math.max(0, Math.min(index, score.masterBars.length - 1))]
   if (!api || !master) return
   const beats = api.tracks[0]?.staves[0]?.bars[master.index]?.voices[0]?.beats ?? []
-  if (beats.length > 0) api.highlightPlaybackRange(beats[0]!, beats[beats.length - 1]!)
+  if (select && beats.length > 0) api.highlightPlaybackRange(beats[0]!, beats[beats.length - 1]!)
   api.tickPosition = master.start
+  currentBar.value = master.index + 1                       // à l'arrêt, alphaTab ne signale pas le déplacement
   const bounds = api.boundsLookup?.findMasterBarByIndex(master.index)
-  if (bounds && host.value) {
+  if (!bounds || !host.value) return
+  const frame = props.fill ? desk.value : null
+  if (frame) {
+    const top = frame.scrollTop + host.value.getBoundingClientRect().top - frame.getBoundingClientRect().top + bounds.realBounds.y - 16
+    frame.scrollTo({ top, behavior: 'smooth' })
+  } else {
     const top = host.value.getBoundingClientRect().top + window.scrollY + bounds.realBounds.y - 16
     window.scrollTo({ top, behavior: 'smooth' })
   }
+}
+
+/**
+ * #32 : raccourcis de la page du lecteur, comme dans Guitar Pro : Espace lecture ou pause, ← → mesure précédente
+ * ou suivante, L boucle, Échap retour au début. Écoutés avant le lecteur du bas (capture), qui ne réagit donc pas
+ * à Espace ici ; jamais pendant la saisie ni sur un bouton ou un champ qui a le focus (isGlobalShortcut).
+ */
+function onKeydown(event: KeyboardEvent) {
+  if (status.value !== 'ready' || recording.value || event.defaultPrevented || !isGlobalShortcut(event)) return
+  const action = SHORTCUTS[event.key === ' ' ? 'Space' : event.key.length === 1 ? event.key.toLowerCase() : event.key]
+  if (!action) return
+  event.preventDefault()                                      // Espace et flèches ne font pas défiler
+  event.stopPropagation()
+  action()
+}
+
+const SHORTCUTS: Record<string, () => void> = {
+  Space: () => { if (canPlay.value) playPause() },
+  Escape: () => { if (canPlay.value) stop() },
+  ArrowLeft: () => goToBar(currentBar.value - 2, false),
+  ArrowRight: () => goToBar(currentBar.value, false),
+  l: () => { loop.value = !loop.value },
 }
 
 defineExpose({ goToBar })
 </script>
 
 <template>
-  <section class="tab-viewer" :aria-label="t('guitarpro.viewer.label', { label })" :aria-busy="status === 'loading'">
+  <section class="tab-viewer" :class="{ fill }" :aria-label="t('guitarpro.viewer.label', { label })" :aria-busy="status === 'loading'">
     <p v-if="status === 'loading'" class="muted" role="status">{{ t('guitarpro.viewer.loading') }}</p>
     <p v-else-if="status === 'error'" class="field-error" role="alert">{{ t('guitarpro.viewer.loadFailed') }}</p>
 
     <template v-if="status === 'ready'">
+      <!-- #32 : en plein cadre, les commandes restent au-dessus de la partition, qui défile seule -->
+      <div class="controls">
       <div class="toolbar">
-        <button type="button" class="play" data-testid="tab-play" :disabled="!canPlay"
+        <button type="button" class="play" data-testid="tab-play" :disabled="!canPlay" :aria-keyshortcuts="fill ? 'Space' : undefined"
                 :aria-label="isPlaying ? t('guitarpro.viewer.pause') : t('guitarpro.viewer.play')" @click="playPause">
           {{ isPlaying ? '⏸' : '▶' }}
         </button>
-        <button type="button" class="secondary" :disabled="!canPlay" @click="stop">{{ t('guitarpro.viewer.stop') }}</button>
+        <button type="button" class="secondary" data-testid="tab-stop" :disabled="!canPlay"
+                :aria-keyshortcuts="fill ? 'Escape' : undefined" @click="stop">{{ t('guitarpro.viewer.stop') }}</button>
         <span v-if="!canPlay" class="muted" role="status">{{ t('guitarpro.viewer.soundLoading') }}</span>
         <label class="inline">
           {{ t('guitarpro.viewer.tempo') }}
-          <select v-model.number="speed">
-            <option v-for="s in SPEEDS" :key="s" :value="s">{{ Math.round(s * 100) }} %</option>
-          </select>
+          <input v-model.number="speed" class="tempo" type="range" :min="SPEED_MIN" :max="SPEED_MAX" :step="SPEED_STEP"
+                 data-testid="tab-tempo" :aria-valuetext="speedText">
+          <output data-testid="tab-tempo-value">{{ speedText }}</output>
         </label>
-        <label class="inline"><input v-model="loop" type="checkbox"> {{ t('guitarpro.viewer.loop') }}</label>
+        <button v-if="speed !== 1" type="button" class="secondary" data-testid="tab-tempo-reset" @click="speed = 1">
+          {{ t('guitarpro.viewer.tempoReset') }}
+        </button>
+        <label class="inline"><input v-model="loop" type="checkbox" data-testid="tab-loop" :aria-keyshortcuts="fill ? 'L' : undefined"> {{ t('guitarpro.viewer.loop') }}</label>
         <span class="inline" role="group" :aria-label="t('guitarpro.viewer.transpose')">
           <button type="button" class="secondary" :aria-label="t('guitarpro.viewer.transposeDown')"
                   :disabled="followsAudio || transpose <= -MAX_TRANSPOSE" @click="step(-1)">−</button>
@@ -382,7 +433,10 @@ defineExpose({ goToBar })
       <TabSyncRecorder v-if="recording && sync" :audios="sync.audios" :initial-audio-id="saved?.audioFileId" :src="listenUrl"
                        :bars="order.length" :saving="saving" @next="showNext" @save="saveSync" @cancel="stopRecording" />
 
-      <p class="muted hint"><small>{{ t('guitarpro.viewer.loopHint') }} {{ t('guitarpro.viewer.readOnly') }}</small></p>
+      <p class="muted hint">
+        <small>{{ t('guitarpro.viewer.loopHint') }} <template v-if="fill">{{ t('guitarpro.viewer.shortcuts') }} </template>{{ t('guitarpro.viewer.readOnly') }}</small>
+      </p>
+      </div>
     </template>
 
     <!-- #29 : la maquette suivie ; alphaTab la commande (lecture, pause, déplacement, tempo) -->
@@ -391,7 +445,7 @@ defineExpose({ goToBar })
 
     <!-- alphaTab dessine ici ; caché tant que la partition n'est pas prête, mais présent pour mesurer la largeur -->
     <!-- #31 : une page blanche sur fond gris, comme dans Guitar Pro -->
-    <div class="desk" :class="{ pending: status !== 'ready' }">
+    <div ref="desk" class="desk" :class="{ pending: status !== 'ready' }" data-testid="tab-desk">
       <div ref="host" class="score" data-testid="tab-score" />
     </div>
      <!-- #31 : les pistes, collées en bas de l'écran pendant que la partition défile -->
@@ -410,6 +464,15 @@ defineExpose({ goToBar })
 .inline select { width: auto; }
 .play { min-width: 44px; min-height: 44px; }
 .hint { margin: 0; }
+.controls { display: grid; gap: .5rem; min-width: 0; }
+.tempo { width: 8rem; padding: 0; }
+.inline output { min-width: 3.2rem; font-variant-numeric: tabular-nums; }
+/* #32 : un seul bloc à la hauteur du parent ; seule la partition défile, commandes et pistes restent visibles */
+.tab-viewer.fill { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.fill .controls { flex: none; }
+.fill .desk { flex: 1; min-height: 0; overflow: auto; }
+.fill .desk.pending { flex: none; }
+.fill > :deep(.track-panel) { flex: none; }
 .sync { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
 .sync p { margin: 0; flex-basis: 100%; }
 /* #14 : la partition suit la largeur, sans défilement horizontal à 360 px */

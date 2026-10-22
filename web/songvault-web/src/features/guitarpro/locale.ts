@@ -31,7 +31,17 @@ const fr = {
     staffView: { file: 'Comme dans le fichier', both: 'Partition et tablature', tab: 'Tablature', score: 'Partition' },
     metronome: 'Métronome',
     countIn: 'Décompte',
-    volumeTrack: 'Volume de {name}'
+    volumeTrack: 'Volume de {name}',
+    // #32 : page du lecteur
+    tempoReset: '100 %',
+    shortcuts: 'Raccourcis : Espace lecture ou pause, ← et → mesure précédente ou suivante, L boucle, Échap retour au début.',
+  },
+  page: {
+    back: 'Retour à la version',
+    fullscreen: 'Plein écran',
+    exitFullscreen: 'Quitter le plein écran',
+    notFound: 'Cette tablature n’est plus dans la version.',
+    unreadable: 'Ce fichier n’est pas encore lisible : l’analyse antivirus est en cours, ou il a été bloqué.',
   },
   // #29 : tablature calée sur une maquette de la même version
   sync: {
@@ -116,8 +126,17 @@ const en: Widen<typeof fr> = {
     staves: 'Staves',
     staffView: { file: 'As in the file', both: 'Score and tablature', tab: 'Tablature', score: 'Score' },
     metronome: 'Metronome',
-    countIn: 'Count-in',    
-    volumeTrack: 'Volume of {name}'
+    countIn: 'Count-in',
+    volumeTrack: 'Volume of {name}',
+    tempoReset: '100 %',
+    shortcuts: 'Shortcuts: Space play or pause, ← and → previous or next bar, L loop, Esc back to the start.',
+  },
+  page: {
+    back: 'Back to the version',
+    fullscreen: 'Full screen',
+    exitFullscreen: 'Exit full screen',
+    notFound: 'This tablature is no longer in the version.',
+    unreadable: 'This file cannot be read yet: the virus scan is running, or it was blocked.',
   },
   sync: {
     source: 'Sound',

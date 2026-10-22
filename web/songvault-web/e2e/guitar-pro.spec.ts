@@ -26,12 +26,12 @@ test.beforeAll(async () => {
 test.afterAll(async () => server?.close())
 
 /** Ouvre le banc d'essai et note toute règle CSP enfreinte. */
-async function open(page: Page, file: string) {
+async function open(page: Page, file: string, query = '') {
   const violations: string[] = []
   page.on('console', (message) => {
     if (message.type() === 'error' && /Content Security Policy/i.test(message.text())) violations.push(message.text())
   })
-  await page.goto(`${server.resolvedUrls!.local[0]}e2e/harness/guitar-pro.html?file=${file}`)
+  await page.goto(`${server.resolvedUrls!.local[0]}e2e/harness/guitar-pro.html?file=${file}${query}`)
   return violations
 }
 
@@ -108,6 +108,35 @@ test('#31 : le panneau des pistes reste en bas de l’écran pendant que la part
   await expect(page.getByRole('button', { name: 'Couper Basse' })).toHaveAttribute('aria-pressed', 'true')
   await expect(play).toHaveAccessibleName('Mettre en pause')               // la lecture continue
   await play.click()
+  expect(violations).toEqual([])
+  await page.close()
+})
+
+test('#32 : sur la page du lecteur, seule la partition défile ; commandes et pistes restent à l’écran, et le clavier pilote', async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 700 } })
+  const violations = await open(page, 'demo-tracks.gp', '&fill=1')
+  const play = page.getByTestId('tab-play')
+  await expect(play).toBeEnabled({ timeout: 30_000 })
+  const desk = page.getByTestId('tab-desk')
+  const panel = page.getByTestId('tab-tracks')
+
+  // Les flèches vont à la dernière mesure : la partition défile dans son cadre, pas la page
+  for (let i = 0; i < 15; i++) await page.keyboard.press('ArrowRight')
+  await expect(page.getByTestId('tab-bar')).toHaveText('Mesure 16 sur 16')
+  await expect.poll(() => desk.evaluate((d) => d.scrollTop)).toBeGreaterThan(0)
+  expect(await page.evaluate(() => window.scrollY)).toBe(0)
+  await expect(play).toBeInViewport()
+  await expect(panel).toBeInViewport()
+  const box = (await panel.boundingBox())!
+  expect(box.y + box.height).toBeLessThanOrEqual(701)
+
+  // Espace lance et arrête la lecture, L boucle
+  await page.keyboard.press('Space')
+  await expect(play).toHaveAccessibleName('Mettre en pause')
+  await page.keyboard.press('Space')
+  await expect(play).toHaveAccessibleName('Lire la tablature')
+  await page.keyboard.press('l')
+  await expect(page.getByTestId('tab-loop')).toBeChecked()
   expect(violations).toEqual([])
   await page.close()
 })

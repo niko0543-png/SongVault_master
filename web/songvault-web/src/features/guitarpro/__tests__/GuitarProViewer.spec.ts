@@ -80,9 +80,9 @@ beforeEach(() => {
 })
 afterEach(() => vi.unstubAllGlobals())
 
-async function mountViewer(tracks = ['Guitare']) {
+async function mountViewer(tracks = ['Guitare'], fill = false) {
   const wrapper = mount(GuitarProViewer, {
-    props: { src: '/api/bands/b/songs/s/versions/v/files/f/content', label: 'riff.gp5' },
+    props: { src: '/api/bands/b/songs/s/versions/v/files/f/content', label: 'riff.gp5', fill },
     global: { plugins: [createTestingPinia({ createSpy: vi.fn, stubActions: false })] },
     attachTo: document.body,
   })
@@ -136,8 +136,8 @@ describe('GuitarProViewer (#28)', () => {
   it('ralentit, boucle et transpose sans toucher au fichier', async () => {
     const wrapper = await mountViewer()
 
-    await wrapper.get('select').setValue('0.75')
-    await wrapper.get('input[type="checkbox"]').setValue(true)
+    await wrapper.get('[data-testid="tab-tempo"]').setValue('0.75')
+    await wrapper.get('[data-testid="tab-loop"]').setValue(true)
     expect(api().playbackSpeed).toBe(0.75)
     expect(api().isLooping).toBe(true)
 
@@ -222,6 +222,73 @@ describe('GuitarProViewer façon Guitar Pro (#31)', () => {
     expect([api().metronomeVolume, api().countInVolume]).toEqual([1, 1])
     await wrapper.get('[data-testid="tab-metronome"]').setValue(false)
     expect(api().metronomeVolume).toBe(0)
+  })
+})
+
+describe('GuitarProViewer sur la page du lecteur (#32)', () => {
+  const press = (key: string, target: EventTarget = document.body) =>
+    target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }))
+
+  it('en plein cadre, alphaTab fait défiler la partition et non la page', async () => {
+    const wrapper = await mountViewer(['Guitare'], true)
+    expect(wrapper.classes()).toContain('fill')
+    expect((api().options as { player: { scrollElement?: unknown } }).player.scrollElement)
+      .toBe(wrapper.get('[data-testid="tab-desk"]').element)
+    wrapper.unmount()
+
+    const inline = await mountViewer()
+    expect((api().options as { player: { scrollElement?: unknown } }).player.scrollElement).toBeUndefined()
+    inline.unmount()
+  })
+
+  it('se pilote au clavier : Espace, L, Échap et les flèches, avant le lecteur du bas', async () => {
+    const wrapper = await mountViewer(['Guitare'], true)
+    api().score!.masterBars = [0, 3840, 7680].map((start, index) => ({ index, start }))
+    const bottomPlayer = vi.fn()
+    window.addEventListener('keydown', bottomPlayer)               // comme AudioPlayer : sans capture
+
+    press(' ')
+    expect(api().playPause).toHaveBeenCalledTimes(1)
+    expect(bottomPlayer).not.toHaveBeenCalled()                     // Espace ne lance pas aussi la maquette du bas
+    press('L')
+    await nextTick()
+    expect(api().isLooping).toBe(true)
+    press('Escape')
+    expect(api().stop).toHaveBeenCalled()
+
+    press('ArrowRight')
+    await nextTick()
+    expect(api().tickPosition).toBe(3840)
+    expect(wrapper.get('[data-testid="tab-bar"]').text()).toBe('Mesure 2 sur 3')
+    press('ArrowLeft')
+    expect(api().tickPosition).toBe(0)
+    expect(api().highlightPlaybackRange).not.toHaveBeenCalled()      // se déplacer ne sélectionne pas
+
+    press(' ', wrapper.get('[data-testid="tab-tempo"]').element)    // un champ a le focus : la touche est à lui
+    expect(api().playPause).toHaveBeenCalledTimes(1)
+    window.removeEventListener('keydown', bottomPlayer)
+    wrapper.unmount()
+  })
+
+  it('ailleurs (comparaison, banc d’essai), le clavier reste au lecteur du bas', async () => {
+    const wrapper = await mountViewer()
+    press(' ')
+    expect(api().playPause).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it('règle le tempo de 25 à 150 %, et revient à 100 % d’un clic', async () => {
+    const wrapper = await mountViewer(['Guitare'], true)
+    const tempo = wrapper.get('[data-testid="tab-tempo"]')
+    expect([tempo.attributes('min'), tempo.attributes('max')]).toEqual(['0.25', '1.5'])
+    expect(wrapper.find('[data-testid="tab-tempo-reset"]').exists()).toBe(false)
+
+    await tempo.setValue('0.6')
+    expect(api().playbackSpeed).toBe(0.6)
+    expect(wrapper.get('[data-testid="tab-tempo-value"]').text()).toBe('60 %')
+    await wrapper.get('[data-testid="tab-tempo-reset"]').trigger('click')
+    expect(api().playbackSpeed).toBe(1)
+    wrapper.unmount()
   })
 })
 

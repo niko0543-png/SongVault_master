@@ -145,6 +145,14 @@ const router = createRouter({
       meta: { title: 'router.titles.versionCompare' },
     },
     {
+      // #32 : le lecteur Guitar Pro sur une page à lui, en plein écran (ADR 0038)
+      path: '/b/:bandId/songs/:songId/versions/:versionId/tablature/:fileId',
+      name: 'tablature',
+      component: () => import('@/features/guitarpro/pages/TablaturePage.vue'),
+      props: true,
+      meta: { title: 'router.titles.tablature' },
+    },
+    {
       path: '/b/:bandId/songs/:songId/versions/:versionId',
       name: 'version-detail',
       component: () => import('@/features/versions/pages/VersionDetailPage.vue'),
