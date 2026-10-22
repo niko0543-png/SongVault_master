@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref, shallowRef, watch } from 'vue'
-import { AlphaTabApi, LayoutMode, PlayerMode, synth, type model } from '@coderline/alphatab'
+import { AlphaTabApi, PlayerMode, synth, type model } from '@coderline/alphatab'
 import { usePlayerStore } from '@/features/player/stores/playerStore'
 import { filesApi } from '@/features/files/api/filesApi'
 import { getErrorMessage } from '@/shared/api/ApiError'
@@ -10,6 +10,7 @@ import { syncApi } from '../sync/syncApi'
 import { playOrder, pointsFromTaps } from '../sync/syncPoints'
 import { connectExternalMedia } from '../sync/externalMedia'
 import type { PlayedBar, SyncContext, TabSync } from '../sync/types'
+import { GUITAR_PRO_RESOURCES, STAFF_VIEWS, WIDE_SCREEN, ZOOMS, applyStaffView, fileStaves, layoutFor, type StaffView } from '../display'
 import { t } from '@/shared/i18n'
 
 /**
@@ -20,6 +21,8 @@ import { t } from '@/shared/i18n'
  * et le fait se placer sur une mesure (`goToBar`).
  * #29 : avec `sync` (FileList), la tablature peut suivre une maquette de la même version au lieu de son propre son :
  * le curseur suit alors l'enregistrement, grâce aux points de synchronisation enregistrés (ADR 0036).
+ * #31 : rendu proche de Guitar Pro : mise en page du fichier sur grand écran, page blanche, zoom, portées,
+ * métronome et décompte (ADR 0037).
  */
 const props = defineProps<{ src?: string; score?: model.Score | null; track?: number; label: string; sync?: SyncContext }>()
 const player = usePlayerStore()
@@ -39,6 +42,15 @@ const tracks = shallowRef<model.Track[]>([])
 const shown = ref<number[]>([0])
 const mixer = reactive<{ mute: boolean[]; solo: boolean[] }>({ mute: [], solo: [] })
 let api: AlphaTabApi | null = null
+
+// #31 : affichage façon Guitar Pro
+const zoom = ref(1)
+const staffView = ref<StaffView>('file')
+const metronome = ref(false)
+const countIn = ref(false)
+let staves = new Map<model.Staff, { score: boolean; tab: boolean }>()
+const wideScreen = typeof window.matchMedia === 'function' ? window.matchMedia(WIDE_SCREEN) : null
+const zoomText = (z: number) => `${Math.round(z * 100)} %`
 
 // #29 : la mesure jouée, et le calage sur une maquette
 const barCount = ref(0)
@@ -65,7 +77,7 @@ const transposeText = computed(() =>
 onMounted(async () => {
   api = new AlphaTabApi(host.value!, {
     core: { fontDirectory: '/font/' },                       // copiés à la racine du site par le plugin Vite
-    display: { layoutMode: LayoutMode.Page },
+    display: { layoutMode: layoutFor(wideScreen?.matches ?? true), resources: GUITAR_PRO_RESOURCES },
     player: { playerMode: PlayerMode.EnabledSynthesizer, soundFont: '/soundfont/sonivox.sf2' },
   })
   api.scoreLoaded.on((score) => {
@@ -73,7 +85,10 @@ onMounted(async () => {
     mixer.mute = score.tracks.map(() => false)
     mixer.solo = score.tracks.map(() => false)
     barCount.value = score.masterBars.length
+    staves = fileStaves(score)
+    staffView.value = 'file'
   })
+  wideScreen?.addEventListener('change', relayout)
   api.playedBeatChanged.on((beat) => { currentBar.value = beat.voice.bar.index + 1 })
   api.renderFinished.on(() => { status.value = 'ready' })
   api.playerReady.on(() => { playerReady.value = true })
@@ -99,6 +114,7 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  wideScreen?.removeEventListener('change', relayout)
   disconnect?.()
   api?.destroy()
   api = null
@@ -114,9 +130,11 @@ async function loadSync() {
   }
 }
 
-// #29 : une tablature calée suit sa maquette dès l'ouverture ; « Son » permet de revenir au son de la tablature
-watch([savedAudio, status], () => {
-  if (sourceChosen || status.value !== 'ready' || !savedAudio.value) return
+// #29 : une tablature calée suit sa maquette dès l'ouverture ; « Son » permet de revenir au son de la tablature.
+// #31 : seulement une fois les sons chargés (playerReady) : sinon la banque de sons, arrivée après le changement
+// de lecteur, met la maquette en pause dès son départ (vu dans Playwright avec la mise en page du fichier).
+watch([savedAudio, status, playerReady], () => {
+  if (sourceChosen || status.value !== 'ready' || !playerReady.value || !savedAudio.value) return
   sourceChosen = true
   source.value = 'audio'
 })
@@ -209,6 +227,29 @@ watch(() => props.track, (index) => {
 watch(speed, (value) => { if (api) api.playbackSpeed = value })
 watch(loop, (value) => { if (api) api.isLooping = value })
 
+// #31 : zoom, portées, métronome et décompte ; seul l'affichage ou l'écoute change, jamais le fichier
+watch(zoom, (value) => {
+  if (!api) return
+  api.settings.display.scale = value
+  api.updateSettings()
+  api.render()
+})
+watch(staffView, (value, previous) => {
+  if (!api?.score || value === previous) return
+  applyStaffView(api.score, value, staves)
+  api.render()
+})
+watch(metronome, (on) => { if (api) api.metronomeVolume = on ? 1 : 0 })
+watch(countIn, (on) => { if (api) api.countInVolume = on ? 1 : 0 })
+
+/** La fenêtre passe sous 720 px ou au-dessus : mise en page du fichier, ou rangement automatique. */
+function relayout() {
+  if (!api) return
+  api.settings.display.layoutMode = layoutFor(wideScreen?.matches ?? true)
+  api.updateSettings()
+  api.render()
+}
+
 function playPause() {
   api?.playPause()
 }
@@ -294,6 +335,24 @@ defineExpose({ goToBar })
         <output class="muted" data-testid="tab-bar">{{ t('guitarpro.viewer.bar', { bar: currentBar, total: barCount }) }}</output>
       </div>
 
+      <!-- #31 : réglages d'affichage, comme la barre de Guitar Pro -->
+      <div class="toolbar view" data-testid="tab-view">
+        <label class="inline">
+          {{ t('guitarpro.viewer.zoom') }}
+          <select v-model.number="zoom" data-testid="tab-zoom">
+            <option v-for="z in ZOOMS" :key="z" :value="z">{{ zoomText(z) }}</option>
+          </select>
+        </label>
+        <label class="inline">
+          {{ t('guitarpro.viewer.staves') }}
+          <select v-model="staffView" data-testid="tab-staves">
+            <option v-for="v in STAFF_VIEWS" :key="v" :value="v">{{ t(`guitarpro.viewer.staffView.${v}`) }}</option>
+          </select>
+        </label>
+        <label class="inline"><input v-model="metronome" type="checkbox" data-testid="tab-metronome" :disabled="followsAudio"> {{ t('guitarpro.viewer.metronome') }}</label>
+        <label class="inline"><input v-model="countIn" type="checkbox" data-testid="tab-count-in" :disabled="followsAudio"> {{ t('guitarpro.viewer.countIn') }}</label>
+      </div>
+
       <!-- #29 : suivre une maquette de la version, et la caler (Member ou Owner) -->
       <div v-if="sync && !score" class="sync" data-testid="tab-sync">
         <label v-if="savedAudio" class="inline">
@@ -338,13 +397,17 @@ defineExpose({ goToBar })
            @loadedmetadata="mediaReady = true" @emptied="mediaReady = false" />
 
     <!-- alphaTab dessine ici ; caché tant que la partition n'est pas prête, mais présent pour mesurer la largeur -->
-    <div ref="host" class="score" :class="{ pending: status !== 'ready' }" data-testid="tab-score" />
+    <!-- #31 : une page blanche sur fond gris, comme dans Guitar Pro -->
+    <div class="desk" :class="{ pending: status !== 'ready' }">
+      <div ref="host" class="score" data-testid="tab-score" />
+    </div>
   </section>
 </template>
 
 <style scoped>
 .tab-viewer { display: grid; gap: .5rem; min-width: 0; }
 .toolbar { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.toolbar.view { gap: .75rem; }
 .inline { display: inline-flex; gap: .35rem; align-items: center; width: auto; }
 .inline select { width: auto; }
 .play { min-width: 44px; min-height: 44px; }
@@ -355,8 +418,16 @@ defineExpose({ goToBar })
 .sync { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
 .sync p { margin: 0; flex-basis: 100%; }
 /* #14 : la partition suit la largeur, sans défilement horizontal à 360 px */
-.score { width: 100%; max-width: 100%; overflow: hidden; background: #fff; color: #000; border-radius: 4px; }
-.score.pending { height: 0; }
+.score { width: 100%; max-width: 100%; overflow: hidden; background: #fff; color: #000; }
+/* #31 : la page de Guitar Pro, sur son bureau gris ; à moins de 720 px, la page prend toute la largeur */
+.desk { background: #d9d9d9; padding: 1.5rem; border-radius: 4px; }
+.desk .score { max-width: 1100px; margin: 0 auto; box-shadow: 0 1px 4px rgb(0 0 0 / 30%); }
+/* Caché tant que la partition n'est pas prête, mais à sa largeur finale : alphaTab ne redessine pas à l'affichage */
+.desk.pending { height: 0; padding-block: 0; overflow: hidden; }
+@media (max-width: 719px) {
+  .desk { padding: 0; background: none; }
+  .desk .score { box-shadow: none; border-radius: 4px; }
+}
 /* Curseur de lecture et sélection, dessinés par alphaTab hors du gabarit de Vue */
 .score :deep(.at-cursor-bar) { background: rgb(255 242 0 / 25%); }
 .score :deep(.at-selection div) { background: rgb(64 64 255 / 10%); }

@@ -25,6 +25,12 @@ const fr = {
     soloTrack: 'Écouter {name} seule',
     readOnly: 'Lecture seule : le fichier n’est jamais modifié. Pour le changer, ouvrez-le dans Guitar Pro et envoyez-le dans une nouvelle version.',
     bar: 'Mesure {bar} sur {total}',
+    // #31 : affichage façon Guitar Pro
+    zoom: 'Zoom',
+    staves: 'Portées',
+    staffView: { file: 'Comme dans le fichier', both: 'Partition et tablature', tab: 'Tablature', score: 'Partition' },
+    metronome: 'Métronome',
+    countIn: 'Décompte',
   },
   // #29 : tablature calée sur une maquette de la même version
   sync: {
@@ -105,6 +111,11 @@ const en: Widen<typeof fr> = {
     soloTrack: 'Play {name} alone',
     readOnly: 'Read only: the file is never changed. To change it, open it in Guitar Pro and upload it to a new version.',
     bar: 'Bar {bar} of {total}',
+    zoom: 'Zoom',
+    staves: 'Staves',
+    staffView: { file: 'As in the file', both: 'Score and tablature', tab: 'Tablature', score: 'Score' },
+    metronome: 'Metronome',
+    countIn: 'Count-in',    
   },
   sync: {
     source: 'Sound',
