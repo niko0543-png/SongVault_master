@@ -161,6 +161,9 @@ docker compose down -v       # supprime aussi la base et les fichiers
 - **Lecteur Guitar Pro** : la partition et la tablature d'un fichier Guitar Pro (GP3 à GP8)
   s'affichent et se jouent dans la page, avec tempo ralenti, boucle, transposition, muet et solo
   par piste, sans jamais toucher au fichier ([ADR 0034](docs/adr/0034-lecteur-guitar-pro.md)).  
+- **Comparaison Guitar Pro** : dans l'écran A/B, les notes ajoutées et modifiées entre deux
+  fichiers Guitar Pro sont colorées dans la partition et listées mesure par mesure ; un changement
+  d'accordage est annoncé en une ligne ([ADR 0035](docs/adr/0035-comparaison-guitar-pro.md)).  
 
 ---
 
@@ -369,6 +372,7 @@ npx playwright test                           # E2E (application lancée sur :80
 npx playwright test e2e/stems-drift.spec.ts   # dérive du mélangeur, sans l'application
 npx playwright test e2e/chords-mobile.spec.ts # accords à 360 px, sans l'application
 npx playwright test e2e/guitar-pro.spec.ts    # lecteur Guitar Pro, sans l'application
+npx playwright test e2e/guitar-pro-compare.spec.ts # comparaison Guitar Pro, sans l'application
 ```
 
 ---
