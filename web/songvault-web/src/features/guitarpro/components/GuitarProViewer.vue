@@ -7,6 +7,8 @@ import { getErrorMessage } from '@/shared/api/ApiError'
 import { useConfirm } from '@/shared/composables/useConfirm'
 import TabSyncRecorder from './TabSyncRecorder.vue'
 import TabTrackPanel from './TabTrackPanel.vue'
+import TransportIcon from './TransportIcon.vue'
+import { formatTime } from '@/shared/utils/format'
 import { syncApi } from '../sync/syncApi'
 import { playOrder, pointsFromTaps } from '../sync/syncPoints'
 import { connectExternalMedia } from '../sync/externalMedia'
@@ -30,6 +32,8 @@ import { t } from '@/shared/i18n'
  * partition qui défile seule dans son cadre, pistes en bas ; et le clavier le pilote (ADR 0038).
  * #33 : boucle par numéros de mesures, réglages gardés sur l'appareil (prefs.ts), progression du chargement des sons,
  * et, sur téléphone, les réglages repliés derrière un bouton (ADR 0039).
+ * #34 : temps écoulé, icônes de lecture, panneau des pistes dès une piste, « Son » dans la barre principale,
+ * double-clic sur une note pour jouer depuis elle (ADR 0040).
  */
 const props = defineProps<{
   src?: string; score?: model.Score | null; track?: number; label: string; sync?: SyncContext; fill?: boolean
@@ -93,6 +97,10 @@ const speedText = computed(() => `${Math.round(speed.value * 100)} %`)
 const rangeFrom = ref<number | null>(null)
 const rangeTo = ref<number | null>(null)
 const soundPercent = ref<number | null>(null)
+// #34 : position de lecture, en millisecondes, et durée du morceau au tempo choisi
+const currentMs = ref(0)
+const endMs = ref(0)
+const timeText = computed(() => (endMs.value > 0 ? `${formatTime(currentMs.value / 1000)} / ${formatTime(endMs.value / 1000)}` : ''))
 const settingsOpen = ref(false)
 /** Le tempo et le mix se gardent par fichier ; la comparaison (#30) n'a pas de fichier à elle. */
 const fileId = computed(() => (props.score ? null : props.sync?.fileId ?? null))
@@ -134,6 +142,7 @@ onMounted(async () => {
   })
   wideScreen?.addEventListener('change', relayout)
   if (props.fill) window.addEventListener('keydown', onKeydown, { capture: true })
+  api.playerPositionChanged.on((e) => { currentMs.value = e.currentTime; endMs.value = e.endTime })
   api.playedBeatChanged.on((beat) => { currentBar.value = beat.voice.bar.index + 1 })
   api.renderFinished.on(() => { status.value = 'ready' })
   api.playerReady.on(() => {
@@ -315,6 +324,11 @@ function stop() {
   api?.stop()
 }
 
+/** #34 : un clic place le curseur sur la note (alphaTab) ; un double-clic lance la lecture depuis elle. */
+function playFromHere() {
+  if (canPlay.value && !isPlaying.value && !recording.value) api?.play()
+}
+
 function step(delta: number) {
   transpose.value = Math.max(-MAX_TRANSPOSE, Math.min(MAX_TRANSPOSE, transpose.value + delta))
   if (!api?.score) return
@@ -467,10 +481,12 @@ defineExpose({ goToBar })
         <div class="toolbar">
           <button type="button" class="play" data-testid="tab-play" :disabled="!canPlay" :aria-keyshortcuts="fill ? 'Space' : undefined"
                   :aria-label="isPlaying ? t('guitarpro.viewer.pause') : t('guitarpro.viewer.play')" @click="playPause">
-            {{ isPlaying ? '⏸' : '▶' }}
+            <TransportIcon :name="isPlaying ? 'pause' : 'play'" />
           </button>
-          <button type="button" class="secondary" data-testid="tab-stop" :disabled="!canPlay"
-                  :aria-keyshortcuts="fill ? 'Escape' : undefined" @click="stop">{{ t('guitarpro.viewer.stop') }}</button>
+          <button type="button" class="secondary icon" data-testid="tab-stop" :disabled="!canPlay" :aria-label="t('guitarpro.viewer.stop')"
+                  :title="t('guitarpro.viewer.stop')" :aria-keyshortcuts="fill ? 'Escape' : undefined" @click="stop">
+            <TransportIcon name="stop" />
+          </button>
           <!-- #33 : la banque de sons pèse quelques mégaoctets : on montre où en est son téléchargement -->
           <span v-if="!canPlay" class="inline muted" role="status" data-testid="tab-sound-loading">
             {{ soundPercent === null ? t('guitarpro.viewer.soundLoading') : t('guitarpro.viewer.soundLoadingPercent', { percent: soundPercent }) }}
@@ -478,6 +494,15 @@ defineExpose({ goToBar })
           </span>
           <label class="inline"><input v-model="loop" type="checkbox" data-testid="tab-loop" :aria-keyshortcuts="fill ? 'L' : undefined"> {{ t('guitarpro.viewer.loop') }}</label>
           <output class="muted" data-testid="tab-bar">{{ t('guitarpro.viewer.bar', { bar: currentBar, total: barCount }) }}</output>
+          <output v-if="timeText" class="muted time" data-testid="tab-time">{{ timeText }}</output>
+          <!-- #29, #34 : le son suivi se choisit dans la barre principale ; le calage reste dans les réglages -->
+          <label v-if="sync && !score && savedAudio" class="inline">
+            {{ t('guitarpro.sync.source') }}
+            <select v-model="source" data-testid="tab-source" :disabled="recording">
+              <option value="synth">{{ t('guitarpro.sync.synth') }}</option>
+              <option value="audio">{{ t('guitarpro.sync.followAudio', { name: savedAudio.name }) }}</option>
+            </select>
+          </label>
           <!-- #33 : sur téléphone, le reste des réglages se replie derrière ce bouton (CSS) -->
           <button v-if="fill" type="button" class="secondary settings-toggle" data-testid="tab-settings-toggle"
                   aria-controls="tab-settings" :aria-expanded="settingsOpen" @click="settingsOpen = !settingsOpen">
@@ -547,13 +572,6 @@ defineExpose({ goToBar })
 
           <!-- #29 : suivre une maquette de la version, et la caler (Member ou Owner) -->
           <div v-if="sync && !score" class="sync" data-testid="tab-sync">
-            <label v-if="savedAudio" class="inline">
-              {{ t('guitarpro.sync.source') }}
-              <select v-model="source" data-testid="tab-source" :disabled="recording">
-                <option value="synth">{{ t('guitarpro.sync.synth') }}</option>
-                <option value="audio">{{ t('guitarpro.sync.followAudio', { name: savedAudio.name }) }}</option>
-              </select>
-            </label>
             <template v-if="sync.canEdit && sync.audios.length > 0 && !recording">
               <button type="button" class="secondary" data-testid="sync-start" :disabled="!canPlay" @click="startRecording">
                 {{ saved ? t('guitarpro.sync.redo') : t('guitarpro.sync.start') }}
@@ -582,12 +600,12 @@ defineExpose({ goToBar })
     <!-- alphaTab dessine ici ; caché tant que la partition n'est pas prête, mais présent pour mesurer la largeur -->
     <!-- #31 : une page blanche sur fond gris, comme dans Guitar Pro -->
     <div ref="desk" class="desk" :class="{ pending: status !== 'ready' }" data-testid="tab-desk">
-      <div ref="host" class="score" data-testid="tab-score" />
+      <div ref="host" class="score" data-testid="tab-score" @dblclick="playFromHere" />
     </div>
 
     <!-- #31 : les pistes, collées en bas de l'écran pendant que la partition défile -->
-    <TabTrackPanel v-if="status === 'ready' && tracks.length > 1 && !score" v-model:open="panelOpen" :tracks="tracks" :shown="shown"
-                   :mute="mixer.mute" :solo="mixer.solo" :volume="mixer.volume" :current-bar="currentBar" :bar-count="barCount"
+    <TabTrackPanel v-if="status === 'ready' && tracks.length > 0 && !score" v-model:open="panelOpen" :tracks="tracks" :shown="shown"
+                   :mute="mixer.mute" :solo="mixer.solo" :volume="mixer.volume" :current-bar="currentBar" :bar-count="barCount" :time="timeText"
                    :disabled="followsAudio" @toggle-shown="toggleShown" @toggle-mute="toggleMute" @toggle-solo="toggleSolo"
                    @volume="setVolume" @go-to-bar="goToBar" />
   </section>
@@ -601,7 +619,8 @@ defineExpose({ goToBar })
 .inline select { width: auto; }
 /* #33 : une case à cocher garde sa taille (la règle globale met les champs à 100 %) : le libellé tient sur une ligne */
 .inline input[type='checkbox'] { width: auto; margin: 0; }
-.play { min-width: 44px; min-height: 44px; }
+.play, .icon { min-width: 44px; min-height: 44px; display: inline-grid; place-items: center; padding: 0; }
+.time { font-variant-numeric: tabular-nums; }
 .hint { margin: 0; }
 .hint summary { cursor: pointer; width: fit-content; }
 .settings { display: grid; gap: .5rem; min-width: 0; }

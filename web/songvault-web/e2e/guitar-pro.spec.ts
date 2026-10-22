@@ -164,3 +164,18 @@ test('#33 : boucle par numéros de mesures, et réglages repliés sur téléphon
   expect(overflow).toBeLessThanOrEqual(0)
   await phone.close()
 })
+
+test('#34 : un double-clic sur une note de la mesure 3 lance la lecture depuis elle, et le temps s’affiche', async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 700 } })
+  const violations = await open(page, 'demo-tracks.gp', '&fill=1')
+  const play = page.getByTestId('tab-play')
+  await expect(play).toBeEnabled({ timeout: 30_000 })
+  // Mesure 3, première ligne (à 90 à la noire, elle commence à 5,3 s : partie du début, la lecture n'y serait pas si vite)
+  await page.getByTestId('tab-score').dblclick({ position: { x: 910, y: 180 } })
+  await expect(play).toHaveAccessibleName('Mettre en pause')
+  await expect(page.getByTestId('tab-bar')).toHaveText('Mesure 3 sur 16', { timeout: 2_000 })
+  await expect(page.getByTestId('tab-time')).toHaveText(/^0:0[5-7] \/ 0:42$/, { timeout: 2_000 })
+  await play.click()
+  expect(violations).toEqual([])
+  await page.close()
+})

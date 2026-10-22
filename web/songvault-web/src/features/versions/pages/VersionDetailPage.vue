@@ -12,7 +12,7 @@ import {
 } from '../types'
 import FileList from '@/features/files/components/FileList.vue'
 import FileUploader from '@/features/files/components/FileUploader.vue'
-import type { SongFile } from '@/features/files/types'
+import { isReadable, type SongFile } from '@/features/files/types'
 import { filesApi } from '@/features/files/api/filesApi'
 import { usePreviewPolling } from '@/features/files/composables/usePreviewPolling'
 import { versionsApi } from '../api/versionsApi'
@@ -41,6 +41,8 @@ const player = usePlayerStore()
 const bands = useBandStore()
 const canWrite = computed(() => bands.can('write'))
 const isNotFound = computed(() => error.value instanceof ApiError && error.value.status === 404)
+/** #34 : les tablatures lisibles de la version, ouvertes depuis l'en-tête. */
+const tablatures = computed(() => version.value?.files.filter((f) => f.fileType === 'Tablature' && isReadable(f)) ?? [])
 const { confirm } = useConfirm()
 const toast = useToast()
 const router = useRouter()
@@ -276,6 +278,11 @@ const commentedFile = computed(() =>
       <header class="page-header">
         <h1>v{{ version.number }} — {{ version.title }}</h1>
         <StatusBadge :status="version.status" />
+        <!-- #34 : la tablature s'ouvre d'ici, sans descendre jusqu'aux fichiers -->
+        <RouterLink v-for="tab in tablatures" :key="tab.id" class="tab-link" data-testid="open-tablature"
+                    :to="{ name: 'tablature', params: { songId, versionId: version.id, fileId: tab.id } }">
+          🎸 {{ tablatures.length > 1 ? t('versions.detail.openTablatureNamed', { name: tab.originalFileName }) : t('versions.detail.openTablature') }}
+        </RouterLink>
         <button v-if="canWrite" type="button" class="danger" :disabled="isDeletingVersion" @click="onDeleteVersion">
           {{ t('versions.detail.delete') }}
         </button>
@@ -391,4 +398,5 @@ const commentedFile = computed(() =>
 @media (max-width: 600px) { .row { grid-template-columns: 1fr; } }
 .bare { border: 0; padding: 0; margin: 0; min-width: 0; }
 .commented-file { width: auto; max-width: 16rem; }
+.tab-link { padding: .5rem 1rem; border: 1px solid var(--primary); border-radius: var(--radius); text-decoration: none; }
 </style>

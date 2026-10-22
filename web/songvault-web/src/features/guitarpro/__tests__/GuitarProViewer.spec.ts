@@ -30,6 +30,9 @@ const fake = vi.hoisted(() => {
     playedBeatChanged = emitter()
     // #33 : téléchargement des sons, boucle
     soundFontLoad = emitter()
+    // #34 : temps écoulé, lecture depuis une note
+    playerPositionChanged = emitter()
+    play = vi.fn()
     playbackRangeChanged = emitter()
     applyPlaybackRangeFromHighlight = vi.fn()
     clearPlaybackRangeHighlight = vi.fn()
@@ -176,9 +179,10 @@ describe('GuitarProViewer (#28)', () => {
     expect(api().changeTrackSolo).toHaveBeenLastCalledWith([guitar], true)
   })
 
-  it('ne montre pas la liste des pistes pour un fichier à une seule piste', async () => {
+  it('#34 : montre le panneau dès une piste, sans muet ni solo', async () => {
     const wrapper = await mountViewer(['Guitare'])
-    expect(wrapper.find('[data-testid="tab-tracks"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="tab-tracks"]').exists()).toBe(true)
+    expect(wrapper.find('[aria-label="Couper Guitare"]').exists()).toBe(false)
   })
 })
 
@@ -408,6 +412,31 @@ describe('GuitarProViewer, confort de travail (#33)', () => {
     await toggle.trigger('click')
     expect(toggle.attributes('aria-expanded')).toBe('true')
     expect(wrapper.get('[data-testid="tab-settings"]').classes()).toContain('open')
+    wrapper.unmount()
+  })
+})
+
+describe('GuitarProViewer, finitions (#34)', () => {
+  it('affiche le temps écoulé et la durée, et des boutons à icône nommés', async () => {
+    const wrapper = await mountViewer()
+    expect(wrapper.find('[data-testid="tab-time"]').exists()).toBe(false)
+    api().playerPositionChanged.fire({ currentTime: 42_500, endTime: 151_000 })
+    await nextTick()
+    expect(wrapper.get('[data-testid="tab-time"]').text()).toBe('0:42 / 2:31')
+    expect(wrapper.get('[data-testid="tab-stop"]').attributes('aria-label')).toBe('Revenir au début')
+    expect(wrapper.find('[data-testid="tab-stop"] svg').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="tab-play"] svg').exists()).toBe(true)
+    wrapper.unmount()
+  })
+
+  it('un double-clic sur la partition lance la lecture depuis la note, pas pendant la lecture', async () => {
+    const wrapper = await mountViewer()
+    await wrapper.get('[data-testid="tab-score"]').trigger('dblclick')
+    expect(api().play).toHaveBeenCalledTimes(1)
+    api().playerStateChanged.fire({ state: 1 })
+    await nextTick()
+    await wrapper.get('[data-testid="tab-score"]').trigger('dblclick')
+    expect(api().play).toHaveBeenCalledTimes(1)
     wrapper.unmount()
   })
 })
