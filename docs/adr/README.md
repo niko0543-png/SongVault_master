@@ -40,3 +40,4 @@ l'ancien, qui passe au statut « remplacé par ADR NNNN ».
 | [0032](0032-paroles-avec-accords.md) | Paroles avec accords : ChordPro dans le champ paroles, transposition à l'affichage | accepté |
 | [0033](0033-interface-multilingue.md) | Interface multilingue : catalogues TypeScript, erreurs de l'API traduites à la sortie | accepté |
 | [0034](0034-lecteur-guitar-pro.md) | Lecteur Guitar Pro : alphaTab chargé à la demande, en lecture seule | accepté |
+| [0035](0035-comparaison-guitar-pro.md) | Comparaison de deux fichiers Guitar Pro : empreintes de mesures, diff dans un Web Worker | accepté |
