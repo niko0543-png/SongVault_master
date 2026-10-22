@@ -1,4 +1,5 @@
-// #28 : fabrique les deux fichiers Guitar Pro des tests, demo.gp5 et demo.gp, à partir d'un riff écrit ici.
+// #28 : fabrique les fichiers Guitar Pro des tests, demo.gp5 et demo.gp, à partir d'un riff écrit ici.
+// #30 : et demo-b.gp, le même riff retouché, pour la comparaison (une mesure insérée au début, une note changée).
 // Lancer depuis web/songvault-web : node e2e/fixtures/make-guitar-pro.mjs (les fichiers produits sont versionnés).
 // demo.gp5 est écrit octet par octet au format Guitar Pro 5.00 (le minimum que lisent Guitar Pro et alphaTab) ;
 // demo.gp (Guitar Pro 7 et 8) est exporté par alphaTab depuis le même riff.
@@ -77,15 +78,20 @@ const gp5 = Uint8Array.from(bytes)
 
 // ---- Guitar Pro 7 : le même riff en alphaTex, exporté par alphaTab
 const settings = new alphaTab.Settings()
-const tex = `\\title "${TITLE}" \\tempo 90 . \\track "Guitare" ` + BARS.map((bar) => bar.map(([s, f]) => `${f}.${s}.4`).join(' ')).join(' | ')
-const score = alphaTab.importer.ScoreLoader.loadAlphaTex(tex, settings)
-const gp = new alphaTab.exporter.Gp7Exporter().export(score, settings)
+const toGp = (bars) => {
+  const tex = `\\title "${TITLE}" \\tempo 90 . \\track "Guitare" ` + bars.map((bar) => bar.map(([s, f]) => `${f}.${s}.4`).join(' ')).join(' | ')
+  return new alphaTab.exporter.Gp7Exporter().export(alphaTab.importer.ScoreLoader.loadAlphaTex(tex, settings), settings)
+}
+const gp = toGp(BARS)
+// #30 : B = une mesure ajoutée au début, et la 3e note de la 2e mesure du riff passe de la case 0 à 2
+const BARS_B = [[[1, 12], [1, 10], [1, 8], [1, 7]], BARS[0], BARS[1].map((n, i) => (i === 2 ? [3, 2] : n)), BARS[2], BARS[3]]
+const gpB = toGp(BARS_B)
 
-// ---- Vérification : alphaTab relit les deux fichiers
-for (const [name, data] of [['demo.gp5', gp5], ['demo.gp', gp]]) {
+// ---- Vérification : alphaTab relit les trois fichiers
+for (const [name, data, bars] of [['demo.gp5', gp5, BARS], ['demo.gp', gp, BARS], ['demo-b.gp', gpB, BARS_B]]) {
   const read = alphaTab.importer.ScoreLoader.loadScoreFromBytes(data, settings)
   const notes = read.tracks[0].staves[0].bars.flatMap((b) => b.voices[0].beats.flatMap((beat) => beat.notes)).length
-  if (read.title !== TITLE || read.masterBars.length !== BARS.length || notes !== 16) throw new Error(`${name} illisible`)
+  if (read.title !== TITLE || read.masterBars.length !== bars.length || notes !== bars.length * 4) throw new Error(`${name} illisible`)
   writeFileSync(fileURLToPath(new URL(name, import.meta.url)), data)
   console.log(`${name} : ${data.length} octets, ${read.masterBars.length} mesures, ${notes} notes`)
 }
