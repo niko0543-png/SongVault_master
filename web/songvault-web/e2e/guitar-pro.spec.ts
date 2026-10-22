@@ -64,6 +64,7 @@ test('à 360 px, la partition suit la largeur de l’écran', async ({ browser }
   await page.close()
 })
 
+
 test('#31 : la page blanche façon Guitar Pro, avec seulement la tablature et un zoom à 150 %', async ({ page }) => {
   const violations = await open(page, 'demo.gp5')
   await expect(page.getByTestId('tab-play')).toBeEnabled({ timeout: 30_000 })
@@ -78,12 +79,16 @@ test('#31 : la page blanche façon Guitar Pro, avec seulement la tablature et un
   expect(violations).toEqual([])
 })
 
+
 test('#31 : le panneau des pistes reste en bas de l’écran pendant que la partition défile, et coupe une piste en pleine lecture', async ({ browser }) => {
   const page = await browser.newPage({ viewport: { width: 1280, height: 700 } })
   const violations = await open(page, 'demo-tracks.gp')
   const play = page.getByTestId('tab-play')
   await expect(play).toBeEnabled({ timeout: 30_000 })
   const panel = page.getByTestId('tab-tracks')
+
+  await page.mouse.wheel(0, 400)                                            // la partition défile, le panneau reste collé en bas
+  await expect.poll(async () => Math.round((await panel.boundingBox())!.y + (await panel.boundingBox())!.height)).toBe(700)
   await expect(panel).toBeVisible()
 
   // La page défile jusqu'au milieu de la partition (sans molette : la même distance quel que soit le système)

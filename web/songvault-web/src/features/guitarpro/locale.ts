@@ -31,7 +31,7 @@ const fr = {
     staffView: { file: 'Comme dans le fichier', both: 'Partition et tablature', tab: 'Tablature', score: 'Partition' },
     metronome: 'Métronome',
     countIn: 'Décompte',
-    volumeTrack: 'Volume de {name}',
+    volumeTrack: 'Volume de {name}'
   },
   // #29 : tablature calée sur une maquette de la même version
   sync: {
@@ -116,8 +116,8 @@ const en: Widen<typeof fr> = {
     staves: 'Staves',
     staffView: { file: 'As in the file', both: 'Score and tablature', tab: 'Tablature', score: 'Score' },
     metronome: 'Metronome',
-    countIn: 'Count-in',
-    volumeTrack: 'Volume of {name}',
+    countIn: 'Count-in',    
+    volumeTrack: 'Volume of {name}'
   },
   sync: {
     source: 'Sound',

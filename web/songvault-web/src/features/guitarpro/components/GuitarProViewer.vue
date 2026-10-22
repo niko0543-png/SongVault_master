@@ -394,8 +394,7 @@ defineExpose({ goToBar })
     <div class="desk" :class="{ pending: status !== 'ready' }">
       <div ref="host" class="score" data-testid="tab-score" />
     </div>
-
-    <!-- #31 : les pistes, collées en bas de l'écran pendant que la partition défile -->
+     <!-- #31 : les pistes, collées en bas de l'écran pendant que la partition défile -->
     <TabTrackPanel v-if="status === 'ready' && tracks.length > 1 && !score" :tracks="tracks" :shown="shown"
                    :mute="mixer.mute" :solo="mixer.solo" :volume="mixer.volume" :current-bar="currentBar" :bar-count="barCount"
                    :disabled="followsAudio" @toggle-shown="toggleShown" @toggle-mute="toggleMute" @toggle-solo="toggleSolo"

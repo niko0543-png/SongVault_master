@@ -48,10 +48,10 @@ zoom, choix entre partition et tablature, métronome et décompte.
   fois sur deux avec la mise en page du fichier.
 
 ## Conséquences
+- La vue d'ensemble ne se parcourt qu'à la souris ou au doigt (elle est cachée aux lecteurs
+d'écran) : au clavier, la partition et la liste des pistes restent le chemin.
 - Un fichier Guitar Pro 7 ou 8 s'affiche avec les mêmes lignes que dans Guitar Pro sur un
   ordinateur ; sur téléphone, l'affichage reste celui de #14.
-- La vue d'ensemble ne se parcourt qu'à la souris ou au doigt (elle est cachée aux lecteurs
-  d'écran) : au clavier, la partition et la liste des pistes restent le chemin.
 - Changer de zoom ou de portées redessine la partition (environ une demi-seconde sur un long
   morceau) ; la lecture continue.
 - La vue « défilement horizontal » de Guitar Pro n'est pas reprise : alphaTab fixe l'élément qui
