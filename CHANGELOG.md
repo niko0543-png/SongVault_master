@@ -76,6 +76,7 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) — versions :
 ### Supprimé
 - `Song.OwnerId`, remplacé par `Song.BandId`. Les morceaux sans propriétaire valide sont supprimés par la migration `BackfillBands`.
 ### Corrigé
+- Une tablature calée sur sa maquette ne se met plus en pause dès le départ quand les sons du lecteur arrivent tard.
 - Un délai dépassé chez le fournisseur d'e-mails n'arrête plus l'API.
 - La page Facturation avait perdu sa route : le lien « Facturation » des Owner y mène de nouveau.
 - Sur Azure, les pochettes des sorties s'affichent : la CSP du front autorise les images du stockage objet.

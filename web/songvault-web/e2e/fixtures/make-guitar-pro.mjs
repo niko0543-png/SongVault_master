@@ -87,6 +87,12 @@ const gp = toGp(BARS)
 // #30 : B = une mesure ajoutée au début, et la 3e note de la 2e mesure du riff passe de la case 0 à 2
 const BARS_B = [[[1, 12], [1, 10], [1, 8], [1, 7]], BARS[0], BARS[1].map((n, i) => (i === 2 ? [3, 2] : n)), BARS[2], BARS[3]]
 const gpB = toGp(BARS_B)
+// #31 : deux pistes ; la basse ne joue qu'à partir de la mesure 5
+const RIFF16 = [0, 1, 2, 3].flatMap(() => BARS)
+const BASS = [...Array(4).fill('r.1'), ...Array(12).fill('0.4.4 0.4.4 3.4.4 2.4.4')]
+const texTracks = `\\title "${TITLE}" \\tempo 90 \\track "Guitare" ` +
+  RIFF16.map((bar) => bar.map(([s, f]) => `${f}.${s}.4`).join(' ')).join(' | ') + ` \\track "Basse" ` + BASS.join(' | ')
+const gpTracks = new alphaTab.exporter.Gp7Exporter().export(alphaTab.importer.ScoreLoader.loadAlphaTex(texTracks, settings), settings)
 
 // #31 : deux pistes ; la basse ne joue qu'à partir de la mesure 5
 const RIFF16 = [0, 1, 2, 3].flatMap(() => BARS)
