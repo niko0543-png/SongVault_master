@@ -77,3 +77,21 @@ test('#31 : la page blanche façon Guitar Pro, avec seulement la tablature et un
   await expect.poll(async () => (await score.boundingBox())!.height).toBeGreaterThan(tabOnly)
   expect(violations).toEqual([])
 })
+
+test('#31 : le panneau des pistes reste en bas de l’écran pendant que la partition défile, et coupe une piste en pleine lecture', async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 700 } })
+  const violations = await open(page, 'demo-tracks.gp')
+  const play = page.getByTestId('tab-play')
+  await expect(play).toBeEnabled({ timeout: 30_000 })
+  const panel = page.getByTestId('tab-tracks')
+
+  await page.mouse.wheel(0, 400)                                            // la partition défile, le panneau reste collé en bas
+  await expect.poll(async () => Math.round((await panel.boundingBox())!.y + (await panel.boundingBox())!.height)).toBe(700)
+  await play.click()
+  await page.getByRole('button', { name: 'Couper Basse' }).click()
+  await expect(page.getByRole('button', { name: 'Couper Basse' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(play).toHaveAccessibleName('Mettre en pause')               // la lecture continue
+  await play.click()
+  expect(violations).toEqual([])
+  await page.close()
+})

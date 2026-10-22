@@ -31,6 +31,15 @@ zoom, choix entre partition et tablature, métronome et décompte.
   « Partition » (appliquées aux pistes à cordes ; batterie et piano gardent leur portée),
   métronome et décompte (le son de la tablature seulement : désactivés quand elle suit une
   maquette, #29). Le fichier n'est jamais modifié.
+- **Panneau des pistes collé en bas** (`TabTrackPanel.vue`, `position: sticky`) : pendant que
+  la partition défile, chaque piste garde sous la main « afficher », muet, solo et volume (0 à
+  2 fois celui du fichier, `changeTrackVolume`). À droite, une vue d'ensemble des mesures comme
+  celle de Guitar Pro : une case par mesure, pleine quand la piste y joue, à la couleur de la
+  piste dans le fichier ; un clic place la partition sur la mesure, la mesure jouée est encadrée.
+  Le panneau se replie, se pose au-dessus du lecteur audio du bas quand il est ouvert (variable
+  CSS `--audio-player-height`, publiée par `AudioPlayer.vue`), et, sous 720 px, ne garde que les
+  pistes, en cibles de 44 px. Il remplace la liste des pistes de #28 ; comme elle, il n'apparaît
+  qu'à partir de deux pistes, et pas dans la comparaison (#30).
 - **La mention « rendered by alphaTab »** en bas de la partition reste : alphaTab l'écrit sans
   réglage pour la retirer, et nous ne modifions pas ses fichiers (MPL-2.0, ADR 0034).
 - **Correctif #29** : une tablature calée ne passe sur sa maquette qu'une fois les sons d'alphaTab
@@ -41,6 +50,8 @@ zoom, choix entre partition et tablature, métronome et décompte.
 ## Conséquences
 - Un fichier Guitar Pro 7 ou 8 s'affiche avec les mêmes lignes que dans Guitar Pro sur un
   ordinateur ; sur téléphone, l'affichage reste celui de #14.
+- La vue d'ensemble ne se parcourt qu'à la souris ou au doigt (elle est cachée aux lecteurs
+  d'écran) : au clavier, la partition et la liste des pistes restent le chemin.
 - Changer de zoom ou de portées redessine la partition (environ une demi-seconde sur un long
   morceau) ; la lecture continue.
 - La vue « défilement horizontal » de Guitar Pro n'est pas reprise : alphaTab fixe l'élément qui
