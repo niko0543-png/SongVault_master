@@ -35,11 +35,14 @@ public sealed class SongVersionsController : ControllerBase
         Guid songId, Guid versionId, [FromServices] GetSongVersionHandler handler, CancellationToken ct)
         => Ok(SongVersionResponse.From(await handler.HandleAsync(songId, versionId, ct)));
 
-    /// <summary>Crée une nouvelle version ; son numéro est attribué automatiquement.</summary>
+    /// <summary>
+    /// Crée une nouvelle version ; son numéro est attribué automatiquement. CopyFromVersionId et CopyFileIds
+    /// y copient des fichiers d'une autre version du morceau (ADR 0046), comptés dans le stockage du groupe.
+    /// </summary>
     /// <param name="songId">Identifiant du morceau.</param>
     /// <response code="201">Version créée.</response>
     /// <response code="400">Requête invalide.</response>
-    /// <response code="409">Deux créations simultanées ; réessayez.</response>
+    /// <response code="409">Deux créations simultanées, ou fichier à reprendre pas encore déclaré sain ; réessayez.</response>
     /// <response code="422">Règle métier non respectée.</response>
     [HttpPost]
     [ProducesResponseType<SongVersionResponse>(StatusCodes.Status201Created)]
@@ -51,7 +54,7 @@ public sealed class SongVersionsController : ControllerBase
     {
         var version = await handler.HandleAsync(new CreateSongVersionCommand(
             songId, request.Title, request.Status.GetValueOrDefault(), request.Notes, request.Lyrics,
-            request.Bpm, request.Key), ct);
+            request.Bpm, request.Key, request.CopyFromVersionId, request.CopyFileIds), ct);
         return CreatedAtAction(nameof(GetById), new { bandId, songId, versionId = version.Id }, SongVersionResponse.From(version));
     }
 

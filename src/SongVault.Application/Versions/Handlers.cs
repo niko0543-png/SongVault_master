@@ -6,11 +6,16 @@ using SongVault.Domain.Songs;
 using SongVault.Application.Audit;
 using SongVault.Application.Trash;
 using SongVault.Domain.Audit;
+using SongVault.Application.Billing;
+using SongVault.Application.Files;
+using SongVault.Domain.Common;
+using SongVault.Domain.Files;
 
 namespace SongVault.Application.Versions;
 
 public sealed class CreateSongVersionHandler(
-    ISongRepository songs, IUnitOfWork unitOfWork, TimeProvider clock, ActivityLog activity)
+    ISongRepository songs, IUnitOfWork unitOfWork, TimeProvider clock, ActivityLog activity,
+    IFileStorageService storage, AudioPreviewQueue previews, FileScanQueue scans, PlanLimits limits)
 {
     private const int MaxAttempts = 3;
 
@@ -19,27 +24,104 @@ public sealed class CreateSongVersionHandler(
         // Validée UNE fois, avant la boucle : une tonalité invalide ne mérite pas de nouvelle tentative
         var key = MusicalKey.ParseOptional(command.Key);
 
-        for (var attempt = 1; ; attempt++)
+        // ADR 0046 : les copies sont stockées UNE fois, avant la boucle ; la base les rattache ensuite
+        var carried = await CopyFilesAsync(command, ct);
+        SongVersionDto created;
+        try
         {
-            var song = await songs.GetByIdAsync(command.SongId, ct)
-                       ?? throw new NotFoundException("Song", command.SongId);
+            for (var attempt = 1; ; attempt++)
+            {
+                var song = carried is null
+                    ? await songs.GetByIdAsync(command.SongId, ct)
+                    : await songs.GetWithVersionAsync(command.SongId, carried.SourceVersionId, ct);
+                if (song is null) throw new NotFoundException("Song", command.SongId);
 
-            var now = clock.GetUtcNow();
-            var version = song.AddVersion(command.Title, command.Status, command.Notes, command.Lyrics,
-                now, command.Bpm, key);
-            activity.VersionChanged(ActivityType.VersionAdded, song, version, now);   // oublié aussi par DiscardChanges
-            try
-            {
-                await unitOfWork.SaveChangesAsync(ct);
-                return SongVersionDto.From(version);
-            }
-            catch (ConcurrencyConflictException) when (attempt < MaxAttempts)
-            {
-                unitOfWork.DiscardChanges();
-                await Task.Delay(Random.Shared.Next(10, 50) * attempt, ct);
+                var now = clock.GetUtcNow();
+                var version = song.AddVersion(command.Title, command.Status, command.Notes, command.Lyrics,
+                    now, command.Bpm, key);
+                if (carried is not null)
+                {
+                    var source = song.FindVersion(carried.SourceVersionId)
+                                 ?? throw new NotFoundException("SongVersion", carried.SourceVersionId);
+                    foreach (var file in version.CarryOverFiles(source, carried.StorageKeys, now))
+                    {
+                        previews.RequestFor(file, now);                     // #15, comme un envoi
+                        scans.RequestFor(file, now);                        // #17 : la copie est analysée à son tour
+                    }
+                }
+                activity.VersionChanged(ActivityType.VersionAdded, song, version, now);   // oublié aussi par DiscardChanges
+                try
+                {
+                    await unitOfWork.SaveChangesAsync(ct);
+                    created = SongVersionDto.From(version);
+                    break;
+                }
+                catch (ConcurrencyConflictException) when (attempt < MaxAttempts)
+                {
+                    unitOfWork.DiscardChanges();
+                    await Task.Delay(Random.Shared.Next(10, 50) * attempt, ct);
+                }
             }
         }
+        catch when (carried is not null)
+        {
+            foreach (var storageKey in carried.StorageKeys.Values)
+                await storage.DeleteAsync(storageKey, CancellationToken.None);     // compensation
+            throw;
+        }
+
+        if (carried is not null) await limits.RefreshStorageAsync(carried.BandId, ct);   // jauge (#16)
+        return created;
     }
+
+    /// <summary>
+    /// Copie dans le stockage les fichiers à reprendre (ADR 0046), après avoir vérifié qu'ils sont en place,
+    /// lisibles (#17) et qu'ils tiennent dans le stockage du groupe (#16). null : rien à reprendre.
+    /// </summary>
+    private async Task<CarriedFiles?> CopyFilesAsync(CreateSongVersionCommand command, CancellationToken ct)
+    {
+        if (command.CopyFileIds is not { Count: > 0 } ids) return null;
+        if (command.CopyFromVersionId is not { } sourceId)
+            throw new DomainException("Indiquez la version d'où reprendre les fichiers.");
+
+        var song = await songs.GetWithVersionAsync(command.SongId, sourceId, ct)
+                   ?? throw new NotFoundException("Song", command.SongId);
+        var source = song.FindVersion(sourceId) is { IsDeleted: false } found
+            ? found
+            : throw new NotFoundException("SongVersion", sourceId);
+        var files = new List<SongFile>();
+        foreach (var id in ids.Distinct())
+        {
+            var file = source.Files.SingleOrDefault(f => f.Id == id && !f.IsDeleted)
+                       ?? throw new DomainException("Un fichier repris doit être un fichier en place de la version d'origine.");
+            var info = await songs.GetFileAsync(command.SongId, sourceId, id, ct);
+            FileScanGate.EnsureReadable(info?.Scan);                       // un fichier bloqué ne se recopie pas
+            files.Add(file);
+        }
+        await limits.EnsureStorageAsync(song.BandId, files.Sum(f => f.SizeBytes), ct);
+        unitOfWork.DiscardChanges();                                       // la boucle recharge le morceau
+
+        var storageKeys = new Dictionary<Guid, string>();
+        try
+        {
+            foreach (var file in files)
+            {
+                var copyKey = $"{Guid.CreateVersion7():N}{Path.GetExtension(file.StorageKey)}";
+                await using (var content = await storage.OpenReadAsync(file.StorageKey, ct))
+                    await storage.SaveAsync(copyKey, content, ct);
+                storageKeys[file.Id] = copyKey;
+            }
+        }
+        catch
+        {
+            foreach (var copyKey in storageKeys.Values)
+                await storage.DeleteAsync(copyKey, CancellationToken.None);
+            throw;
+        }
+        return new CarriedFiles(sourceId, song.BandId, storageKeys);
+    }
+
+    private sealed record CarriedFiles(Guid SourceVersionId, Guid BandId, IReadOnlyDictionary<Guid, string> StorageKeys);
 }
 
 public sealed class ListSongVersionsHandler(ISongRepository songs)

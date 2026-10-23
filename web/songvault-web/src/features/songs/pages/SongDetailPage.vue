@@ -60,6 +60,9 @@ async function markSeen(id: string) {
 // ---- Création d'une version ----
 const creation = useAsyncAction((input: SongVersionInput) => versionsApi.create(props.songId, input))
 const creationErrors = computed(() => mapProblemErrors(creation.error.value))
+/** ADR 0046 : un refus sans champ (fichier à reprendre indisponible, stockage plein…) s'affiche sous le formulaire. */
+const creationMessage = computed(() =>
+  creation.error.value && Object.keys(creationErrors.value).length === 0 ? getErrorMessage(creation.error.value) : null)
 const formKey = ref(0)
 const lastCreated = ref<number | null>(null)
 
@@ -155,10 +158,13 @@ async function onDelete() {
       <CreateVersionForm
         v-if="bands.can('write')"
         :key="formKey"
+        :song-id="song.id"
+        :versions="versions"
         :submitting="creation.isLoading.value"
         :server-errors="creationErrors"
         @submit="onCreateVersion"
       />
+      <p v-if="creationMessage" class="field-error" role="alert">{{ creationMessage }}</p>
 
       <SongRightsSection :song-id="song.id" :readonly="!bands.can('write')" :version-count="versions.length" />
     </template>

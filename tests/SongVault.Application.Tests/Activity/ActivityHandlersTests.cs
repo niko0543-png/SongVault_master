@@ -1,4 +1,6 @@
 ﻿using SongVault.Application.Activity;
+using SongVault.Application.Billing;
+using SongVault.Application.Files;
 using SongVault.Application.Common.Exceptions;
 using SongVault.Application.Songs.CreateSong;
 using SongVault.Application.Songs.DeleteSong;
@@ -61,7 +63,9 @@ public sealed class ActivityHandlersTests
         var song = ExistingSong();
         song.AddVersion("Idée", SongVersionStatus.Idea, null, null, Now.AddDays(-1));
 
-        await new CreateSongVersionHandler(_songs, _uow, _clock, Log())
+        await new CreateSongVersionHandler(_songs, _uow, _clock, Log(), new FakeFileStorageService(),
+                new AudioPreviewQueue(new FakeAudioPreviewRepository()), new FileScanQueue(new FakeFileScanRepository(), new FakeBackgroundJobs()),
+                new PlanLimits(new FakeBillingRepository()))
             .HandleAsync(new CreateSongVersionCommand(song.Id, "Démo", SongVersionStatus.Demo, null, null),
                 CancellationToken.None);
 
