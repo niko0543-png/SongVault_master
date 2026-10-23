@@ -10,6 +10,8 @@ public sealed class Release
 {
     public const int TitleMaxLength = 200;
     public const int MaxTracks = 100;
+    public const int LabelMaxLength = 200;
+    public const int MaxStreamingLinks = 12;
 
     private readonly List<ReleaseTrack> _tracks = [];
 
@@ -24,6 +26,12 @@ public sealed class Release
     /// <summary>Clé de la pochette dans le stockage ; null sans pochette.</summary>
     public string? CoverStorageKey { get; private set; }
     public string? CoverContentType { get; private set; }
+    /// <summary>Label ou distributeur (#38) ; null si non renseigné.</summary>
+    public string? Label { get; private set; }
+    /// <summary>Code-barres UPC/EAN de la sortie (#38).</summary>
+    public Upc? Upc { get; private set; }
+    /// <summary>Liens d'écoute (#38), dans l'ordre de la saisie ; une colonne JSON, comme les points de calage (#29).</summary>
+    public IReadOnlyList<StreamingLink> StreamingLinks { get; private set; } = [];
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
 
@@ -73,6 +81,45 @@ public sealed class Release
         CoverContentType = null;
         if (previous is not null) UpdatedAt = now;
         return previous;
+    }
+
+    /// <summary>
+    /// Enregistre les infos de sortie (#38) : label, code-barres et liens d'écoute, qui remplacent les anciens. Les
+    /// adresses sont validées avant de toucher à la sortie ; une même adresse n'apparaît qu'une fois.
+    /// </summary>
+    public void SetDistribution(string? label, Upc? upc, IReadOnlyList<string> streamingUrls, DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(streamingUrls);
+        var cleanLabel = Text.Optional(label, LabelMaxLength, "label");
+        var links = streamingUrls.Where(u => !string.IsNullOrWhiteSpace(u)).Select(StreamingLink.Parse).ToList();
+        if (links.Count > MaxStreamingLinks)
+            throw new DomainException($"Une sortie a au plus {MaxStreamingLinks} liens d'écoute.");
+        if (links.Select(l => l.Url).Distinct(StringComparer.OrdinalIgnoreCase).Count() != links.Count)
+            throw new DomainException("Un même lien d'écoute apparaît deux fois.");
+
+        Label = cleanLabel;
+        Upc = upc;
+        StreamingLinks = links;
+        UpdatedAt = now;
+    }
+
+    /// <summary>
+    /// Met ce morceau sur la sortie dans cette version (#38) : sa piste prend la version s'il y figure déjà, sinon il
+    /// arrive en dernière place. Pas de réordonnancement, donc pas de passe en négatif.
+    /// </summary>
+    public void PutTrack(Guid songId, Guid versionId, DateTimeOffset now)
+    {
+        if (songId == Guid.Empty || versionId == Guid.Empty)
+            throw new DomainException("Chaque piste indique un morceau et une version.");
+        var existing = _tracks.SingleOrDefault(t => t.SongId == songId);
+        if (existing is not null) existing.Place(existing.TrackNumber, versionId);
+        else
+        {
+            if (_tracks.Count >= MaxTracks)
+                throw new DomainException($"Une sortie compte au plus {MaxTracks} pistes.");
+            _tracks.Add(ReleaseTrack.Create(Id, songId, versionId, _tracks.Count == 0 ? 1 : _tracks.Max(t => t.TrackNumber) + 1));
+        }
+        UpdatedAt = now;
     }
 
     /// <summary>Vérifie une liste de pistes sans rien modifier : 422 avant le moindre enregistrement.</summary>

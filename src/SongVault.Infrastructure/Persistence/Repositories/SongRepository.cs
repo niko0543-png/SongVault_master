@@ -27,13 +27,19 @@ internal sealed class SongRepository(SongVaultDbContext db, IBandContext bandCon
     public Task<Song?> GetByIdAsync(Guid id, CancellationToken ct)
         => BandSongs.FirstOrDefaultAsync(s => s.Id == id, ct);
 
+    public async Task<IReadOnlyList<Song>> ListReleasedOnAsync(Guid releaseId, CancellationToken ct)
+        => await BandSongs.Where(s => s.ReleaseId == releaseId).ToListAsync(ct);
+
     public Task<bool> ExistsAsync(Guid songId, CancellationToken ct)
         => BandSongs.AnyAsync(s => s.Id == songId, ct);
 
     public async Task<PagedResult<SongDto>> ListAsync(
-        int page, int pageSize, string? search, SongVersionStatus? status, CancellationToken ct)
+        int page, int pageSize, string? search, SongVersionStatus? status, bool? released, CancellationToken ct)
     {
         var query = BandSongs.AsNoTracking();
+
+        if (released is not null)
+            query = released.Value ? query.Where(s => s.ReleaseId != null) : query.Where(s => s.ReleaseId == null);
 
         if (search is not null)
             query = query.Where(s => s.Title.Contains(search) || (s.Artist != null && s.Artist.Contains(search)));
@@ -77,7 +83,9 @@ internal sealed class SongRepository(SongVaultDbContext db, IBandContext bandCon
                     ? SongBadge.None
                     : x.SeenAt == null ? SongBadge.New : SongBadge.Updated,
                 x.Tablature == null ? null : x.Tablature.VersionId,
-                x.Tablature == null ? null : x.Tablature.FileId))
+                x.Tablature == null ? null : x.Tablature.FileId,
+                x.Song.ReleaseId,
+                x.Song.ReleaseId == null ? null : x.Song.ReleasedAt))
             .ToListAsync(ct);
 
         return new PagedResult<SongDto>(items, page, pageSize, total);

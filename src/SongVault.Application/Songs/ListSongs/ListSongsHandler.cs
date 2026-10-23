@@ -16,6 +16,6 @@ public sealed class ListSongsHandler(ISongRepository songs)
         if (string.IsNullOrEmpty(search)) search = null;
         else if (search.Length > MaxSearchLength) search = search[..MaxSearchLength];
 
-        return songs.ListAsync(page, pageSize, search, query.Status, ct);
+        return songs.ListAsync(page, pageSize, search, query.Status, query.Released, ct);
     }
 }

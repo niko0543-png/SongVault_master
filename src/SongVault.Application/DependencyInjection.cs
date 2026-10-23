@@ -96,6 +96,10 @@ public static class DependencyInjection
         services.AddScoped<UpdateReleaseHandler>();
         services.AddScoped<DeleteReleaseHandler>();
         services.AddScoped<SetReleaseTracksHandler>();
+        // #38 : infos de sortie d'un morceau
+        services.AddScoped<ReleaseSongHandler>();
+        services.AddScoped<UnreleaseSongHandler>();
+        services.AddScoped<SetReleaseDistributionHandler>();
         services.AddScoped<UploadReleaseCoverHandler>();
         services.AddScoped<DownloadReleaseCoverHandler>();
         services.AddScoped<DeleteReleaseCoverHandler>();

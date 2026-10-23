@@ -32,6 +32,14 @@ public sealed class Song : ISoftDeletable
     public DateTimeOffset? DeletedAt { get; private set; }
     public string? DeletedById { get; private set; }
     public bool IsDeleted => DeletedAt is not null;
+    /// <summary>
+    /// Sortie où le morceau est paru (#38, ADR 0044) ; null tant qu'il est en travail. Un morceau sorti quitte la liste
+    /// des morceaux pour l'onglet Sorties. Supprimer la sortie le remet en travail (clé étrangère SET NULL).
+    /// </summary>
+    public Guid? ReleaseId { get; private set; }
+    /// <summary>Quand ses infos de sortie ont été enregistrées ; n'a de sens que si ReleaseId est renseigné.</summary>
+    public DateTimeOffset? ReleasedAt { get; private set; }
+    public bool IsReleased => ReleaseId is not null;
 
     public static Song Create(Guid bandId, string title, string? artist, string? description, DateTimeOffset now)
     {
@@ -107,6 +115,43 @@ public sealed class Song : ISoftDeletable
             _credits.Add(Credit.Create(Id, i + 1, clean[i].Name, clean[i].Role, clean[i].Share));
         Iswc = iswc;
         UpdatedAt = now;
+    }
+
+    /// <summary>
+    /// La version qui peut sortir (#38) : la dernière version en place, si elle est au statut Final ; sinon une
+    /// DomainException qui dit pourquoi. Les versions à charger : toutes celles qui sont en place.
+    /// </summary>
+    public SongVersion EnsureReleasable(Guid versionId)
+    {
+        if (IsDeleted) throw new DomainException("Ce morceau est dans la corbeille.");
+        var version = _versions.SingleOrDefault(v => v.Id == versionId && !v.IsDeleted)
+                      ?? throw new DomainException("Cette version n'appartient pas au morceau.");
+        var latest = _versions.Where(v => !v.IsDeleted).MaxBy(v => v.Number)!;
+        if (latest.Id != version.Id)
+            throw new DomainException($"Seule la dernière version (v{latest.Number}) peut sortir.");
+        if (version.Status != SongVersionStatus.Final)
+            throw new DomainException("Passez d'abord cette version au statut Final : c'est elle qui sort.");
+        return version;
+    }
+
+    /// <summary>Le morceau est sorti sur cette sortie (#38) : il passe dans l'onglet Sorties.</summary>
+    public void MarkReleased(Guid releaseId, DateTimeOffset now)
+    {
+        if (releaseId == Guid.Empty) throw new DomainException("Un morceau sort sur une sortie.");
+        if (IsReleased) throw new DomainException("Ce morceau est déjà sorti.");
+        ReleaseId = releaseId;
+        ReleasedAt = now;
+        UpdatedAt = now;
+    }
+
+    /// <summary>Remet le morceau en travail (#38) : il revient dans la liste des morceaux. La sortie et ses pistes restent.</summary>
+    public bool Unrelease(DateTimeOffset now)
+    {
+        if (!IsReleased) return false;
+        ReleaseId = null;
+        ReleasedAt = null;
+        UpdatedAt = now;
+        return true;
     }
 
     /// <summary>

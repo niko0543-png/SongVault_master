@@ -80,11 +80,17 @@ public sealed class SetReleaseTracksHandler(
 
         // Deux passes dans une transaction : l'index unique (ReleaseId, TrackNumber) est vérifié ligne à ligne,
         // un échange 1 ↔ 2 en une seule passe le violerait.
+        // #38 : un morceau sorti sur cette sortie qui la quitte revient dans les morceaux en travail
+        var wanted = command.Tracks.Select(t => t.SongId).ToHashSet();
+        var leaving = (await songs.ListReleasedOnAsync(release.Id, ct)).Where(s => !wanted.Contains(s.Id)).ToList();
+
         await unitOfWork.ExecuteInTransactionAsync(async token =>
         {
             release.ParkTrackNumbers();
             await unitOfWork.SaveChangesAsync(token);
-            release.SetTracks(command.Tracks, clock.GetUtcNow());
+            var now = clock.GetUtcNow();
+            release.SetTracks(command.Tracks, now);
+            foreach (var song in leaving) song.Unrelease(now);
             await unitOfWork.SaveChangesAsync(token);
         }, ct);
 

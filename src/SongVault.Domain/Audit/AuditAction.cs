@@ -33,4 +33,9 @@ public enum AuditAction
     FilePurged,
     /// <summary>Crédits ou ISWC d'un morceau enregistrés (#22) : qui touche aux parts des droits doit se voir.</summary>
     CreditsChanged,
+    /// <summary>
+    /// Morceau sorti (#38) : ses infos de sortie enregistrées sur sa dernière version. Le détail dit les versions
+    /// mises à la corbeille, ou effacées pour libérer la place.
+    /// </summary>
+    SongReleased,
 }
