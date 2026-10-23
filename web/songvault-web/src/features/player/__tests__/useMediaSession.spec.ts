@@ -8,6 +8,7 @@ import { SKIP_SECONDS, useMediaSession } from '../composables/useMediaSession'
 class FakeAudio extends EventTarget implements AudioLike {
   src = ''
   currentTime = 0
+  volume = 1
   duration = 240
   play = vi.fn<() => Promise<void>>(async () => { this.dispatchEvent(new Event('play')) })
   pause = vi.fn<() => void>(() => { this.dispatchEvent(new Event('pause')) })

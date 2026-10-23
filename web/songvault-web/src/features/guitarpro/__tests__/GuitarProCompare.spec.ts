@@ -7,15 +7,20 @@ import { exporter, importer, model, Settings } from '@coderline/alphatab'
  * #30 : la comparaison lit deux vrais fichiers Guitar Pro (écrits ici par alphaTab à partir d'alphaTex) ;
  * seul le lecteur est remplacé : il note la partition reçue et les mesures demandées.
  */
-const viewer = vi.hoisted(() => ({ goToBar: vi.fn(), score: null as unknown }))
+const viewer = vi.hoisted(() => ({
+  goToBar: vi.fn(), score: null as unknown, track: undefined as number | undefined,
+  position: { tracks: [0], bar: 0 }, start: null as unknown,
+}))
 vi.mock('../components/GuitarProViewer.vue', () => ({
   default: defineComponent({
     name: 'GuitarProViewer',
-    props: { score: Object, track: Number, label: String, fill: Boolean },
+    props: { score: Object, track: Number, label: String, fill: Boolean, startTracks: Array, startBar: Number },
     setup(props, { expose }) {
-      expose({ goToBar: viewer.goToBar })
+      expose({ goToBar: viewer.goToBar, position: () => viewer.position })
       return () => {
         viewer.score = props.score
+        viewer.track = props.track
+        viewer.start = { tracks: props.startTracks, bar: props.startBar }
         return h('div', { 'data-testid': 'viewer' }, props.label)
       }
     },
@@ -86,6 +91,52 @@ describe('GuitarProCompare (#30)', () => {
     expect(fret(3, 2)).toBe('#B35900')
     expect(fret(3, 1)).toBeUndefined()
     expect(fret(1, 0)).toBeUndefined()
+  })
+
+  it('#37 : passe à l’ancienne partition, en rouge ce qui a été retiré, en orange ce qui a été remplacé, et s’y place sur la mesure de A', async () => {
+    const before = [...RIFF, '5.3.4 7.3.4 5.3.4 7.3.4']
+    const after = ['12.1.1', RIFF[0]!, RIFF[2]!, '5.3.4 7.3.4 9.3.4 7.3.4']  // une mesure ajoutée, la 2 de A retirée, la 4 retouchée
+    serve({ fa: gp(before), fb: gp(after) })
+    const wrapper = await mountCompare()
+    const items = () => wrapper.findAll('[data-testid="gp-changes"] li button')
+    expect(items().map((b) => b.text())).toEqual([
+      'Mesure 1 : ajoutée', 'Mesure 2 de A : supprimée, avant la mesure 3', 'Mesure 4 : 1 note modifiée, 1 note retirée',
+    ])
+
+    await wrapper.get('[data-testid="gp-side-old"]').setValue(true)
+    const score = viewer.score as model.Score
+    expect(score.masterBars.length).toBe(4)                             // la partition de A
+    const fret = (bar: number, beat: number) =>
+      score.tracks[0]!.staves[0]!.bars[bar]!.voices[0]!.beats[beat]!.notes[0]!.style?.colors.get(model.NoteSubElement.GuitarTabFretNumber)?.rgba
+    expect(fret(1, 0)).toBe('#B42318')                                  // la mesure retirée
+    expect(fret(3, 2)).toBe('#B35900')                                  // la case 5 remplacée par la 9
+    expect(fret(3, 1)).toBeUndefined()
+    expect(fret(2, 0)).toBeUndefined()
+    expect(fret(0, 0)).toBeUndefined()
+
+    await items()[2]!.trigger('click')
+    expect(viewer.goToBar).toHaveBeenLastCalledWith(3)                  // mesure 4 de B = mesure 4 de A
+    await items()[1]!.trigger('click')
+    expect(viewer.goToBar).toHaveBeenLastCalledWith(1)
+    await items()[0]!.trigger('click')
+    expect(viewer.goToBar).toHaveBeenLastCalledWith(0)                  // ajoutée dans B : avant la mesure 1 de A
+
+    viewer.position = { tracks: [0], bar: 1 }                         // mesure 2 de A, retirée de B
+    await wrapper.get('[data-testid="gp-side-new"]').setValue(true)
+    expect((viewer.score as model.Score).masterBars.length).toBe(4)
+    expect(viewer.score).not.toBe(score)
+    expect(viewer.start).toEqual({ tracks: [0], bar: 2 })              // elle se trouvait avant la mesure 3 de B
+  })
+
+  it('#37 : garde la piste et la mesure en passant de B à A', async () => {
+    const after = ['12.1.1', ...RIFF]
+    serve({ fa: gp(RIFF), fb: gp(after) })
+    const wrapper = await mountCompare()
+
+    viewer.position = { tracks: [0], bar: 3 }                         // mesure 4 de B
+    await wrapper.get('[data-testid="gp-side-old"]').setValue(true)
+    expect(viewer.start).toEqual({ tracks: [0], bar: 2 })              // = mesure 3 de A
+    expect(viewer.track).toBe(0)
   })
 
   it('annonce un changement d’accordage en une ligne, sans différence de notes', async () => {

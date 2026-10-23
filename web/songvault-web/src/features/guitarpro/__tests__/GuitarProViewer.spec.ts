@@ -18,11 +18,14 @@ const fake = vi.hoisted(() => {
     score: { tracks: { name: string; staves: FakeStaff[] }[]; masterBars: unknown[]; applyFlatSyncPoints: (p: unknown[]) => void } | null = null
     // #31 : métronome et décompte
     metronomeVolume = 0
+    masterVolume = 1
     countInVolume = 0
     playbackSpeed = 1
     isLooping = false
     scoreLoaded = emitter()
     renderFinished = emitter()
+    postRenderFinished = emitter()
+    beatMouseDown = emitter()
     playerReady = emitter()
     playerStateChanged = emitter()
     error = emitter()
@@ -223,6 +226,19 @@ describe('GuitarProViewer façon Guitar Pro (#31)', () => {
     expect(api().changeTrackVolume).toHaveBeenLastCalledWith([bass], 0.5)
     await wrapper.findAll('[data-testid="tab-overview"] .lane')[1]!.findAll('.cell')[1]!.trigger('click')
     expect(api().tickPosition).toBe(3840)                           // la lecture partira de la mesure 2
+  })
+
+  it('règle le volume général de toutes les pistes, le garde sur l’appareil et le reprend à l’ouverture', async () => {
+    const wrapper = await mountViewer(['Guitare', 'Basse'])
+
+    await byLabel(wrapper, 'Volume général').setValue('0.5')
+    expect(api().masterVolume).toBe(0.5)
+    expect(api().changeTrackVolume).not.toHaveBeenCalled()             // le mix des pistes ne bouge pas
+    wrapper.unmount()
+
+    const again = await mountViewer(['Guitare', 'Basse'])
+    expect(api().masterVolume).toBe(0.5)                             // redonné quand les sons sont prêts
+    expect(byLabel(again, 'Volume général').attributes('aria-valuetext')).toBe('50 %')
   })
 
   it('active le métronome et le décompte', async () => {
@@ -510,15 +526,16 @@ describe('GuitarProViewer dans la comparaison (#30)', () => {
     masterBars: [bar(0), bar(3840), bar(7680)],
   }
 
-  async function mountWithScore() {
+  async function mountWithScore(start: { startTracks?: number[]; startBar?: number } = {}) {
     const wrapper = mount(GuitarProViewer, {
-      props: { score: score as never, track: 1, label: 'riff.gp' },
+      props: { score: score as never, track: 1, label: 'riff.gp', ...start },
       global: { plugins: [createTestingPinia({ createSpy: vi.fn, stubActions: false })] },
     })
     await flushPromises()
     api().score = score as never
     api().scoreLoaded.fire(score)
     api().renderFinished.fire()
+    api().postRenderFinished.fire()
     await nextTick()
     return wrapper
   }
@@ -528,7 +545,7 @@ describe('GuitarProViewer dans la comparaison (#30)', () => {
 
     expect(fetchMock).not.toHaveBeenCalled()
     expect(api().renderScore).toHaveBeenCalledWith(score, [1])
-    expect(wrapper.find('[data-testid="tab-tracks"]').exists()).toBe(false)   // la piste se choisit dans la comparaison
+    expect(wrapper.find('[data-testid="tab-tracks"]').exists()).toBe(true)    // #37 : le panneau des pistes reste dans la comparaison
     await wrapper.setProps({ track: 0 })
     expect(api().renderTracks).toHaveBeenLastCalledWith([score.tracks[0]])
   })
@@ -546,6 +563,29 @@ describe('GuitarProViewer dans la comparaison (#30)', () => {
     expect(api().tickPosition).toBe(3840)
     expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'smooth' }))
     scrollTo.mockRestore()
+  })
+
+  it('#37 : reprend les pistes et la mesure données, une fois la partition placée et le son prêt', async () => {
+    const wrapper = await mountWithScore({ startTracks: [0, 1], startBar: 2 })
+
+    expect(api().renderScore).toHaveBeenCalledWith(score, [0, 1])
+    expect(api().tickPosition).toBe(0)                                  // avant le son, alphaTab remettrait le curseur au début
+    api().playerReady.fire()
+    await nextTick()
+    expect(api().tickPosition).toBe(7680)                               // placé sur la mesure 3
+    expect((wrapper.vm as unknown as { position: () => unknown }).position()).toEqual({ tracks: [0, 1], bar: 2 })
+    api().tickPosition = 0                                              // un nouveau rendu (zoom…) ne le replace pas
+    api().postRenderFinished.fire()
+    await nextTick()
+    expect(api().tickPosition).toBe(0)
+  })
+
+  it('#37 : un clic sur une note change la mesure en cours', async () => {
+    const wrapper = await mountWithScore()
+    api().beatMouseDown.fire({ voice: { bar: { index: 1 } } })
+    await nextTick()
+    expect(wrapper.get('[data-testid="tab-bar"]').attributes('aria-label')).toBe('Mesure 2 sur 3')
+    expect((wrapper.vm as unknown as { position: () => { bar: number } }).position().bar).toBe(1)
   })
 })
 
@@ -613,6 +653,10 @@ describe('GuitarProViewer calé sur une maquette (#29)', () => {
     expect(wrapper.get('[data-testid="tab-play"]').attributes('disabled')).toBeDefined()
     await wrapper.get('[data-testid="tab-audio"]').trigger('loadedmetadata')
     expect(wrapper.get('[data-testid="tab-play"]').attributes('disabled')).toBeUndefined()
+
+    // Le volume général règle aussi la maquette suivie
+    await byLabel(wrapper, 'Volume général').setValue('0.25')
+    expect((wrapper.get('[data-testid="tab-audio"]').element as HTMLAudioElement).volume).toBe(0.25)
 
     await wrapper.get('[data-testid="tab-source"]').setValue('synth')
     await flushPromises()

@@ -11,6 +11,9 @@ const fr = {
     playHint: 'Lecture (Espace)',
     forward: 'Avancer de {skipSeconds} secondes',
     position: 'Position de lecture',
+    volume: 'Volume',
+    mute: 'Couper le son',
+    unmute: 'Rétablir le son',
   },
   store: {
     cannotPlay: 'Impossible de lire ce fichier.',
@@ -29,6 +32,9 @@ const en: Widen<typeof fr> = {
     playHint: 'Play (Space)',
     forward: 'Forward {skipSeconds} seconds',
     position: 'Playback position',
+    volume: 'Volume',
+    mute: 'Mute',
+    unmute: 'Unmute',
   },
   store: {
     cannotPlay: 'Cannot play this file.',

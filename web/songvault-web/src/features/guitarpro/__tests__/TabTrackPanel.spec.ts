@@ -50,6 +50,17 @@ describe('TabTrackPanel (#31)', () => {
     expect(wrapper.get('[data-testid="tab-tracks-toggle"]').attributes('aria-expanded')).toBe('false')
   })
 
+  it('règle le volume général sur la piste « Général », même quand la tablature suit une maquette', async () => {
+    const wrapper = mountPanel({ disabled: true, master: 0.8 })
+    const master = wrapper.get('[aria-label="Volume général"]')
+
+    expect(master.attributes('disabled')).toBeUndefined()
+    expect(master.attributes('aria-valuetext')).toBe('80 %')
+    expect(wrapper.get('[data-testid="tab-master"]').text()).toContain('Général')
+    await master.setValue('0.35')
+    expect(wrapper.emitted('update:master')).toEqual([[0.35]])
+  })
+
   it('#34 : avec une seule piste, garde le volume et la vue d’ensemble, sans case ni muet/solo ; montre le temps', () => {
     const wrapper = mountPanel({ tracks: [tracks[0]] as never, shown: [0], mute: [false], solo: [false], volume: [1], time: '0:42 / 2:31' })
     expect(wrapper.find('input[type="checkbox"]').exists()).toBe(false)

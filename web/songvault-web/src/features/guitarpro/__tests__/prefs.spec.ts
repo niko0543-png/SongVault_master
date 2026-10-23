@@ -7,11 +7,18 @@ describe('Réglages du lecteur gardés sur l’appareil (#33)', () => {
   it('relit ce qui a été gardé, réglage par réglage', () => {
     saveViewPrefs({ zoom: 1.5 })
     saveViewPrefs({ panelOpen: false })
-    expect(loadViewPrefs()).toEqual({ zoom: 1.5, staffView: 'file', panelOpen: false, panelHeight: null, settingsOpen: false })
+    expect(loadViewPrefs()).toEqual({ zoom: 1.5, staffView: 'file', panelOpen: false, panelHeight: null, settingsOpen: false, masterVolume: 1 })
 
     saveFilePrefs('f', { speed: 0.5, mute: [false, true], solo: [false, false], volume: [1, 0.3] })
     expect(loadFilePrefs('f', 2, { min: 0.25, max: 1.5 })).toEqual({ speed: 0.5, mute: [false, true], solo: [false, false], volume: [1, 0.3] })
     expect(loadFilePrefs('f', 3, { min: 0.25, max: 1.5 })).toEqual({ speed: 0.5 })    // le fichier a changé de pistes
+  })
+
+  it('garde le volume général entre 0 et 1, et ignore une valeur abîmée', () => {
+    saveViewPrefs({ masterVolume: 0.4 })
+    expect(loadViewPrefs().masterVolume).toBe(0.4)
+    localStorage.setItem('songvault.tab.view', JSON.stringify({ masterVolume: 3 }))
+    expect(loadViewPrefs().masterVolume).toBe(1)
   })
 
   it('sans stockage (navigation privée), les réglages par défaut, sans erreur', () => {
