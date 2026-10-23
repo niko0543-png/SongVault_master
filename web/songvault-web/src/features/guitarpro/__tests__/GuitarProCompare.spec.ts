@@ -2,8 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { defineComponent, h } from 'vue'
 import { exporter, importer, model, Settings } from '@coderline/alphatab'
-import type { SongFile } from '@/features/files/types'
-import type { SongVersion } from '@/features/versions/types'
 
 /**
  * #30 : la comparaison lit deux vrais fichiers Guitar Pro (écrits ici par alphaTab à partir d'alphaTex) ;
@@ -13,7 +11,7 @@ const viewer = vi.hoisted(() => ({ goToBar: vi.fn(), score: null as unknown }))
 vi.mock('../components/GuitarProViewer.vue', () => ({
   default: defineComponent({
     name: 'GuitarProViewer',
-    props: { score: Object, track: Number, label: String },
+    props: { score: Object, track: Number, label: String, fill: Boolean },
     setup(props, { expose }) {
       expose({ goToBar: viewer.goToBar })
       return () => {
@@ -37,15 +35,6 @@ function gp(bars: string[], tuning = 'E4 B3 G3 D3 A2 E2'): Uint8Array {
   return new exporter.Gp7Exporter().export(score, new Settings())
 }
 
-const file = (id: string, name = 'riff.gp'): SongFile => ({
-  id, originalFileName: name, contentType: 'application/octet-stream', sizeBytes: 3000,
-  fileType: 'Tablature', uploadedAt: '2026-10-21T10:00:00Z', preview: null, scan: 'Clean',
-})
-const version = (id: string, number: number, files: SongFile[]): SongVersion => ({
-  id, songId: 's', number, title: `v${number}`, status: 'Demo', notes: null, lyrics: null, bpm: null, key: null,
-  createdAt: '2026-10-21T10:00:00Z', updatedAt: '2026-10-21T10:00:00Z', files,
-})
-
 const fetchMock = vi.fn<typeof fetch>()
 function serve(files: Record<string, Uint8Array | null>) {
   fetchMock.mockImplementation(async (url) => {
@@ -61,7 +50,7 @@ beforeEach(() => {
 
 async function mountCompare() {
   const wrapper = mount(GuitarProCompare, {
-    props: { songId: 's', a: version('va', 1, [file('fa')]), b: version('vb', 2, [file('fb')]) },
+    props: { songId: 's', a: { versionId: 'va', fileId: 'fa' }, b: { versionId: 'vb', fileId: 'fb' }, label: 'riff.gp' },
   })
   await flushPromises()
   await vi.waitFor(() => expect(wrapper.find('[aria-busy="false"]').exists()).toBe(true))
