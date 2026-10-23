@@ -63,6 +63,7 @@ public sealed class Setlist
         foreach (var item in items)
         {
             Text.Optional(item.Notes, SetlistItem.NotesMaxLength, "notes");
+            Text.Optional(item.CommentBefore, SetlistItem.CommentMaxLength, "commentaire");
             if (item.DurationMs is < SetlistItem.MinDurationMs or > SetlistItem.MaxDurationMs)
                 throw new DomainException("La durée saisie va de 1 seconde à 60 minutes.");
         }
@@ -81,7 +82,8 @@ public sealed class Setlist
 
     /// <summary>
     /// Remplace les morceaux par cette liste, dans cet ordre (1, 2, 3…). Un morceau absent de la liste quitte
-    /// la setlist ; un morceau déjà présent garde sa ligne et prend sa nouvelle place, sa version, ses notes et sa durée.
+    /// la setlist ; un morceau déjà présent garde sa ligne et prend sa nouvelle place, sa version, ses notes, sa durée
+    /// et son commentaire.
     /// </summary>
     public void SetItems(IReadOnlyList<SetlistItemChoice> items, DateTimeOffset now)
     {
@@ -94,6 +96,7 @@ public sealed class Setlist
         {
             var choice = items[index];
             var notes = Text.Optional(choice.Notes, SetlistItem.NotesMaxLength, "notes");
+            var comment = Text.Optional(choice.CommentBefore, SetlistItem.CommentMaxLength, "commentaire");
             var item = _items.SingleOrDefault(i => i.SongId == choice.SongId);
             if (item is null)
             {
@@ -101,7 +104,7 @@ public sealed class Setlist
                 _items.Add(item);
             }
             else item.MoveTo(index + 1);
-            item.Describe(choice.VersionId, notes, choice.DurationMs);
+            item.Describe(choice.VersionId, notes, choice.DurationMs, comment);
         }
         UpdatedAt = now;
     }

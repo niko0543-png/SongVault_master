@@ -7,6 +7,8 @@ import { setlistsApi } from '../api/setlistsApi'
 import type { Setlist, SetlistItem } from '../types'
 import { ApiError } from '@/shared/api/ApiError'
 import type { BandRole } from '@/features/bands/types'
+import { songsApi } from '@/features/songs/api/songsApi'
+import type { Song } from '@/features/songs/types'
 
 // toChoices reste la vraie fonction ; seuls les appels réseau sont simulés
 vi.mock('../api/setlistsApi', async (importOriginal) => ({
@@ -19,7 +21,8 @@ function item(songId: string, songTitle: string, position: number, extra: Partia
   return {
     position, songId, songTitle, versionId: null, playedVersionId: `${songId}-v2`,
     versions: [{ id: `${songId}-v1`, number: 1, title: 'Démo' }, { id: `${songId}-v2`, number: 2, title: 'Live' }],
-    key: null, bpm: null, notes: null, manualDurationMs: null, audioDurationMs: null, durationMs: null, ...extra,
+    key: null, bpm: null, notes: null, manualDurationMs: null, audioDurationMs: null, durationMs: null,
+    commentBefore: null, ...extra,
   }
 }
 
@@ -28,7 +31,7 @@ const setlist: Setlist = {
   createdAt: '2026-10-19T10:00:00Z', updatedAt: '2026-10-19T10:00:00Z',
   items: [
     item('a', 'Aube', 1, { key: 'Am', bpm: 92, audioDurationMs: 187_431, durationMs: 187_431 }),
-    item('b', 'Brume', 2, { manualDurationMs: 215_000, durationMs: 215_000, notes: 'enchaîner' }),
+    item('b', 'Brume', 2, { manualDurationMs: 215_000, durationMs: 215_000, notes: 'enchaîner', commentBefore: 'Présenter le groupe' }),
     item('c', 'Cendres', 3),
   ],
   totalDurationMs: 402_431, missingDurationCount: 1,
@@ -63,14 +66,23 @@ async function mountPage(role: BandRole = 'Member') {
 
 const titles = (w: Awaited<ReturnType<typeof mountPage>>) =>
   w.findAll('[data-testid="setlist-line"] a').map((a) => a.text())
+function song(id: string, title: string, extra: Partial<Song> = {}): Song {
+  return { id, title, artist: null, description: null, createdAt: '', updatedAt: '', badge: 'None', ...extra }
+}
+const bandSongs = [song('a', 'Aube'), song('d', 'Dune', { artist: 'Les Rats' }), song('e', 'Écume', { releaseId: 'r1' })]
+
 const sentItems = () => vi.mocked(setlistsApi.setItems).mock.lastCall?.[1]
 
 describe('SetlistDetailPage', () => {
   beforeEach(() => {
+    vi.mocked(songsApi.list).mockReset().mockResolvedValue(
+      { items: bandSongs, page: 1, pageSize: 50, totalCount: bandSongs.length, totalPages: 1 })
     vi.mocked(setlistsApi.get).mockReset().mockResolvedValue(structuredClone(setlist))
     vi.mocked(setlistsApi.setItems).mockReset().mockImplementation(async (_id, items) => ({
       ...setlist,
-      items: items.map((c, i) => ({ ...setlist.items.find((x) => x.songId === c.songId)!, position: i + 1 })),
+      items: items.map((c, i) => ({
+        ...(setlist.items.find((x) => x.songId === c.songId) ?? item(c.songId, c.songId, 0)), commentBefore: c.commentBefore, position: i + 1,
+      })),
     }))
   })
 
@@ -92,9 +104,9 @@ describe('SetlistDetailPage', () => {
     await flushPromises()
 
     expect(sentItems()).toEqual([
-      { songId: 'a', versionId: null, notes: null, durationMs: null },
-      { songId: 'c', versionId: null, notes: null, durationMs: null },
-      { songId: 'b', versionId: null, notes: 'enchaîner', durationMs: 215_000 },
+      { songId: 'a', versionId: null, notes: null, durationMs: null, commentBefore: null },
+      { songId: 'c', versionId: null, notes: null, durationMs: null, commentBefore: null },
+      { songId: 'b', versionId: null, notes: 'enchaîner', durationMs: 215_000, commentBefore: 'Présenter le groupe' },
     ])
     expect(titles(w)).toEqual(['Aube', 'Cendres', 'Brume'])
     expect(w.get('[aria-live="polite"]').text()).toBe('Cendres déplacé en position 2 sur 3.')
@@ -106,7 +118,7 @@ describe('SetlistDetailPage', () => {
 
     await w.get('[data-testid="duration-c"]').setValue('4:05')
     await flushPromises()
-    expect(sentItems()?.[2]).toEqual({ songId: 'c', versionId: null, notes: null, durationMs: 245_000 })
+    expect(sentItems()?.[2]).toEqual({ songId: 'c', versionId: null, notes: null, durationMs: 245_000, commentBefore: null })
 
     vi.mocked(setlistsApi.setItems).mockClear()
     await w.get('[data-testid="duration-a"]').setValue('4:99')
@@ -121,11 +133,11 @@ describe('SetlistDetailPage', () => {
 
     await w.get('[aria-label="Version de Aube"]').setValue('a-v1')
     await flushPromises()
-    expect(sentItems()?.[0]).toEqual({ songId: 'a', versionId: 'a-v1', notes: null, durationMs: null })
+    expect(sentItems()?.[0]).toEqual({ songId: 'a', versionId: 'a-v1', notes: null, durationMs: null, commentBefore: null })
 
     await w.get('[aria-label="Notes pour Cendres"]').setValue('  capo 2 ')
     await flushPromises()
-    expect(sentItems()?.[2]).toEqual({ songId: 'c', versionId: null, notes: 'capo 2', durationMs: null })
+    expect(sentItems()?.[2]).toEqual({ songId: 'c', versionId: null, notes: 'capo 2', durationMs: null, commentBefore: null })
     w.unmount()
   })
 
@@ -163,8 +175,68 @@ describe('SetlistDetailPage', () => {
     expect(sheet.findAll('li .number').map((n) => n.text())).toEqual(['1', '2', '3'])
     expect(sheet.findAll('li .title').map((t) => t.text())).toEqual(['Aube', 'Brume — enchaîner', 'Cendres'])
     expect(sheet.findAll('li .notes').map((n) => n.text())).toEqual(['— enchaîner'])
+    expect(sheet.findAll('li.comment').map((c) => c.text())).toEqual(['Présenter le groupe'])
     expect(sheet.classes()).toContain('size-xl')
     expect(sheet.get('footer').text()).toContain('Durée totale : 6 min 42 s')
+    w.unmount()
+  })
+
+  it('liste les morceaux du groupe, sortis compris, et ajoute les cochés en fin de setlist dans l\'ordre coché', async () => {
+    const w = await mountPage()
+
+    expect(songsApi.list).toHaveBeenCalledWith({ search: undefined, page: 1, pageSize: 50 })
+    const picker = w.get('[data-testid="song-picker"]')
+    expect(picker.get<HTMLInputElement>('[data-testid="pick-a"]').element.disabled).toBe(true)   // Aube y est déjà
+    expect(picker.text()).toContain('déjà dans la setlist')
+    expect(picker.text()).toContain('sorti')
+    expect(picker.get<HTMLButtonElement>('[data-testid="pick-add"]').element.disabled).toBe(true)
+
+    await picker.get('[data-testid="pick-e"]').setValue(true)
+    await picker.get('[data-testid="pick-d"]').setValue(true)
+    expect(picker.get('[data-testid="pick-add"]').text()).toBe('Ajouter les 2 morceaux')
+    await picker.get('[data-testid="pick-add"]').trigger('click')
+    await flushPromises()
+
+    expect(sentItems()?.map((c) => c.songId)).toEqual(['a', 'b', 'c', 'e', 'd'])
+    expect(sentItems()?.[3]).toEqual({ songId: 'e', versionId: null, notes: null, durationMs: null, commentBefore: null })
+    w.unmount()
+  })
+
+  it('le filtre relance la liste pendant la frappe', async () => {
+    vi.useFakeTimers()
+    try {
+      const w = await mountPage()
+      await w.get('#setlist-search').setValue('  du ')
+      await vi.advanceTimersByTimeAsync(300)
+      expect(songsApi.list).toHaveBeenLastCalledWith({ search: 'du', page: 1, pageSize: 50 })
+      w.unmount()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('un commentaire s\'écrit entre deux morceaux et part avec la ligne qui suit', async () => {
+    const w = await mountPage()
+
+    expect(w.findAll('[data-testid="setlist-comment"]')).toHaveLength(1)
+    await w.get('[aria-label="Ajouter un commentaire avant Cendres"]').trigger('click')
+    await w.get('[aria-label="Commentaire avant Cendres"]').setValue('  Changer de guitare ')
+    await flushPromises()
+    expect(sentItems()?.[2]).toEqual({ songId: 'c', versionId: null, notes: null, durationMs: null, commentBefore: 'Changer de guitare' })
+
+    await w.get('[aria-label="Commentaire avant Brume"]').setValue('')
+    await flushPromises()
+    expect(sentItems()?.[1]).toMatchObject({ songId: 'b', commentBefore: null })
+    w.unmount()
+  })
+
+  it('un Guest lit les commentaires sans pouvoir en ajouter', async () => {
+    const w = await mountPage('Guest')
+
+    expect(w.get('[data-testid="setlist-comment"]').text()).toBe('Présenter le groupe')
+    expect(w.find('textarea').exists()).toBe(false)
+    expect(w.find('[data-testid="song-picker"]').exists()).toBe(false)
+    expect(songsApi.list).not.toHaveBeenCalled()
     w.unmount()
   })
 })

@@ -51,3 +51,4 @@ l'ancien, qui passe au statut « remplacé par ADR NNNN ».
 | [0044](0044-sortie-d-un-morceau.md) | Sortie d'un morceau : infos de sortie sur la dernière version Final, liens d'écoute, versions gardées | accepté |
 | [0045](0045-onglet-morceaux-et-volumes.md) | Onglet « Morceaux » et réglages de volume (lecteur audio, piste « Général » du lecteur Guitar Pro) | accepté |
 | [0043](0043-comparaison-guitar-pro-vert-et-rouge.md) | Comparaison Guitar Pro : ajouté en vert, modifié en orange, retiré en rouge, pistes en bas | accepté |
+| [0046](0046-setlist-morceaux-a-cocher-et-commentaires.md) | Setlists : morceaux existants à cocher et commentaires entre les morceaux | accepté |

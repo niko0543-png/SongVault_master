@@ -38,8 +38,9 @@ public sealed class SetlistsEndpointsTests(SongVaultApiFactory factory)
     private static Task<HttpResponseMessage> SetItemsAsync(HttpClient client, string setlist, params object[] items)
         => client.PutAsJsonAsync($"{setlist}/items", new { items });
 
-    private static object Line(SongRef song, int? durationMs = null, string? notes = null, bool withVersion = false)
-        => new { songId = song.SongId, versionId = withVersion ? song.VersionId : (Guid?)null, notes, durationMs };
+    private static object Line(SongRef song, int? durationMs = null, string? notes = null, bool withVersion = false,
+        string? commentBefore = null)
+        => new { songId = song.SongId, versionId = withVersion ? song.VersionId : (Guid?)null, notes, durationMs, commentBefore };
 
     private static async Task<SetlistResponse> ReadAsync(HttpResponseMessage response)
     {
@@ -59,13 +60,15 @@ public sealed class SetlistsEndpointsTests(SongVaultApiFactory factory)
         await ReadAsync(await SetItemsAsync(owner, setlist, Line(aube), Line(brume), Line(cendres)));
 
         // « Cendres » passe en tête, puis « Aube » et « Brume » échangent leurs places
-        var moved = await ReadAsync(await SetItemsAsync(owner, setlist, Line(cendres), Line(brume), Line(aube, notes: "enchaîner")));
+        var moved = await ReadAsync(await SetItemsAsync(owner, setlist,
+            Line(cendres), Line(brume, commentBefore: "Présenter le groupe"), Line(aube, notes: "enchaîner")));
 
         Assert.Equal(["Cendres", "Brume", "Aube"], moved.Items.Select(i => i.SongTitle));
         Assert.Equal([1, 2, 3], moved.Items.Select(i => i.Position));
         var reloaded = (await owner.GetFromJsonAsync<SetlistResponse>(setlist, TestJson.Options))!;
         Assert.Equal(moved.Items.Select(i => i.SongId), reloaded.Items.Select(i => i.SongId));
         Assert.Equal("enchaîner", reloaded.Items[2].Notes);
+        Assert.Equal([null, "Présenter le groupe", null], reloaded.Items.Select(i => i.CommentBefore));
         var list = (await owner.GetFromJsonAsync<List<SetlistSummaryResponse>>($"/api/bands/{bandId}/setlists", TestJson.Options))!;
         Assert.Equal(("Concert au Ferrailleur", "Nantes", 3), (list.Single().Name, list.Single().Venue, list.Single().ItemCount));
     }

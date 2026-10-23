@@ -45,6 +45,7 @@ internal sealed class SetlistRepository(SongVaultDbContext db, IBandContext band
                 i.VersionId,
                 i.Notes,
                 i.DurationMs,
+                i.CommentBefore,
                 SongTitle = db.Songs.Where(s => s.Id == i.SongId).Select(s => s.Title).FirstOrDefault() ?? "",
             })
             .ToListAsync(ct);
@@ -85,7 +86,7 @@ internal sealed class SetlistRepository(SongVaultDbContext db, IBandContext band
                 return new SetlistItemDto(i.Position, i.SongId, i.SongTitle, i.VersionId, version?.Id,
                     [.. versions[i.SongId].Select(v => new SetlistVersionOptionDto(v.Id, v.Number, v.Title))],
                     version?.Key?.Value, version?.Bpm, i.Notes, i.DurationMs,
-                    version is not null ? durations.GetValueOrDefault(version.Id) : null);
+                    version is not null ? durations.GetValueOrDefault(version.Id) : null, i.CommentBefore);
             }),
         ]);
     }

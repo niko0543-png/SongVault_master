@@ -69,6 +69,27 @@ public sealed class SetlistTests
     }
 
     [Fact]
+    public void Le_commentaire_avant_un_morceau_suit_ce_morceau_quand_il_change_de_place()
+    {
+        var setlist = New();
+        var a = Item();
+        var b = Item() with { CommentBefore = "  Présenter le groupe  " };
+        setlist.SetItems([a, b], Now);
+
+        setlist.SetItems([b with { CommentBefore = "Présenter le groupe" }, a], Now);
+
+        Assert.Equal(("Présenter le groupe", 1), (setlist.Items[0].CommentBefore, setlist.Items[0].Position));
+        Assert.Null(setlist.Items[1].CommentBefore);
+    }
+
+    [Fact]
+    public void SetItems_refuse_un_commentaire_trop_long()
+    {
+        Assert.Throws<DomainException>(
+            () => New().SetItems([Item() with { CommentBefore = new string('x', SetlistItem.CommentMaxLength + 1) }], Now));
+    }
+
+    [Fact]
     public void SetItems_retire_les_morceaux_absents_et_renumerote()
     {
         var setlist = New();
