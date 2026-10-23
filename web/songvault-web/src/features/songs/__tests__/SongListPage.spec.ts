@@ -7,6 +7,8 @@ import { songsApi } from '../api/songsApi'
 import { ApiError } from '../../../shared/api/ApiError'
 import type { Song } from '../types'
 import type { BandRole } from '@/features/bands/types'
+import { useBandStore } from '@/features/bands/stores/bandStore'
+import { useSongsStore } from '../stores/songsStore'
 
 // Remplace le module entier : aucun appel réseau pendant les tests
 vi.mock('../api/songsApi')
@@ -93,5 +95,27 @@ describe('SongListPage', () => {
     await flushPromises()
 
     expect(wrapper.text().includes('Nouveau morceau')).toBe(visible)
+  })
+
+  it('recharge la liste quand on change de groupe depuis la page (ne reste pas sur « Chargement… »)', async () => {
+    vi.mocked(songsApi.list)
+      .mockResolvedValueOnce({ items: [song], page: 1, pageSize: 50, totalCount: 1, totalPages: 1 })
+      .mockResolvedValueOnce({ items: [{ ...song, id: '2', title: 'Aube' }], page: 1, pageSize: 50, totalCount: 1, totalPages: 1 })
+
+    const wrapper = mountPage('Member')
+    await flushPromises()
+    expect(wrapper.text()).toContain('Nocturne')
+
+    // Ce que font la garde du routeur (groupe actif) et AppLayout (vidage du cache) au changement de groupe
+    const bands = useBandStore()
+    bands.bands = [...bands.bands, { id: 'b2', name: 'Autre', role: 'Member' }]
+    bands.activeId = 'b2'
+    useSongsStore().reset()
+    await flushPromises()
+
+    expect(songsApi.list).toHaveBeenCalledTimes(2)
+    expect(wrapper.find('[data-testid="loading-state"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('Aube')
+    expect(wrapper.text()).not.toContain('Nocturne')
   })
 })

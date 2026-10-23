@@ -79,11 +79,20 @@ function onSelect(id: string) {
   void router.push({ name: 'song-detail', params: { songId: id } })
 }
 
-// ================= Premier chargement =================
+// ================= Chargement =================
 
-onMounted(() => {
+function load() {
   void store.setFilters({ search: search.value.trim(), status: status.value })
-})
+}
+
+onMounted(load)
+
+// Changement de groupe depuis cette page : la route reste « songs », la page n'est donc pas recréée,
+// mais AppLayout vide la liste en cache. Sans ce rechargement, la page restait sur « Chargement… ».
+// flush 'post' : passe après le vidage fait par AppLayout.
+watch(() => bands.activeId, (next, prev) => {
+  if (prev && next !== prev) { store.invalidate(); load() }
+}, { flush: 'post' })
 </script>
 
 <template>
