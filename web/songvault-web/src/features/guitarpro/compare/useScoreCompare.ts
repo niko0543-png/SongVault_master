@@ -3,7 +3,7 @@ import { importer, Settings, type model } from '@coderline/alphatab'
 import { filesApi } from '@/features/files/api/filesApi'
 import { toPlainScore } from './plain'
 import { runDiff } from './runDiff'
-import { highlight, NEW_COLOR, OLD_COLOR } from './highlight'
+import { highlight, NEW_COLORS, OLD_COLORS } from './highlight'
 import type { ScoreDiff } from './scoreDiff'
 
 /** #36 : un fichier Guitar Pro d'une version, l'un des deux côtés d'une comparaison. */
@@ -15,7 +15,8 @@ export interface ComparedFile {
 /**
  * #30 : lit les deux fichiers, calcule les différences de A vers B (dans un Web Worker) et colore la partition de B.
  * #36 : partagé par le résumé de l'écran A/B et par la page de la tablature, qui montre les différences.
- * #37 : avec `withOld`, colore aussi la partition de A en rouge : ce qui a été retiré ou remplacé (différences de B vers A).
+ * #37 : avec `withOld`, colore aussi la partition de A : en rouge ce qui a été retiré, en orange ce qui a été
+ * remplacé (différences de B vers A).
  */
 export function useScoreCompare(songId: MaybeRefOrGetter<string>, a: MaybeRefOrGetter<ComparedFile | null>, b: MaybeRefOrGetter<ComparedFile | null>,
   withOld = false) {
@@ -43,8 +44,8 @@ export function useScoreCompare(songId: MaybeRefOrGetter<string>, a: MaybeRefOrG
       const plainB = toPlainScore(after)
       const [result, reverse] = await Promise.all([runDiff(plainA, plainB), withOld ? runDiff(plainB, plainA) : null])
       if (id !== run) return                                              // un autre fichier a été choisi entre-temps
-      highlight(after, result, NEW_COLOR)
-      if (reverse) highlight(before, reverse, OLD_COLOR)
+      highlight(after, result, NEW_COLORS)
+      if (reverse) highlight(before, reverse, OLD_COLORS)
       diff.value = result
       scoreA.value = markRaw(before)
       scoreB.value = markRaw(after)

@@ -101,7 +101,7 @@ const fr = {
     loading: 'Comparaison des deux fichiers…',
     failed: 'Impossible de comparer ces fichiers Guitar Pro.',
     direction: 'Partition de B ({fileB}), comparée à A ({fileA}).',
-    legend: 'Nouvelle version : en vert, ce qui a été ajouté ou modifié. Ancienne version : en rouge, ce qui a été retiré ou remplacé. Chaque différence est aussi dans la liste ; un clic y place la partition.',
+    legend: 'En vert : ajouté (nouvelle version). En orange : modifié. En rouge : retiré (ancienne version). Chaque différence est aussi dans la liste ; un clic y place la partition.',
     // #37 : la partition affichée dans la comparaison
     side: 'Partition affichée',
     sideNew: 'Nouvelle version (B)',
@@ -233,7 +233,7 @@ const en: Widen<typeof fr> = {
     loading: 'Comparing the two files…',
     failed: 'These Guitar Pro files could not be compared.',
     direction: 'Score of B ({fileB}), compared with A ({fileA}).',
-    legend: 'New version: what was added or changed is green. Old version: what was removed or replaced is red. Every difference is also in the list; clicking one moves the score to it.',
+    legend: 'Green: added (new version). Orange: changed. Red: removed (old version). Every difference is also in the list; clicking one moves the score to it.',
     side: 'Score shown',
     sideNew: 'New version (B)',
     sideOld: 'Old version (A)',

@@ -12,8 +12,8 @@ import type { BarChange } from '../compare/scoreDiff'
  * et un clic place la partition sur la mesure.
  * #36 : ouvert par « Afficher les modifs » de l'écran A/B, sur la page de la tablature (ADR 0042) :
  * le lecteur y occupe toute la place (`fill`), la liste est à côté de la partition, repliable sur téléphone.
- * #37 : on passe de la nouvelle partition (B, changements en vert) à l'ancienne (A, ce qui a été retiré ou
- * remplacé, en rouge) ; le panneau des pistes du lecteur reste en bas (ADR 0043).
+ * #37 : on passe de la nouvelle partition (B : ajouts en vert, modifications en orange) à l'ancienne (A : ce qui
+ * a été retiré en rouge, ce qui a été remplacé en orange) ; le panneau des pistes reste en bas (ADR 0043).
  */
 const props = defineProps<{ songId: string; a: ComparedFile; b: ComparedFile; label: string }>()
 
@@ -101,7 +101,8 @@ function goTo(change: BarChange) {
 .inline select { width: auto; }
 .changes { margin: 0; padding-left: 1.5rem; }
 /* Le même code que dans la partition (highlight.ts), en plus du texte : la couleur n'est jamais seule */
-.change-added::marker, .change-modified::marker { color: #1a7f37; }
+.change-added::marker { color: #1a7f37; }
+.change-modified::marker { color: #b35900; }
 .change-removed::marker { color: #b42318; }
 .sides { display: flex; flex-wrap: wrap; gap: .25rem .75rem; }
 .sides label { display: inline-flex; gap: .3rem; align-items: center; width: auto; margin: 0; cursor: pointer; }

@@ -74,7 +74,7 @@ describe('GuitarProCompare (#30)', () => {
     expect(viewer.goToBar).toHaveBeenCalledWith(3)
   })
 
-  it('colore en vert, dans la partition de B, les notes ajoutées et modifiées', async () => {
+  it('colore dans la partition de B les notes ajoutées en vert et modifiées en orange', async () => {
     const after = ['12.1.1', ...RIFF]
     after[3] = '0.4.4 2.4.4 5.4.4 0.4.4'
     serve({ fa: gp(RIFF), fb: gp(after) })
@@ -84,34 +84,42 @@ describe('GuitarProCompare (#30)', () => {
     const noteAt = (bar: number, beat: number) => score.tracks[0]!.staves[0]!.bars[bar]!.voices[0]!.beats[beat]!.notes[0]!
     const fret = (bar: number, beat: number) => noteAt(bar, beat).style?.colors.get(model.NoteSubElement.GuitarTabFretNumber)?.rgba
     expect(fret(0, 0)).toBe('#1A7F37')
-    expect(fret(3, 2)).toBe('#1A7F37')
+    expect(fret(3, 2)).toBe('#B35900')
     expect(fret(3, 1)).toBeUndefined()
     expect(fret(1, 0)).toBeUndefined()
   })
 
-  it('#37 : passe à l’ancienne partition, en rouge ce qui a été retiré ou remplacé, et s’y place sur la mesure de A', async () => {
-    const after = ['12.1.1', ...RIFF]
-    after[3] = '0.4.4 2.4.4 5.4.4 0.4.4'
-    serve({ fa: gp(RIFF), fb: gp(after) })
+  it('#37 : passe à l’ancienne partition, en rouge ce qui a été retiré, en orange ce qui a été remplacé, et s’y place sur la mesure de A', async () => {
+    const before = [...RIFF, '5.3.4 7.3.4 5.3.4 7.3.4']
+    const after = ['12.1.1', RIFF[0]!, RIFF[2]!, '5.3.4 7.3.4 9.3.4 7.3.4']  // une mesure ajoutée, la 2 de A retirée, la 4 retouchée
+    serve({ fa: gp(before), fb: gp(after) })
     const wrapper = await mountCompare()
+    const items = () => wrapper.findAll('[data-testid="gp-changes"] li button')
+    expect(items().map((b) => b.text())).toEqual([
+      'Mesure 1 : ajoutée', 'Mesure 2 de A : supprimée, avant la mesure 3', 'Mesure 4 : 1 note modifiée, 1 note retirée',
+    ])
 
     await wrapper.get('[data-testid="gp-side-old"]').setValue(true)
     const score = viewer.score as model.Score
-    expect(score.masterBars.length).toBe(3)                             // la partition de A
+    expect(score.masterBars.length).toBe(4)                             // la partition de A
     const fret = (bar: number, beat: number) =>
       score.tracks[0]!.staves[0]!.bars[bar]!.voices[0]!.beats[beat]!.notes[0]!.style?.colors.get(model.NoteSubElement.GuitarTabFretNumber)?.rgba
-    expect(fret(2, 2)).toBe('#B42318')                                  // la case 3 remplacée par la 5
-    expect(fret(2, 1)).toBeUndefined()
+    expect(fret(1, 0)).toBe('#B42318')                                  // la mesure retirée
+    expect(fret(3, 2)).toBe('#B35900')                                  // la case 5 remplacée par la 9
+    expect(fret(3, 1)).toBeUndefined()
+    expect(fret(2, 0)).toBeUndefined()
     expect(fret(0, 0)).toBeUndefined()
 
-    const items = wrapper.findAll('[data-testid="gp-changes"] li button')
-    await items[1]!.trigger('click')
-    expect(viewer.goToBar).toHaveBeenLastCalledWith(2)                  // mesure 4 de B = mesure 3 de A
-    await items[0]!.trigger('click')
+    await items()[2]!.trigger('click')
+    expect(viewer.goToBar).toHaveBeenLastCalledWith(3)                  // mesure 4 de B = mesure 4 de A
+    await items()[1]!.trigger('click')
+    expect(viewer.goToBar).toHaveBeenLastCalledWith(1)
+    await items()[0]!.trigger('click')
     expect(viewer.goToBar).toHaveBeenLastCalledWith(0)                  // ajoutée dans B : avant la mesure 1 de A
 
     await wrapper.get('[data-testid="gp-side-new"]').setValue(true)
     expect((viewer.score as model.Score).masterBars.length).toBe(4)
+    expect(viewer.score).not.toBe(score)
   })
 
   it('annonce un changement d’accordage en une ligne, sans différence de notes', async () => {
