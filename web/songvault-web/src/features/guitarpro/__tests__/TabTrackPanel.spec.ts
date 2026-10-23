@@ -58,4 +58,29 @@ describe('TabTrackPanel (#31)', () => {
     expect(wrapper.findAll('.lane')).toHaveLength(1)
     expect(wrapper.get('output').text()).toBe('Mesure 2 sur 3 · 0:42 / 2:31')
   })
+
+  it('#35 : se redimensionne en glissant la poignée ou au clavier, entre une piste et les trois quarts de l’écran', async () => {
+    const wrapper = mountPanel({ height: 200 })
+    const grip = wrapper.get('[data-testid="tab-tracks-resize"]')
+    const body = wrapper.get('[data-testid="tab-tracks-body"]')
+    expect(body.attributes('style')).toContain('height: 200px')
+    body.element.getBoundingClientRect = () => ({ height: 200 }) as DOMRect
+
+    // jsdom n'a pas PointerEvent : un MouseEvent du même nom porte clientY
+    const pointer = (type: string, clientY = 0) => grip.element.dispatchEvent(new MouseEvent(type, { clientY, bubbles: true, cancelable: true }))
+    pointer('pointerdown', 500)
+    pointer('pointermove', 400)                                              // vers le haut : plus grand
+    pointer('pointerup')
+    expect(wrapper.emitted('update:height')!.slice(-1)[0]).toEqual([300])
+
+    await wrapper.setProps({ height: 300 })
+    await grip.trigger('keydown', { key: 'ArrowDown' })
+    expect(wrapper.emitted('update:height')!.slice(-1)[0]).toEqual([276])
+    await grip.trigger('keydown', { key: 'End' })
+    expect(wrapper.emitted('update:height')!.slice(-1)[0]).toEqual([48])
+    await grip.trigger('keydown', { key: 'Home' })
+    expect(wrapper.emitted('update:height')!.slice(-1)[0]).toEqual([Math.round(window.innerHeight * 0.75)])
+    await grip.trigger('dblclick')                                            // double-clic : hauteur par défaut
+    expect(wrapper.emitted('update:height')!.slice(-1)[0]).toEqual([null])
+  })
 })
