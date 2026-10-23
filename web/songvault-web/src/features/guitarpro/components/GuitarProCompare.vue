@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { t } from '@/shared/i18n'
 import GuitarProViewer from './GuitarProViewer.vue'
-import { describeBar, describeGlobal, targetBar, targetBarA } from '../compare/describe'
+import { describeBar, describeGlobal, matchingBar, targetBar, targetBarA } from '../compare/describe'
 import { useScoreCompare, type ComparedFile } from '../compare/useScoreCompare'
 import type { BarChange } from '../compare/scoreDiff'
 
@@ -14,12 +14,15 @@ import type { BarChange } from '../compare/scoreDiff'
  * le lecteur y occupe toute la place (`fill`), la liste est à côté de la partition, repliable sur téléphone.
  * #37 : on passe de la nouvelle partition (B : ajouts en vert, modifications en orange) à l'ancienne (A : ce qui
  * a été retiré en rouge, ce qui a été remplacé en orange) ; le panneau des pistes reste en bas (ADR 0043).
+ * Le changement de partition garde les pistes affichées et la mesure où l'on était, retrouvées dans l'autre version.
  */
 const props = defineProps<{ songId: string; a: ComparedFile; b: ComparedFile; label: string }>()
 
 const { status, diff, scoreA, scoreB } = useScoreCompare(() => props.songId, () => props.a, () => props.b, true)
 const trackB = ref(0)
 const side = ref<'new' | 'old'>('new')
+/** Où reprendre dans la partition qu'on vient d'afficher. */
+const start = ref<{ tracks: number[]; bar: number }>({ tracks: [], bar: 0 })
 const viewer = ref<InstanceType<typeof GuitarProViewer> | null>(null)
 const barCount = computed(() => scoreB.value?.masterBars.length ?? 0)
 const barCountA = computed(() => scoreA.value?.masterBars.length ?? 0)
@@ -37,6 +40,21 @@ function barOf(change: BarChange): number {
 function goTo(change: BarChange) {
   viewer.value?.goToBar(barOf(change))
 }
+
+/** #37 : passe à l'autre partition en gardant les pistes affichées (par leur partenaire) et la mesure. */
+function switchSide(next: 'new' | 'old') {
+  if (next === side.value || !diff.value) return
+  const here = viewer.value?.position() ?? { tracks: [], bar: 0 }
+  const toOld = next === 'old'
+  const partner = (index: number) => diff.value!.tracks.find((t) => (toOld ? t.trackB : t.trackA) === index)
+  const tracks = here.tracks.map((index) => partner(index)).filter((t) => t !== undefined)
+  if (tracks[0]) trackB.value = tracks[0].trackB                        // la liste suit l'instrument affiché
+  start.value = {
+    tracks: tracks.map((t) => (toOld ? t.trackA : t.trackB)),
+    bar: matchingBar(here.bar, current.value?.changes ?? [], toOld, barCountA.value, barCount.value),
+  }
+  side.value = next
+}
 </script>
 
 <template>
@@ -50,10 +68,10 @@ function goTo(change: BarChange) {
         <div class="changes-body">
           <div class="sides" role="radiogroup" :aria-label="t('guitarpro.compare.side')">
             <label :class="{ active: side === 'new' }">
-              <input v-model="side" type="radio" name="gp-side" value="new" data-testid="gp-side-new" /> {{ t('guitarpro.compare.sideNew') }}
+              <input type="radio" name="gp-side" value="new" :checked="side === 'new'" data-testid="gp-side-new" @change="switchSide('new')" /> {{ t('guitarpro.compare.sideNew') }}
             </label>
             <label :class="{ active: side === 'old' }">
-              <input v-model="side" type="radio" name="gp-side" value="old" data-testid="gp-side-old" /> {{ t('guitarpro.compare.sideOld') }}
+              <input type="radio" name="gp-side" value="old" :checked="side === 'old'" data-testid="gp-side-old" @change="switchSide('old')" /> {{ t('guitarpro.compare.sideOld') }}
             </label>
           </div>
           <div v-if="diff.global.length > 0" data-testid="gp-global">
@@ -83,7 +101,8 @@ function goTo(change: BarChange) {
         </div>
       </details>
 
-      <GuitarProViewer :key="side" ref="viewer" class="viewer" fill :score="shownScore" :track="shownTrack" :label="label" />
+      <GuitarProViewer :key="side" ref="viewer" class="viewer" fill :score="shownScore" :track="shownTrack" :label="label"
+                       :start-tracks="start.tracks" :start-bar="start.bar" />
     </template>
   </div>
 </template>

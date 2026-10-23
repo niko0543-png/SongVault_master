@@ -75,9 +75,15 @@ test('liste les différences, les colore dans la partition, et un clic place la 
   await expect(score.locator('.at-selection div').first()).toBeVisible()
 
   // #37 : l'ancienne partition, avec en orange la note remplacée (demo-b.gp n'enlève aucune mesure), et rien en vert
+  // et l'on reste sur la même musique : la mesure 3 de B est la mesure 2 de A
   await page.getByTestId('gp-side-old').check()
   await expect(page.getByTestId('tab-play')).toBeEnabled({ timeout: 30_000 })
+  await expect(page.getByTestId('tab-bar')).toHaveAttribute('aria-label', 'Mesure 2 sur 4')
   await expect(page.getByTestId('tab-score').locator(orange).first()).toBeAttached({ timeout: 30_000 })
   await expect(page.getByTestId('tab-score').locator(green)).toHaveCount(0)
+
+  // Retour à la nouvelle partition, sur la même mesure
+  await page.getByTestId('gp-side-new').check()
+  await expect(page.getByTestId('tab-bar')).toHaveAttribute('aria-label', 'Mesure 3 sur 5', { timeout: 30_000 })
   expect(violations).toEqual([])
 })

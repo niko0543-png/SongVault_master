@@ -7,16 +7,20 @@ import { exporter, importer, model, Settings } from '@coderline/alphatab'
  * #30 : la comparaison lit deux vrais fichiers Guitar Pro (écrits ici par alphaTab à partir d'alphaTex) ;
  * seul le lecteur est remplacé : il note la partition reçue et les mesures demandées.
  */
-const viewer = vi.hoisted(() => ({ goToBar: vi.fn(), score: null as unknown, track: undefined as number | undefined }))
+const viewer = vi.hoisted(() => ({
+  goToBar: vi.fn(), score: null as unknown, track: undefined as number | undefined,
+  position: { tracks: [0], bar: 0 }, start: null as unknown,
+}))
 vi.mock('../components/GuitarProViewer.vue', () => ({
   default: defineComponent({
     name: 'GuitarProViewer',
-    props: { score: Object, track: Number, label: String, fill: Boolean },
+    props: { score: Object, track: Number, label: String, fill: Boolean, startTracks: Array, startBar: Number },
     setup(props, { expose }) {
-      expose({ goToBar: viewer.goToBar })
+      expose({ goToBar: viewer.goToBar, position: () => viewer.position })
       return () => {
         viewer.score = props.score
         viewer.track = props.track
+        viewer.start = { tracks: props.startTracks, bar: props.startBar }
         return h('div', { 'data-testid': 'viewer' }, props.label)
       }
     },
@@ -117,9 +121,22 @@ describe('GuitarProCompare (#30)', () => {
     await items()[0]!.trigger('click')
     expect(viewer.goToBar).toHaveBeenLastCalledWith(0)                  // ajoutée dans B : avant la mesure 1 de A
 
+    viewer.position = { tracks: [0], bar: 1 }                         // mesure 2 de A, retirée de B
     await wrapper.get('[data-testid="gp-side-new"]').setValue(true)
     expect((viewer.score as model.Score).masterBars.length).toBe(4)
     expect(viewer.score).not.toBe(score)
+    expect(viewer.start).toEqual({ tracks: [0], bar: 2 })              // elle se trouvait avant la mesure 3 de B
+  })
+
+  it('#37 : garde la piste et la mesure en passant de B à A', async () => {
+    const after = ['12.1.1', ...RIFF]
+    serve({ fa: gp(RIFF), fb: gp(after) })
+    const wrapper = await mountCompare()
+
+    viewer.position = { tracks: [0], bar: 3 }                         // mesure 4 de B
+    await wrapper.get('[data-testid="gp-side-old"]').setValue(true)
+    expect(viewer.start).toEqual({ tracks: [0], bar: 2 })              // = mesure 3 de A
+    expect(viewer.track).toBe(0)
   })
 
   it('annonce un changement d’accordage en une ligne, sans différence de notes', async () => {

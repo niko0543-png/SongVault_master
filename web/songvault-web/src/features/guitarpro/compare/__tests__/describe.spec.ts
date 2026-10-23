@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { describeBar, describeGlobal, targetBar, targetBarA, tuningName } from '../describe'
+import { describeBar, describeGlobal, matchingBar, targetBar, targetBarA, tuningName } from '../describe'
 import type { BarChange } from '../scoreDiff'
 
 describe('différences Guitar Pro en phrases (#30)', () => {
@@ -35,5 +35,17 @@ describe('différences Guitar Pro en phrases (#30)', () => {
       { kind: 'added', barB: 5 },
     ]
     expect(changes.map((change) => targetBarA(change, changes, 5))).toEqual([0, 2, 3, 4])
+  })
+
+  it('#37 : retrouve une mesure dans l’autre partition, dans les deux sens', () => {
+    // A : 0 1 2 3 4 ; B : X 0 1 3' 4 Y (X et Y ajoutées, 2 supprimée, 3 modifiée)
+    const changes: BarChange[] = [
+      { kind: 'added', barB: 0 },
+      { kind: 'removed', barA: 2, beforeB: 3 },
+      { kind: 'modified', barA: 3, barB: 3, notes: [], removedNotes: 1 },
+      { kind: 'added', barB: 5 },
+    ]
+    expect([0, 1, 2, 3, 4, 5].map((b) => matchingBar(b, changes, true, 5, 6))).toEqual([0, 0, 1, 3, 4, 4])
+    expect([0, 1, 2, 3, 4].map((a) => matchingBar(a, changes, false, 5, 6))).toEqual([1, 2, 3, 3, 4])
   })
 })

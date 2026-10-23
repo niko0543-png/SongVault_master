@@ -35,10 +35,13 @@ import { t } from '@/shared/i18n'
  * double-clic sur une note pour jouer depuis elle (ADR 0040).
  * #35 : barre du haut façon Guitar Pro (transport, écran de la piste, boucle, vitesse, transposition) et panneau
  * des pistes redimensionnable (ADR 0041).
- * #37 : le panneau des pistes reste aussi dans la comparaison (ADR 0043).
+ * #37 : le panneau des pistes reste aussi dans la comparaison (ADR 0043). En passant d'une partition à l'autre,
+ * la comparaison redonne les pistes affichées (`startTracks`) et la mesure (`startBar`, 0 = la première) ; `position()`
+ * les lui dit avant le changement.
  */
 const props = defineProps<{
   src?: string; score?: model.Score | null; track?: number; label: string; sync?: SyncContext; fill?: boolean
+  startTracks?: number[]; startBar?: number
 }>()
 const player = usePlayerStore()
 const { confirm } = useConfirm()
@@ -180,7 +183,13 @@ onMounted(async () => {
   if (props.fill) window.addEventListener('keydown', onKeydown, { capture: true })
   api.playerPositionChanged.on((e) => { currentMs.value = e.currentTime; endMs.value = e.endTime })
   api.playedBeatChanged.on((beat) => { currentBar.value = beat.voice.bar.index + 1 })
-  api.renderFinished.on(() => { status.value = 'ready' })
+  let placed = false
+  api.renderFinished.on(() => {
+    status.value = 'ready'
+    if (placed) return
+    placed = true
+    if (props.score && props.startBar) goToBar(props.startBar)          // #37 : la mesure où l'on était dans l'autre partition
+  })
   api.playerReady.on(() => {
     playerReady.value = true
     applyMixer()                                              // #33 : le mix gardé, et après chaque changement de son
@@ -191,7 +200,8 @@ onMounted(async () => {
   })
   api.error.on(() => { status.value = 'error' })
   if (props.score) {                                        // #30 : partition déjà lue par la comparaison
-    shown.value = [props.track ?? 0]
+    const start = (props.startTracks ?? []).filter((i) => i >= 0 && i < props.score!.tracks.length)
+    shown.value = start.length > 0 ? start : [props.track ?? 0]
     api.renderScore(props.score, shown.value)
     return
   }
@@ -511,7 +521,12 @@ const SHORTCUTS: Record<string, () => void> = {
   l: () => { loop.value = !loop.value },
 }
 
-defineExpose({ goToBar })
+/** #37 : les pistes affichées et la mesure en cours (0 = la première), pour les reprendre dans l'autre partition. */
+function position() {
+  return { tracks: [...shown.value], bar: currentBar.value - 1 }
+}
+
+defineExpose({ goToBar, position })
 </script>
 
 <template>

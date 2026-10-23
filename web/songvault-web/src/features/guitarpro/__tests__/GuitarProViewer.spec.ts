@@ -510,9 +510,9 @@ describe('GuitarProViewer dans la comparaison (#30)', () => {
     masterBars: [bar(0), bar(3840), bar(7680)],
   }
 
-  async function mountWithScore() {
+  async function mountWithScore(start: { startTracks?: number[]; startBar?: number } = {}) {
     const wrapper = mount(GuitarProViewer, {
-      props: { score: score as never, track: 1, label: 'riff.gp' },
+      props: { score: score as never, track: 1, label: 'riff.gp', ...start },
       global: { plugins: [createTestingPinia({ createSpy: vi.fn, stubActions: false })] },
     })
     await flushPromises()
@@ -546,6 +546,18 @@ describe('GuitarProViewer dans la comparaison (#30)', () => {
     expect(api().tickPosition).toBe(3840)
     expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'smooth' }))
     scrollTo.mockRestore()
+  })
+
+  it('#37 : reprend les pistes et la mesure données, et dit où il en est', async () => {
+    const wrapper = await mountWithScore({ startTracks: [0, 1], startBar: 2 })
+
+    expect(api().renderScore).toHaveBeenCalledWith(score, [0, 1])
+    expect(api().tickPosition).toBe(7680)                               // placé sur la mesure 3
+    expect((wrapper.vm as unknown as { position: () => unknown }).position()).toEqual({ tracks: [0, 1], bar: 2 })
+    api().renderFinished.fire()                                         // un nouveau rendu (zoom…) ne le replace pas
+    api().tickPosition = 0
+    api().renderFinished.fire()
+    expect(api().tickPosition).toBe(0)
   })
 })
 

@@ -22,11 +22,16 @@ retiré en rouge.
 - La liste reste celle de A vers B ; un clic place la partition affichée sur la bonne mesure
   (celle de A pour l'ancienne : une mesure ajoutée dans B renvoie à la mesure de A qui suit).
 - **Le panneau des pistes reste en bas** dans la comparaison, comme dans le lecteur habituel.
+- **Changer de partition garde l'instrument et la mesure** : le lecteur dit ses pistes affichées et
+  sa mesure (`position()`), la comparaison les retrouve dans l'autre version (pistes associées par
+  l'ADR 0035, mesure par l'alignement des différences de la piste : `matchingBar`) et les redonne
+  au nouveau lecteur (`startTracks`, `startBar`). Une mesure qui n'existe que d'un côté renvoie à
+  la suivante de l'autre.
 
 ## Conséquences
 - Front seulement : pas de changement d'API, pas de migration, pas de nouveau paquet npm.
 - Deux calculs de différences par comparaison (dans des Web Workers) au lieu d'un ; le résumé
   de l'écran A/B n'en fait qu'un.
-- Changer de partition recrée le lecteur : la lecture repart du début.
+- Changer de partition recrée le lecteur : la lecture s'arrête, et repart de la mesure retrouvée.
 - Les numéros de mesure restent rouges, comme dans Guitar Pro (ADR 0037) : la légende et la liste
   disent le sens des couleurs, qui ne sont jamais seules.
