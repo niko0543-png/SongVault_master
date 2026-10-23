@@ -122,7 +122,7 @@ watch(() => props.inSetlist, (ids) => { selected.value = selected.value.filter((
   max-height: 18rem; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius);
 }
 .songs label { display: flex; align-items: center; gap: .5rem; cursor: pointer; padding: .2rem 0; }
-.songs input { flex: none; }
+.songs input { flex: none; width: auto; }                  /* main.css met les champs à 100 % : la case cachait le titre */
 .title { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .tag { flex: none; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 0 .45rem; }
 .more { justify-self: start; }
