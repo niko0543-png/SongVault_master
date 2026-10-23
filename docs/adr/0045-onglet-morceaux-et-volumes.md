@@ -1,4 +1,4 @@
-# ADR 0044 — Onglet « Morceaux » et réglages de volume
+# ADR 0045 — Onglet « Morceaux » et réglages de volume
 
 - Statut : accepté
 - Date : 2026-10-23
