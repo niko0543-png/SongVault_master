@@ -5,8 +5,6 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import ReleaseDetailPage from '../pages/ReleaseDetailPage.vue'
 import { releasesApi } from '../api/releasesApi'
 import type { Release, ReleaseTrack } from '../types'
-import { songsApi } from '@/features/songs/api/songsApi'
-import { versionsApi } from '@/features/versions/api/versionsApi'
 import { ApiError } from '@/shared/api/ApiError'
 import type { BandRole } from '@/features/bands/types'
 
@@ -85,8 +83,18 @@ describe('ReleaseDetailPage', () => {
     const w = await mountPage()
 
     expect(titles(w)).toEqual(['Aube', 'Brume', 'Crépuscule'])
-    expect(w.get<HTMLSelectElement>('[aria-label="Version de Aube"]').element.value).toBe('a-v1')
+    expect(w.text()).toContain('v1 · Démo (Démo)')
     expect(w.text()).toContain('EP · 20 novembre 2026')
+    w.unmount()
+  })
+
+  it('#39 : pas de saisie ici, ni titre, ni version, ni ajout de morceau, ni infos de sortie', async () => {
+    const w = await mountPage()
+
+    expect(w.find('[aria-label^="Version de"]').exists()).toBe(false)
+    expect(w.find('#track-search').exists()).toBe(false)
+    expect(w.findAll('button').map((b) => b.text())).not.toContain('Modifier')
+    expect(w.find('[data-move]').exists()).toBe(true)                      // l'ordre des pistes reste réglable
     w.unmount()
   })
 
@@ -114,16 +122,6 @@ describe('ReleaseDetailPage', () => {
     w.unmount()
   })
 
-  it('changer de version enregistre la piste avec la nouvelle version', async () => {
-    const w = await mountPage()
-
-    await w.get('[aria-label="Version de Brume"]').setValue('b-v2')
-    await flushPromises()
-
-    expect(sentTracks()?.[1]).toEqual({ songId: 'b', versionId: 'b-v2' })
-    w.unmount()
-  })
-
   it('un refus remet l\'ordre enregistré et affiche le message', async () => {
     vi.mocked(releasesApi.setTracks).mockRejectedValue(
       new ApiError(409, { title: 'Conflit', status: 409, detail: 'La ressource a été modifiée par une autre requête. Réessayez.' }))
@@ -137,33 +135,4 @@ describe('ReleaseDetailPage', () => {
     w.unmount()
   })
 
-  it('ajoute un morceau en fin de liste, dans sa dernière version', async () => {
-    vi.mocked(songsApi.list).mockResolvedValue({
-      items: [
-        { id: 'a', title: 'Aube', artist: null, description: null, createdAt: '', updatedAt: '', badge: 'None' },
-        { id: 'd', title: 'Dérive', artist: null, description: null, createdAt: '', updatedAt: '', badge: 'None' },
-      ],
-      page: 1, pageSize: 10, totalCount: 2, totalPages: 1,
-    })
-    vi.mocked(versionsApi.list).mockResolvedValue([
-      { id: 'd-v1', number: 1, title: 'Idée', status: 'Idea', createdAt: '' },
-      { id: 'd-v3', number: 3, title: 'Master', status: 'Final', createdAt: '' },
-      { id: 'd-v2', number: 2, title: 'Démo', status: 'Demo', createdAt: '' },
-    ])
-    vi.mocked(releasesApi.setTracks).mockResolvedValue(structuredClone(release))
-    const w = await mountPage()
-
-    await w.get('#track-search').setValue('d')
-    await w.get('form[role="search"]').trigger('submit')
-    await flushPromises()
-    const results = w.findAll('.results li')
-    expect(results.map((li) => li.text())).toEqual(['DériveAjouter'])   // Aube est déjà sur la sortie
-    await results[0]!.get('button').trigger('click')
-    await flushPromises()
-
-    expect(songsApi.list).toHaveBeenCalledWith({ search: 'd', pageSize: 10 })
-    expect(sentTracks()?.[3]).toEqual({ songId: 'd', versionId: 'd-v3' })
-    expect(sentTracks()).toHaveLength(4)
-    w.unmount()
-  })
 })

@@ -40,7 +40,7 @@ async function mountPage(role: BandRole) {
 describe('ReleaseListPage', () => {
   beforeEach(() => vi.mocked(releasesApi.list).mockReset().mockResolvedValue(releases))
 
-  it('affiche type, date et nombre de pistes ; un Guest ne voit pas le formulaire', async () => {
+  it('affiche type, date et nombre de pistes ; sans formulaire', async () => {
     const { wrapper } = await mountPage('Guest')
 
     const items = wrapper.findAll('[data-testid="release-item"]')
@@ -49,16 +49,10 @@ describe('ReleaseListPage', () => {
     expect(wrapper.find('form').exists()).toBe(false)
   })
 
-  it('crée une sortie puis ouvre son détail', async () => {
-    vi.mocked(releasesApi.create).mockResolvedValue({ id: 'r3' } as Release)
-    const { wrapper, router } = await mountPage('Member')
+  it('#39 : pas de formulaire de création, même pour un Member', async () => {
+    const { wrapper } = await mountPage('Member')
 
-    await wrapper.get('#release-title').setValue('  Aube  ')
-    await wrapper.get('#release-type').setValue('Single')
-    await wrapper.get('form').trigger('submit')
-    await flushPromises()
-
-    expect(releasesApi.create).toHaveBeenCalledWith({ title: 'Aube', type: 'Single', releaseDate: null })
-    expect(router.currentRoute.value.fullPath).toBe('/b/b1/releases/r3')
+    expect(wrapper.find('form').exists()).toBe(false)
+    expect(wrapper.text()).toContain('dernière version finale')
   })
 })

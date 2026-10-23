@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { setlistsApi, toChoices } from '../api/setlistsApi'
 import {
-  SETLIST_MAX_ITEMS, SETLIST_NOTES_MAX,
+  SETLIST_COMMENT_MAX, SETLIST_MAX_ITEMS, SETLIST_NOTES_MAX,
   type Setlist, type SetlistInput, type SetlistItem, type SetlistItemChoice,
 } from '../types'
 import { formatDuration, formatSetlistDate, formatTotal, parseDuration } from '../format'
 import SetlistForm from '../components/SetlistForm.vue'
 import SetlistPrintSheet from '../components/SetlistPrintSheet.vue'
-import { songsApi } from '@/features/songs/api/songsApi'
+import SongPicker from '../components/SongPicker.vue'
 import type { Song } from '@/features/songs/types'
 import { useBandStore } from '@/features/bands/stores/bandStore'
 import LoadingState from '@/shared/components/LoadingState.vue'
@@ -140,6 +140,26 @@ function onChangeDuration(item: SetlistItem, event: Event) {
   saveLine(item, { durationMs })
 }
 
+// ---- Commentaires entre les morceaux (ADR 0046) : celui d'une ligne se lit juste avant elle ----
+/** Lignes dont on a ouvert le champ commentaire, encore vide */
+const openComments = ref<string[]>([])
+
+function showComment(item: SetlistItem): boolean {
+  return !!item.commentBefore || openComments.value.includes(item.songId)
+}
+
+function onOpenComment(item: SetlistItem) {
+  openComments.value = [...openComments.value, item.songId]
+  void nextTick(() => document.getElementById(`comment-${item.songId}`)?.focus())
+}
+
+function onChangeComment(item: SetlistItem, event: Event) {
+  const commentBefore = (event.target as HTMLTextAreaElement).value.trim() || null
+  if (!commentBefore) openComments.value = openComments.value.filter((id) => id !== item.songId)
+  if (commentBefore === item.commentBefore) return
+  saveLine(item, { commentBefore })
+}
+
 function onRemoveItem(item: SetlistItem) {
   if (!setlist.value) return
   const rest = setlist.value.items.filter((i) => i.songId !== item.songId)
@@ -156,28 +176,16 @@ function musicLabel(item: SetlistItem): string {
   return [item.key, item.bpm ? `${item.bpm} BPM` : null].filter(Boolean).join(' · ')
 }
 
-// ---- Ajout d'un morceau ----
-const search = ref('')
-const results = ref<Song[]>([])
-const searched = ref(false)
-const isFull = computed(() => (setlist.value?.items.length ?? 0) >= SETLIST_MAX_ITEMS)
-const candidates = computed(() =>
-  results.value.filter((s) => !setlist.value?.items.some((i) => i.songId === s.id)))
+// ---- Ajout de morceaux existants (ADR 0046) ----
+const songIds = computed(() => setlist.value?.items.map((i) => i.songId) ?? [])
+const remaining = computed(() => SETLIST_MAX_ITEMS - songIds.value.length)
 
-async function onSearch() {
-  itemsError.value = null
-  try {
-    results.value = (await songsApi.list({ search: search.value.trim() || undefined, pageSize: 10 })).items
-    searched.value = true
-  } catch (e) {
-    itemsError.value = getErrorMessage(e)
-  }
-}
-
-/** Ajoute le morceau en fin de setlist, joué dans sa dernière version. */
-function onAdd(song: Song) {
+/** Ajoute les morceaux cochés en fin de setlist, dans l'ordre où on les a cochés, joués dans leur dernière version. */
+function onAdd(songs: Song[]) {
   if (!setlist.value) return
-  void saveItems([...toChoices(setlist.value), { songId: song.id, versionId: null, notes: null, durationMs: null }])
+  const added = songs.filter((s) => !songIds.value.includes(s.id))
+    .map((s) => ({ songId: s.id, versionId: null, notes: null, durationMs: null, commentBefore: null }))
+  void saveItems([...toChoices(setlist.value), ...added])
 }
 </script>
 
@@ -225,6 +233,16 @@ function onAdd(song: Song) {
           <ReorderableList v-else :items="setlist.items" :item-key="(i) => i.songId" :item-label="(i) => i.songTitle"
                            :label="t('setlists.detail.itemsLabel')" :disabled="!canWrite || savingItems" @move="onMove">
             <template #default="{ item }">
+              <div v-if="showComment(item)" class="between" data-testid="setlist-comment">
+                <textarea v-if="canWrite" :id="`comment-${item.songId}`" :value="item.commentBefore ?? ''" rows="1"
+                          :maxlength="SETLIST_COMMENT_MAX" :placeholder="t('setlists.detail.commentPlaceholder')" :disabled="savingItems"
+                          :aria-label="t('setlists.detail.commentBefore', { songTitle: item.songTitle })"
+                          @change="onChangeComment(item, $event)" />
+                <p v-else>{{ item.commentBefore }}</p>
+              </div>
+              <button v-else-if="canWrite" type="button" class="add-comment" :disabled="savingItems"
+                      :aria-label="t('setlists.detail.addCommentBefore', { songTitle: item.songTitle })"
+                      @click="onOpenComment(item)">{{ t('setlists.detail.addComment') }}</button>
               <div class="line" data-testid="setlist-line">
                 <span class="number">{{ item.position }}.</span>
                 <RouterLink :to="{ name: 'song-detail', params: { songId: item.songId } }">{{ item.songTitle }}</RouterLink>
@@ -254,21 +272,7 @@ function onAdd(song: Song) {
           </ReorderableList>
           <p v-if="savingItems" class="muted" role="status">{{ t('common.actions.saving') }}</p>
 
-          <form v-if="canWrite" class="add-item" role="search" @submit.prevent="onSearch">
-            <label for="setlist-search">{{ t('setlists.detail.addSong') }}</label>
-            <div class="search-row">
-              <input id="setlist-search" v-model="search" type="search" :placeholder="t('setlists.detail.searchPlaceholder')" :disabled="isFull" />
-              <button type="submit" class="secondary" :disabled="isFull">{{ t('setlists.detail.search') }}</button>
-            </div>
-            <p v-if="isFull" class="muted">{{ t('setlists.detail.maxItems', { setlistMaxItems: SETLIST_MAX_ITEMS }) }}</p>
-            <ul v-if="searched" class="results">
-              <li v-for="song in candidates" :key="song.id">
-                <span>{{ song.title }}<small v-if="song.artist" class="muted"> · {{ song.artist }}</small></span>
-                <button type="button" class="secondary" :disabled="savingItems || isFull" @click="onAdd(song)">{{ t('setlists.detail.add') }}</button>
-              </li>
-              <li v-if="candidates.length === 0" class="muted">{{ t('setlists.detail.noOtherSong') }}</li>
-            </ul>
-          </form>
+          <SongPicker v-if="canWrite" :in-setlist="songIds" :remaining="remaining" :disabled="savingItems" @add="onAdd" />
         </SectionCard>
       </div>
 
@@ -291,10 +295,14 @@ function onAdd(song: Song) {
 .version { grid-column: 2; min-width: 0; }
 .notes { grid-column: 3 / 5; min-width: 0; }
 .line button { grid-column: 2 / -1; justify-self: end; }
-.add-item { margin-top: 1rem; display: grid; gap: .4rem; }
-.search-row { display: flex; gap: .5rem; }
-.results { list-style: none; padding: 0; margin: 0; display: grid; gap: .3rem; }
-.results li { display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
+.between { margin: 0 0 .4rem 2.5rem; padding-left: .6rem; border-left: 3px solid var(--border); font-style: italic; }
+.between p { margin: 0; white-space: pre-line; }
+.between textarea { width: 100%; resize: vertical; font-style: italic; }
+.add-comment {
+  display: block; margin: 0 0 .25rem 2.5rem; background: none; border: none; padding: 0;
+  color: var(--primary); font-size: .85rem; cursor: pointer;
+}
+.add-comment:disabled { color: var(--muted); cursor: default; }
 @media (max-width: 640px) {
   .line { grid-template-columns: 2rem 1fr 5rem; }
   .music { grid-column: 2; }

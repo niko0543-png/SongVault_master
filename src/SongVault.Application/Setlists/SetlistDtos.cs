@@ -23,11 +23,12 @@ public sealed record SetlistDto(
 /// <summary>
 /// Une ligne. VersionId est la version choisie (null = la dernière) ; PlayedVersionId celle qui sera jouée,
 /// dont viennent Key, Bpm et AudioDurationMs. Versions liste les versions du morceau, pour en choisir une.
+/// CommentBefore se lit entre la ligne précédente et celle-ci (ADR 0046).
 /// </summary>
 public sealed record SetlistItemDto(
     int Position, Guid SongId, string SongTitle, Guid? VersionId, Guid? PlayedVersionId,
     IReadOnlyList<SetlistVersionOptionDto> Versions, string? Key, int? Bpm, string? Notes,
-    int? ManualDurationMs, int? AudioDurationMs)
+    int? ManualDurationMs, int? AudioDurationMs, string? CommentBefore = null)
 {
     /// <summary>La durée saisie prime ; sinon celle du fichier audio ; sinon inconnue.</summary>
     public int? DurationMs => ManualDurationMs ?? AudioDurationMs;

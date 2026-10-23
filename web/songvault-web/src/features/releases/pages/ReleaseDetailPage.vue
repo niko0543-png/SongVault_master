@@ -1,20 +1,16 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
-import { releasesApi, toChoices } from '../api/releasesApi'
+import { releasesApi } from '../api/releasesApi'
 import {
-  COVER_ACCEPT, COVER_MAX_BYTES, RELEASE_MAX_TRACKS, releaseTypeLabels,
-  type Release, type ReleaseInput, type ReleaseTrack, type TrackChoice,
+  COVER_ACCEPT, COVER_MAX_BYTES, releaseTypeLabels,
+  type Release, type ReleaseTrack, type TrackChoice,
 } from '../types'
 import { formatReleaseDate } from '../format'
-import ReleaseForm from '../components/ReleaseForm.vue'
 import ReleaseExportSection from '../components/ReleaseExportSection.vue'
 import ReleaseDistributionSection from '../components/ReleaseDistributionSection.vue'
 import ShareLinksPanel from '@/features/sharing/components/ShareLinksPanel.vue'
 import { rightsApi } from '@/features/rights/api/rightsApi'
-import { songsApi } from '@/features/songs/api/songsApi'
-import type { Song } from '@/features/songs/types'
-import { versionsApi } from '@/features/versions/api/versionsApi'
 import { statusLabels } from '@/features/versions/types'
 import { useBandStore } from '@/features/bands/stores/bandStore'
 import LoadingState from '@/shared/components/LoadingState.vue'
@@ -53,25 +49,9 @@ async function load(id: string) {
 }
 watch(() => props.releaseId, load, { immediate: true })
 
-// ---- Titre, type, date ----
-const isEditing = ref(false)
+// #39 : titre, type, date et infos de sortie ne se saisissent plus ici, mais depuis la dernière version finale
+// d'un morceau (section « Sortie ») ; la page garde la pochette, l'ordre des pistes, l'archive et le partage.
 const detailsError = ref<string | null>(null)
-const savingDetails = ref(false)
-
-async function onSaveDetails(input: ReleaseInput) {
-  if (!release.value) return
-  savingDetails.value = true
-  detailsError.value = null
-  try {
-    await releasesApi.update(release.value.id, input)
-    release.value = { ...release.value, ...input }
-    isEditing.value = false
-  } catch (e) {
-    detailsError.value = getErrorMessage(e)
-  } finally {
-    savingDetails.value = false
-  }
-}
 
 async function onDelete() {
   if (!release.value) return
@@ -117,57 +97,9 @@ function onMove(tracks: ReleaseTrack[]) {
   void saveTracks(tracks.map((t) => ({ songId: t.songId, versionId: t.versionId })), tracks)
 }
 
-function onChangeVersion(track: ReleaseTrack, event: Event) {
-  if (!release.value) return
-  const versionId = (event.target as HTMLSelectElement).value
-  void saveTracks(toChoices(release.value).map((c) => (c.songId === track.songId ? { ...c, versionId } : c)))
-}
-
-function onRemoveTrack(track: ReleaseTrack) {
-  if (!release.value) return
-  const rest = release.value.tracks.filter((t) => t.songId !== track.songId)
-  void saveTracks(toChoices({ tracks: rest }), rest)
-}
-
 function versionLabel(track: ReleaseTrack): string {
   const v = track.versions.find((x) => x.id === track.versionId)
   return v ? `v${v.number} · ${v.title} (${statusLabels[v.status]})` : t('releases.detail.unknownVersion')
-}
-
-// ---- Ajout d'un morceau ----
-const search = ref('')
-const results = ref<Song[]>([])
-const searched = ref(false)
-const isFull = computed(() => (release.value?.tracks.length ?? 0) >= RELEASE_MAX_TRACKS)
-const candidates = computed(() =>
-  results.value.filter((s) => !release.value?.tracks.some((t) => t.songId === s.id)))
-
-async function onSearch() {
-  tracksError.value = null
-  try {
-    results.value = (await songsApi.list({ search: search.value.trim() || undefined, pageSize: 10 })).items
-    searched.value = true
-  } catch (e) {
-    tracksError.value = getErrorMessage(e)
-  }
-}
-
-/** Ajoute le morceau en fin de liste, dans sa dernière version ; la version se change ensuite. */
-async function onAdd(song: Song) {
-  if (!release.value) return
-  tracksError.value = null
-  try {
-    const versions = await versionsApi.list(song.id)
-    const latest = versions.reduce<(typeof versions)[number] | null>(
-      (best, v) => (best && best.number > v.number ? best : v), null)
-    if (!latest) {
-      tracksError.value = t('releases.detail.noVersion', { title: song.title })
-      return
-    }
-    await saveTracks([...toChoices(release.value), { songId: song.id, versionId: latest.id }])
-  } catch (e) {
-    tracksError.value = getErrorMessage(e)
-  }
 }
 
 // ---- Pochette ----
@@ -225,17 +157,11 @@ async function onRemoveCover() {
           <h1>{{ release.title }}</h1>
           <p class="muted">{{ releaseTypeLabels[release.type] }} · {{ formatReleaseDate(release.releaseDate) }}</p>
         </div>
-        <div v-if="canWrite && !isEditing" class="actions">
-          <button type="button" class="secondary" @click="isEditing = true">{{ t('releases.detail.edit') }}</button>
+        <div v-if="canWrite" class="actions">
           <button type="button" class="danger" @click="onDelete">{{ t('common.actions.delete') }}</button>
         </div>
       </header>
-      <p v-if="detailsError && !isEditing" class="field-error" role="alert">{{ detailsError }}</p>
-      <SectionCard v-if="isEditing" :title="t('releases.detail.editTitle')">
-        <ReleaseForm :initial="{ title: release.title, type: release.type, releaseDate: release.releaseDate }"
-                     :submit-label="t('common.actions.save')" :submitting="savingDetails" :error="detailsError"
-                     @submit="onSaveDetails" @cancel="isEditing = false" />
-      </SectionCard>
+      <p v-if="detailsError" class="field-error" role="alert">{{ detailsError }}</p>
 
       <div class="layout">
         <SectionCard :title="t('releases.detail.cover')">
@@ -269,38 +195,16 @@ async function onRemoveCover() {
                   <RouterLink :to="{ name: 'song-detail', params: { songId: item.songId } }">{{ item.songTitle }}</RouterLink>
                   <small v-if="item.isReleasedHere" class="released-badge">{{ t('releases.detail.releasedHere') }}</small>
                 </span>
-                <select v-if="canWrite" :value="item.versionId" :disabled="savingTracks"
-                        :aria-label="t('releases.detail.versionOf', { songTitle: item.songTitle })" @change="onChangeVersion(item, $event)">
-                  <option v-for="v in item.versions" :key="v.id" :value="v.id">
-                    v{{ v.number }} · {{ v.title }} ({{ statusLabels[v.status] }})
-                  </option>
-                </select>
-                <span v-else class="muted">{{ versionLabel(item) }}</span>
-                <button v-if="canWrite" type="button" class="secondary" :disabled="savingTracks"
-                        :aria-label="t('releases.detail.removeTrack', { songTitle: item.songTitle })" @click="onRemoveTrack(item)">{{ t('releases.detail.remove') }}</button>
+<span class="muted">{{ versionLabel(item) }}</span>
               </div>
             </template>
           </ReorderableList>
           <p v-if="savingTracks" class="muted" role="status">{{ t('common.actions.saving') }}</p>
 
-          <form v-if="canWrite" class="add-track" role="search" @submit.prevent="onSearch">
-            <label for="track-search">{{ t('releases.detail.addSong') }}</label>
-            <div class="search-row">
-              <input id="track-search" v-model="search" type="search" :placeholder="t('releases.detail.searchPlaceholder')" :disabled="isFull" />
-              <button type="submit" class="secondary" :disabled="isFull">{{ t('releases.detail.search') }}</button>
-            </div>
-            <p v-if="isFull" class="muted">{{ t('releases.detail.maxTracks', { releaseMaxTracks: RELEASE_MAX_TRACKS }) }}</p>
-            <ul v-if="searched" class="results">
-              <li v-for="song in candidates" :key="song.id">
-                <span>{{ song.title }}<small v-if="song.artist" class="muted"> · {{ song.artist }}</small></span>
-                <button type="button" class="secondary" :disabled="savingTracks || isFull" @click="onAdd(song)">{{ t('releases.detail.add') }}</button>
-              </li>
-              <li v-if="candidates.length === 0" class="muted">{{ t('releases.detail.noOtherSong') }}</li>
-            </ul>
-          </form>
+          <p class="muted"><small>{{ t('releases.detail.fromSongs') }}</small></p>
         </SectionCard>
       </div>
-      <ReleaseDistributionSection :release="release" :can-write="canWrite" @saved="(saved) => (release = saved)" />
+      <ReleaseDistributionSection :release="release" :can-write="false" />
       <ReleaseExportSection :release-id="release.id" :can-write="canWrite" />
       <ShareLinksPanel v-if="canWrite" :target="{ type: 'Release', id: release.id }" />
     </template>
@@ -313,14 +217,10 @@ async function onRemoveCover() {
 @media (max-width: 800px) { .layout { grid-template-columns: 1fr; } }
 .cover { width: 100%; max-width: 320px; aspect-ratio: 1; object-fit: cover; border-radius: var(--radius); display: block; margin-bottom: .75rem; }
 .file-label { display: grid; gap: .25rem; margin-bottom: .5rem; }
-.track { display: grid; grid-template-columns: 2rem minmax(6rem, 1fr) minmax(0, 12rem) auto; gap: .5rem; align-items: center; }
+.track { display: grid; grid-template-columns: 2rem minmax(6rem, 1fr) auto; gap: .5rem; align-items: center; }
 .track a { overflow-wrap: anywhere; }
 .number { color: var(--muted); text-align: right; }
 .title { min-width: 0; }
 .released-badge { display: inline-block; padding: 0 .4rem; border: 1px solid currentColor; border-radius: 999px; font-size: .75rem; color: var(--muted); }
-.add-track { margin-top: 1rem; display: grid; gap: .4rem; }
-.search-row { display: flex; gap: .5rem; }
-.results { list-style: none; padding: 0; margin: 0; display: grid; gap: .3rem; }
-.results li { display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
 @media (max-width: 640px) { .track { grid-template-columns: 2rem 1fr; } }
 </style>

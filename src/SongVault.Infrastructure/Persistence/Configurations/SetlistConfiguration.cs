@@ -40,6 +40,7 @@ internal sealed class SetlistItemConfiguration : IEntityTypeConfiguration<Setlis
         builder.HasIndex(i => i.SongId);                                 // « dans quelles setlists est ce morceau ? »
         builder.HasIndex(i => i.VersionId);
         builder.Property(i => i.Notes).HasMaxLength(SetlistItem.NotesMaxLength);
+        builder.Property(i => i.CommentBefore).HasMaxLength(SetlistItem.CommentMaxLength);
 
         // Restrict, comme les pistes d'une sortie : SQL Server refuse deux chemins de cascade, et un morceau
         // d'une setlist ne part pas à la corbeille en silence (DeleteSongHandler refuse avec un 409).
