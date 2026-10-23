@@ -84,6 +84,7 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) — versions :
 ### Supprimé
 - `Song.OwnerId`, remplacé par `Song.BandId`. Les morceaux sans propriétaire valide sont supprimés par la migration `BackfillBands`.
 ### Corrigé
+- Liste des morceaux bloquée sur « Chargement… » après un changement de groupe depuis cette liste : elle se recharge maintenant pour le nouveau groupe.
 - Une tablature calée sur sa maquette ne se met plus en pause dès le départ quand les sons du lecteur arrivent tard.
 - Un délai dépassé chez le fournisseur d'e-mails n'arrête plus l'API.
 - La page Facturation avait perdu sa route : le lien « Facturation » des Owner y mène de nouveau.
