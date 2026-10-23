@@ -1109,6 +1109,10 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("SongId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("CommentBefore")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<int?>("DurationMs")
                         .HasColumnType("int");
 

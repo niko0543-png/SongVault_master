@@ -7,6 +7,7 @@
 public sealed class SetlistItem
 {
     public const int NotesMaxLength = 500;
+    public const int CommentMaxLength = 500;
     public const int MinDurationMs = 1_000;
     public const int MaxDurationMs = 60 * 60 * 1_000;
 
@@ -22,16 +23,22 @@ public sealed class SetlistItem
     public string? Notes { get; private set; }
     /// <summary>Durée saisie à la main, en millisecondes ; prime sur la durée du fichier audio (#15).</summary>
     public int? DurationMs { get; private set; }
+    /// <summary>
+    /// Ce qui se passe juste avant ce morceau (ADR 0046) : « présenter le groupe », « changement de guitare »…
+    /// Affiché entre le morceau précédent et celui-ci ; il suit le morceau quand on le déplace.
+    /// </summary>
+    public string? CommentBefore { get; private set; }
 
     internal static SetlistItem Create(Guid setlistId, Guid songId, int position)
         => new() { SetlistId = setlistId, SongId = songId, Position = position };
 
     internal void MoveTo(int position) => Position = position;
 
-    internal void Describe(Guid? versionId, string? notes, int? durationMs)
+    internal void Describe(Guid? versionId, string? notes, int? durationMs, string? commentBefore)
     {
         VersionId = versionId;
         Notes = notes;
         DurationMs = durationMs;
+        CommentBefore = commentBefore;
     }
 }

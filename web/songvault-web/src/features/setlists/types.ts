@@ -3,6 +3,7 @@ export const SETLIST_NAME_MAX = 200
 export const SETLIST_VENUE_MAX = 200
 export const SETLIST_MAX_ITEMS = 50
 export const SETLIST_NOTES_MAX = 500
+export const SETLIST_COMMENT_MAX = 500
 
 // ---- Contrats API ----
 export interface SetlistSummary {
@@ -38,6 +39,8 @@ export interface SetlistItem {
   audioDurationMs: number | null
   /** Durée retenue : saisie, sinon audio, sinon null */
   durationMs: number | null
+  /** Ce qui se passe juste avant ce morceau sur scène, affiché entre la ligne précédente et celle-ci (ADR 0046) */
+  commentBefore: string | null
 }
 
 export interface Setlist extends Omit<SetlistSummary, 'itemCount'> {
@@ -62,4 +65,5 @@ export interface SetlistItemChoice {
   versionId: string | null
   notes: string | null
   durationMs: number | null
+  commentBefore: string | null
 }

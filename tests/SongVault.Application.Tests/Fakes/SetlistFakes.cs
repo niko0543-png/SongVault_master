@@ -41,7 +41,7 @@ internal sealed class FakeSetlistRepository(FakeSongRepository? songs = null) : 
             int? audio = played is not null && AudioDurations.TryGetValue(played.Id, out var ms) ? ms : null;
             return new SetlistItemDto(i.Position, i.SongId, song?.Title ?? "", i.VersionId, played?.Id,
                 [.. versions.Select(v => new SetlistVersionOptionDto(v.Id, v.Number, v.Title))],
-                played?.Key?.Value, played?.Bpm, i.Notes, i.DurationMs, audio);
+                played?.Key?.Value, played?.Bpm, i.Notes, i.DurationMs, audio, i.CommentBefore);
         });
         return Task.FromResult<SetlistDto?>(new SetlistDto(s.Id, s.Name, s.Date, s.Venue, s.CreatedAt, s.UpdatedAt, [.. items]));
     }

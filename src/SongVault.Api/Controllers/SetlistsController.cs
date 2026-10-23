@@ -69,7 +69,7 @@ public sealed class SetlistsController : ControllerBase
         return NoContent();
     }
 
-    /// <summary>Remplace toutes les lignes par la liste envoyée, dans son ordre (ajouter, retirer, réordonner, annoter).</summary>
+    /// <summary>Remplace toutes les lignes par la liste envoyée, dans son ordre (ajouter, retirer, réordonner, annoter, commenter).</summary>
     /// <remarks>Un morceau figure au plus une fois ; une version donnée doit appartenir à son morceau, dans le groupe.</remarks>
     /// <response code="200">La setlist avec ses nouvelles lignes et sa durée totale.</response>
     /// <response code="409">Lignes modifiées entre-temps par quelqu'un d'autre ; rechargez la setlist.</response>
@@ -83,7 +83,7 @@ public sealed class SetlistsController : ControllerBase
         Guid id, SetSetlistItemsRequest request, [FromServices] SetSetlistItemsHandler handler, CancellationToken ct)
     {
         var items = request.Items
-            .Select(i => new SetlistItemChoice(i.SongId!.Value, i.VersionId, i.Notes, i.DurationMs))
+            .Select(i => new SetlistItemChoice(i.SongId!.Value, i.VersionId, i.Notes, i.DurationMs, i.CommentBefore))
             .ToList();
         return SetlistResponse.From(await handler.HandleAsync(new SetSetlistItemsCommand(id, items), ct));
     }

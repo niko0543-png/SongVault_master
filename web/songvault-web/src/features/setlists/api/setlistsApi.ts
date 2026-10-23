@@ -18,6 +18,6 @@ export const setlistsApi = {
 /** Lignes actuelles d'une setlist, au format attendu par setItems. */
 export function toChoices(setlist: Pick<Setlist, 'items'>): SetlistItemChoice[] {
   return setlist.items.map((i) => ({
-    songId: i.songId, versionId: i.versionId, notes: i.notes, durationMs: i.manualDurationMs,
+    songId: i.songId, versionId: i.versionId, notes: i.notes, durationMs: i.manualDurationMs, commentBefore: i.commentBefore,
   }))
 }

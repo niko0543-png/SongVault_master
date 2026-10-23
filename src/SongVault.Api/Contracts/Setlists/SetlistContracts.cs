@@ -12,14 +12,15 @@ public sealed record SaveSetlistRequest(
     [MaxLength(Setlist.VenueMaxLength)] string? Venue);
 
 /// <summary>
-/// Une ligne : le morceau, la version jouée (absente = la dernière), les notes de scène et la durée saisie
-/// en millisecondes (absente = celle du fichier audio).
+/// Une ligne : le morceau, la version jouée (absente = la dernière), les notes de scène, la durée saisie
+/// en millisecondes (absente = celle du fichier audio) et le commentaire dit ou fait juste avant le morceau.
 /// </summary>
 public sealed record SetlistItemRequest(
     [Required] Guid? SongId,
     Guid? VersionId,
     [MaxLength(SetlistItem.NotesMaxLength)] string? Notes,
-    [Range(SetlistItem.MinDurationMs, SetlistItem.MaxDurationMs)] int? DurationMs);
+    [Range(SetlistItem.MinDurationMs, SetlistItem.MaxDurationMs)] int? DurationMs,
+    [MaxLength(SetlistItem.CommentMaxLength)] string? CommentBefore = null);
 
 /// <summary>Toutes les lignes, dans l'ordre de jeu : la première de la liste ouvre le concert.</summary>
 public sealed record SetSetlistItemsRequest([Required, MaxLength(Setlist.MaxItems)] IReadOnlyList<SetlistItemRequest> Items);
@@ -34,11 +35,12 @@ public sealed record SetlistVersionOptionResponse(Guid Id, int Number, string Ti
 /// <summary>
 /// Une ligne. VersionId : version choisie (null = la dernière) ; PlayedVersionId : version jouée, dont viennent
 /// Key, Bpm et AudioDurationMs. DurationMs : la durée retenue (saisie, sinon audio, sinon null).
+/// CommentBefore : le commentaire entre la ligne précédente et celle-ci.
 /// </summary>
 public sealed record SetlistItemResponse(
     int Position, Guid SongId, string SongTitle, Guid? VersionId, Guid? PlayedVersionId,
     IReadOnlyList<SetlistVersionOptionResponse> Versions, string? Key, int? Bpm, string? Notes,
-    int? ManualDurationMs, int? AudioDurationMs, int? DurationMs);
+    int? ManualDurationMs, int? AudioDurationMs, int? DurationMs, string? CommentBefore);
 
 /// <summary>Une setlist ; TotalDurationMs additionne les durées connues, MissingDurationCount compte les autres.</summary>
 public sealed record SetlistResponse(
@@ -49,6 +51,6 @@ public sealed record SetlistResponse(
         new(d.Id, d.Name, d.Date, d.Venue, d.CreatedAt, d.UpdatedAt,
             [.. d.Items.Select(i => new SetlistItemResponse(i.Position, i.SongId, i.SongTitle, i.VersionId, i.PlayedVersionId,
                 [.. i.Versions.Select(v => new SetlistVersionOptionResponse(v.Id, v.Number, v.Title))],
-                i.Key, i.Bpm, i.Notes, i.ManualDurationMs, i.AudioDurationMs, i.DurationMs))],
+                i.Key, i.Bpm, i.Notes, i.ManualDurationMs, i.AudioDurationMs, i.DurationMs, i.CommentBefore))],
             d.TotalDurationMs, d.MissingDurationCount);
 }
