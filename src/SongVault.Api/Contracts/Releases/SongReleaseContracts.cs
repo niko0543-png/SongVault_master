@@ -6,8 +6,9 @@ using SongVault.Domain.Releases;
 namespace SongVault.Api.Contracts.Releases;
 
 /// <summary>
-/// Les infos de sortie de la dernière version, au statut Final (#38). ReleaseId vide : un single au titre du morceau
-/// est créé ; sinon le morceau rejoint cette sortie. Keep : All garde toutes les versions, LatestOnly met les autres à la
+/// Les infos de sortie de la dernière version, au statut Final (#38). ReleaseId vide : une sortie est créée, de type
+/// NewReleaseType (Single par défaut) et au titre NewReleaseTitle (celui du morceau par défaut) ; sinon le morceau
+/// rejoint cette sortie. Keep : All garde toutes les versions, LatestOnly met les autres à la
 /// corbeille ; PurgeNow (Owner) les efface tout de suite pour libérer la place.
 /// </summary>
 public sealed record ReleaseSongRequest(
@@ -18,10 +19,13 @@ public sealed record ReleaseSongRequest(
     [MaxLength(ReleaseDistributionRequest.UpcInputMaxLength)] string? Upc,
     [MaxLength(Release.MaxStreamingLinks)] IReadOnlyList<string>? StreamingLinks,
     [Required] KeepVersions? Keep,
-    bool PurgeNow = false)
+    bool PurgeNow = false,
+    ReleaseType? NewReleaseType = null,
+    [MaxLength(Release.TitleMaxLength)] string? NewReleaseTitle = null)
 {
     public ReleaseSongCommand ToCommand(Guid songId)
-        => new(songId, VersionId!.Value, ReleaseId, ReleaseDate, Label, Upc, StreamingLinks ?? [], Keep!.Value, PurgeNow);
+        => new(songId, VersionId!.Value, ReleaseId, ReleaseDate, Label, Upc, StreamingLinks ?? [], Keep!.Value, PurgeNow,
+            NewReleaseType, NewReleaseTitle);
 }
 
 /// <summary>Label, code-barres UPC/EAN (vide = aucun) et liens d'écoute d'une sortie, qui remplacent les anciens.</summary>

@@ -8,7 +8,7 @@ import type { BandRole } from '@/features/bands/types'
 import type { Release } from '../types'
 
 vi.mock('../api/releasesApi', () => ({
-  releasesApi: { list: vi.fn(), get: vi.fn(), releaseSong: vi.fn(), unreleaseSong: vi.fn() },
+  releasesApi: { list: vi.fn(), get: vi.fn(), releaseSong: vi.fn(), unreleaseSong: vi.fn(), setDistribution: vi.fn() },
 }))
 
 const ep: Release = {
@@ -67,6 +67,7 @@ describe('SongReleaseSection (#38)', () => {
     expect(releasesApi.releaseSong).toHaveBeenCalledWith('s1', {
       versionId: 'v3', releaseId: null, releaseDate: '2026-12-01', label: 'Nuit Records', upc: null,
       streamingLinks: ['https://open.spotify.com/track/1'], keep: 'LatestOnly', purgeNow: false,
+      newReleaseType: 'Single', newReleaseTitle: null,
     })
     expect(w.emitted('released')?.[0]).toEqual([expect.objectContaining({ releaseId: 'r-new' })])
   })
@@ -96,6 +97,31 @@ describe('SongReleaseSection (#38)', () => {
     expect(vi.mocked(releasesApi.releaseSong).mock.calls[0]![1]).toMatchObject({ keep: 'All', purgeNow: false })
   })
 
+  it('#39 : un nouvel EP prend le titre saisi', async () => {
+    const w = await mountSection({ otherVersionCount: 0 })
+    expect(w.find('#sr-title').exists()).toBe(false)                       // un single garde le titre du morceau
+    await w.get('#sr-release').setValue('new:EP')
+    await w.get('#sr-title').setValue(' Nuits blanches ')
+    await w.get('form').trigger('submit')
+    await flushPromises()
+
+    expect(vi.mocked(releasesApi.releaseSong).mock.calls[0]![1])
+      .toMatchObject({ releaseId: null, newReleaseType: 'EP', newReleaseTitle: 'Nuits blanches' })
+  })
+
+  it('#39 : une fois sorti, les infos de sortie se corrigent ici', async () => {
+    vi.mocked(releasesApi.setDistribution).mockResolvedValue({ ...ep, label: 'Autre label' })
+    const w = await mountSection({ releaseId: 'ep1' })
+    const section = w.findComponent({ name: 'ReleaseDistributionSection' })
+    await section.get('button').trigger('click')
+    await section.get('#rd-label').setValue('Autre label')
+    await section.get('form').trigger('submit')
+    await flushPromises()
+
+    expect(releasesApi.setDistribution).toHaveBeenCalledWith('ep1', expect.objectContaining({ label: 'Autre label' }))
+    expect(w.text()).toContain('Autre label')
+  })
+
   it('choisir une sortie existante reprend ses infos de sortie', async () => {
     const w = await mountSection()
     await w.get('#sr-release').setValue('ep1')
@@ -117,7 +143,7 @@ describe('SongReleaseSection (#38)', () => {
     expect(w.text()).toContain('Nuits blanches')
     expect(w.text()).toContain('Nuit Records')
     expect(w.get('[data-testid="streaming-link"]').text()).toContain('Spotify')
-    await w.get('button').trigger('click')
+    await w.get('[data-testid="song-release"] button').trigger('click')
     await flushPromises()
     expect(releasesApi.unreleaseSong).toHaveBeenCalledWith('s1')
     expect(w.emitted('unreleased')).toHaveLength(1)

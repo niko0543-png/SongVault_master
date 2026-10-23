@@ -48,3 +48,16 @@ et noter les liens d'écoute des plateformes.
 - Un morceau sorti reste ouvrable, modifiable et lisible par les liens de partage ; seule sa place
   dans les listes change. Une nouvelle version après la sortie ne le remet pas en travail.
 - Pas de nouveau paquet NuGet ni npm.
+
+## Révision (#39, 2026-10-23)
+- **L'onglet Sorties ne se saisit plus** : plus de création de sortie, ni de modification du titre, du type,
+  de la date ou des infos de sortie, ni d'ajout, de retrait ou de changement de version d'une piste. Une sortie
+  et ses infos ne viennent que de la section « Sortie » de la dernière version finale d'un morceau.
+- Cette section crée donc aussi un **nouvel EP ou un nouvel album** (titre saisi, celui du morceau par défaut),
+  en plus du nouveau single et des sorties existantes (`newReleaseType`, `newReleaseTitle`).
+- Une fois le morceau sorti, ses infos de sortie (label, UPC/EAN, liens d'écoute) **se corrigent sur la page de
+  la version**. Une date à corriger : « Remettre dans les morceaux », puis ressortir sur la même sortie.
+- Restent sur la page d'une sortie : la pochette, l'ordre des pistes, l'archive du distributeur, les liens de
+  partage, l'export des crédits et la suppression.
+- L'API garde ses routes (`POST/PUT …/releases`, `PUT …/tracks`, `PUT …/distribution`) : seul le front cesse de
+  les proposer ailleurs que depuis la version.

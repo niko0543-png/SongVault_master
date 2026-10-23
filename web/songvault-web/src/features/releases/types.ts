@@ -88,6 +88,9 @@ export interface SongReleaseInput extends ReleaseDistributionInput {
   keep: KeepVersions
   /** Owner seulement : effacer tout de suite au lieu de la corbeille */
   purgeNow: boolean
+  /** #39 : sortie créée quand releaseId est null (Single par défaut), et son titre (celui du morceau par défaut) */
+  newReleaseType: ReleaseType | null
+  newReleaseTitle: string | null
 }
 
 export interface KeptVersion {
