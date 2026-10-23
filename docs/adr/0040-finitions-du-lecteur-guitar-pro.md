@@ -24,12 +24,16 @@ Pro et plus rapide à atteindre.
 - **Accès direct** : l'en-tête de la page d'une version porte un lien « 🎸 Tablature » vers la
   page du lecteur, un par fichier lisible s'il y en a plusieurs. On n'a plus à descendre
   jusqu'aux fichiers.
-- **Pas d'icône dans la liste des morceaux pour l'instant** : ni la liste des morceaux ni celle
-  des versions ne disent aujourd'hui si une version a une tablature. Il faudrait un champ dans
-  les réponses de l'API (par exemple l'identifiant de la tablature de la dernière version) ;
-  ce sera une petite tâche séparée, avec ses tests côté API.
+- **Icône 🎸 dans les listes** : la liste des morceaux et celle des versions d'un morceau
+  ouvrent directement la tablature. L'API ajoute pour cela `tablatureVersionId` et
+  `tablatureFileId` à chaque morceau de la liste (la dernière version qui a une tablature
+  lisible, et sa première tablature), et `tablatureFileId` à chaque version du résumé. Une
+  tablature n'y figure qu'une fois déclarée saine par l'antivirus (`Clean` ou `NotScanned`,
+  ADR 0024), comme pour sa lecture. Deux sous-requêtes dans les lectures existantes, sans
+  migration.
 
 ## Conséquences
-- Aucun changement côté API ni nouveau paquet npm.
+- Deux champs en lecture seule ajoutés aux réponses de l'API, sans migration ; pas de nouveau
+  paquet npm.
 - Le double-clic dépend du comportement d'alphaTab au clic (curseur placé sur la note) ; le test
   Playwright le vérifie sur un vrai fichier.
