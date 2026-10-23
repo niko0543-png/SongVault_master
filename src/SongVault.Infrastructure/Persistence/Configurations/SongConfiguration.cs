@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 using SongVault.Domain.Bands;
+using SongVault.Domain.Releases;
 using SongVault.Domain.Songs;
 
 namespace SongVault.Infrastructure.Persistence.Configurations;
@@ -38,5 +39,9 @@ internal sealed class SongConfiguration : IEntityTypeConfiguration<Song>
         // #20 : corbeille. Index filtré : la purge quotidienne ne lit que ce qui est à la corbeille
         builder.Property(s => s.DeletedById).HasMaxLength(450);
         builder.HasIndex(s => s.DeletedAt).HasFilter("[DeletedAt] IS NOT NULL");
+        // #38 : la sortie où le morceau est paru. La supprimer le remet en travail (SET NULL), sans toucher à ses versions
+        builder.HasOne<Release>().WithMany()
+               .HasForeignKey(s => s.ReleaseId)
+               .OnDelete(DeleteBehavior.SetNull);
     }
 }

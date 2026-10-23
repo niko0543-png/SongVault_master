@@ -7,7 +7,7 @@ export type AuditAction =
   | 'BandRenamed' | 'FileQuarantined'
   | 'VersionDeleted' | 'SongRestored' | 'VersionRestored' | 'FileRestored'
   | 'SongPurged' | 'VersionPurged' | 'FilePurged'
-  | 'CreditsChanged'
+  | 'CreditsChanged' | 'SongReleased'
 
 /** Une ligne du journal d'audit (GET /api/bands/{id}/audit, Owner seulement). */
 export interface AuditItem {

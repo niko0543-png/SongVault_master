@@ -12,7 +12,10 @@ public interface ISongRepository
 {
     void Add(Song song);
     Task<Song?> GetByIdAsync(Guid id, CancellationToken ct);
-    Task<PagedResult<SongDto>> ListAsync(int page, int pageSize, string? search, SongVersionStatus? status, CancellationToken ct);
+    /// <param name="released">#38 : true = morceaux sortis, false = en travail, null = tous.</param>
+    Task<PagedResult<SongDto>> ListAsync(int page, int pageSize, string? search, SongVersionStatus? status, bool? released, CancellationToken ct);
+    /// <summary>Les morceaux du groupe actif parus sur cette sortie (#38), suivis par EF.</summary>
+    Task<IReadOnlyList<Song>> ListReleasedOnAsync(Guid releaseId, CancellationToken ct);
     Task<Song?> GetWithVersionAsync(Guid songId, Guid versionId, CancellationToken ct);
     /// <summary>Le morceau avec toutes ses versions et leurs fichiers en place, pour le mettre à la corbeille (#20).</summary>
     Task<Song?> GetWithAllVersionsAsync(Guid songId, CancellationToken ct);

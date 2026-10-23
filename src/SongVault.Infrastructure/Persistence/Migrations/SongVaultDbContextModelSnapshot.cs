@@ -957,6 +957,10 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<string>("Label")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<DateOnly?>("ReleaseDate")
                         .HasColumnType("date");
 
@@ -964,6 +968,10 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
+
+                    b.Property<string>("StreamingLinks")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -974,6 +982,10 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("Upc")
+                        .HasMaxLength(13)
+                        .HasColumnType("nvarchar(13)");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("datetimeoffset");
@@ -1299,6 +1311,12 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                     b.Property<int>("LastVersionNumber")
                         .HasColumnType("int");
 
+                    b.Property<Guid?>("ReleaseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("ReleasedAt")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
@@ -1316,6 +1334,8 @@ namespace SongVault.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("DeletedAt")
                         .HasFilter("[DeletedAt] IS NOT NULL");
+
+                    b.HasIndex("ReleaseId");
 
                     b.HasIndex("BandId", "Title");
 
@@ -1778,6 +1798,11 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                         .HasForeignKey("BandId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("SongVault.Domain.Releases.Release", null)
+                        .WithMany()
+                        .HasForeignKey("ReleaseId")
+                        .OnDelete(DeleteBehavior.SetNull);
                 });
 
             modelBuilder.Entity("SongVault.Domain.Songs.SongVersion", b =>

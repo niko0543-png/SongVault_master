@@ -135,6 +135,11 @@ async function onDelete() {
         </div>
       </header>
       <p v-if="deletion.error.value" class="field-error" role="alert">{{ getErrorMessage(deletion.error.value) }}</p>
+      <!-- #38 : un morceau sorti a quitté la liste des morceaux -->
+      <p v-if="song.releaseId" class="card released" data-testid="song-released">
+        {{ t('songs.detail.released') }}
+        <RouterLink :to="{ name: 'release-detail', params: { releaseId: song.releaseId } }">{{ t('songs.detail.seeRelease') }}</RouterLink>
+      </p>
       <p v-if="song.description">{{ song.description }}</p>
       <p class="muted"><small>{{ t('songs.detail.dates', { createdAt: formatDate(song.createdAt), updatedAt: formatDate(song.updatedAt) }) }}</small></p>
 
@@ -162,4 +167,5 @@ async function onDelete() {
 
 <style scoped>
 .actions { display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; }
+.released { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
 </style>

@@ -41,6 +41,7 @@ export const useSongsStore = defineStore('songs', () => {
       const page = await songsApi.list({
         search: filters.value.search || undefined,
         status: filters.value.status || undefined,
+        released: false,                             // #38 : un morceau sorti est dans l'onglet Sorties
       })
       if (requestId !== lastRequest) return          // réponse périmée : on l'ignore
       items.value = page.items

@@ -28,15 +28,19 @@ public sealed record ReleaseSummaryResponse(
 public sealed record ReleaseVersionOptionResponse(Guid Id, int Number, string Title, SongVersionStatus Status);
 
 /// <summary>Une piste ; Versions liste les versions du morceau parmi lesquelles choisir.</summary>
+/// <summary>IsReleasedHere (#38) : le morceau est paru sur cette sortie (il a quitté la liste des morceaux).</summary>
 public sealed record ReleaseTrackResponse(
-    int TrackNumber, Guid SongId, string SongTitle, Guid VersionId, IReadOnlyList<ReleaseVersionOptionResponse> Versions);
+    int TrackNumber, Guid SongId, string SongTitle, Guid VersionId, IReadOnlyList<ReleaseVersionOptionResponse> Versions,
+    bool IsReleasedHere);
 
 public sealed record ReleaseResponse(
     Guid Id, string Title, ReleaseType Type, DateOnly? ReleaseDate, bool HasCover,
-    DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, IReadOnlyList<ReleaseTrackResponse> Tracks)
+    DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, IReadOnlyList<ReleaseTrackResponse> Tracks,
+    string? Label, string? Upc, IReadOnlyList<StreamingLinkResponse> StreamingLinks)
 {
     public static ReleaseResponse From(ReleaseDto d) =>
         new(d.Id, d.Title, d.Type, d.ReleaseDate, d.HasCover, d.CreatedAt, d.UpdatedAt,
             [.. d.Tracks.Select(t => new ReleaseTrackResponse(t.TrackNumber, t.SongId, t.SongTitle, t.VersionId,
-                [.. t.Versions.Select(v => new ReleaseVersionOptionResponse(v.Id, v.Number, v.Title, v.Status))]))]);
+                [.. t.Versions.Select(v => new ReleaseVersionOptionResponse(v.Id, v.Number, v.Title, v.Status))], t.IsReleasedHere))],
+            d.Label, d.Upc, [.. (d.StreamingLinks ?? []).Select(l => new StreamingLinkResponse(l.Platform, l.Url))]);
 }

@@ -25,6 +25,7 @@ function mountPage(role?: BandRole) {
     routes: [
       { path: '/songs/new', name: 'song-create', component: Stub },
       { path: '/songs/:songId', name: 'song-detail', component: Stub },
+      { path: '/releases', name: 'releases', component: Stub },
       { path: '/:pathMatch(.*)*', component: Stub },
     ],
   })

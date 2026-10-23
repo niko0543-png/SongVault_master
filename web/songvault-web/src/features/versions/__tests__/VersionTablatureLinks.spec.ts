@@ -11,7 +11,7 @@ vi.mock('../composables/useVersion', async () => {
       song: ref({ title: 'Riff' }),
       version: ref({ id: 'v1', number: 2, title: 'Démo', status: 'Idea', notes: null, lyrics: null, bpm: null, key: null,
                      createdAt: '2026-10-22T10:00:00Z', updatedAt: '2026-10-22T10:00:00Z', files: state.files }),
-      previous: ref(null), next: ref(null), isLoading: ref(false), error: ref(null),
+      previous: ref(null), next: ref(null), siblings: ref([]), isLoading: ref(false), error: ref(null),
       isSaving: ref(false), saveError: ref(null), save: vi.fn(), reload: vi.fn(),
     }),
   }
