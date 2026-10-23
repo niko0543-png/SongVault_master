@@ -528,7 +528,7 @@ describe('GuitarProViewer dans la comparaison (#30)', () => {
 
     expect(fetchMock).not.toHaveBeenCalled()
     expect(api().renderScore).toHaveBeenCalledWith(score, [1])
-    expect(wrapper.find('[data-testid="tab-tracks"]').exists()).toBe(false)   // la piste se choisit dans la comparaison
+    expect(wrapper.find('[data-testid="tab-tracks"]').exists()).toBe(true)    // #37 : le panneau des pistes reste dans la comparaison
     await wrapper.setProps({ track: 0 })
     expect(api().renderTracks).toHaveBeenLastCalledWith([score.tracks[0]])
   })

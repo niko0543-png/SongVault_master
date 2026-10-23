@@ -35,6 +35,7 @@ import { t } from '@/shared/i18n'
  * double-clic sur une note pour jouer depuis elle (ADR 0040).
  * #35 : barre du haut façon Guitar Pro (transport, écran de la piste, boucle, vitesse, transposition) et panneau
  * des pistes redimensionnable (ADR 0041).
+ * #37 : le panneau des pistes reste aussi dans la comparaison (ADR 0043).
  */
 const props = defineProps<{
   src?: string; score?: model.Score | null; track?: number; label: string; sync?: SyncContext; fill?: boolean
@@ -691,7 +692,7 @@ defineExpose({ goToBar })
     </div>
 
     <!-- #31 : les pistes, collées en bas de l'écran pendant que la partition défile -->
-    <TabTrackPanel v-if="status === 'ready' && tracks.length > 0 && !score" v-model:open="panelOpen" v-model:height="panelHeight" :tracks="tracks" :shown="shown"
+    <TabTrackPanel v-if="status === 'ready' && tracks.length > 0" v-model:open="panelOpen" v-model:height="panelHeight" :tracks="tracks" :shown="shown"
                    :mute="mixer.mute" :solo="mixer.solo" :volume="mixer.volume" :current-bar="currentBar" :bar-count="barCount" :time="timeText"
                    :disabled="followsAudio" @toggle-shown="toggleShown" @toggle-mute="toggleMute" @toggle-solo="toggleSolo"
                    @volume="setVolume" @go-to-bar="goToBar" />

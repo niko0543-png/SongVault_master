@@ -162,9 +162,11 @@ docker compose down -v       # supprime aussi la base et les fichiers
   s'affichent et se jouent dans la page, avec tempo ralenti, boucle, transposition, muet et solo
   par piste, sans jamais toucher au fichier ([ADR 0034](docs/adr/0034-lecteur-guitar-pro.md)).  
 - **Comparaison Guitar Pro** : dans l'écran A/B, un résumé des modifications s'affiche à côté de
-  chaque fichier Guitar Pro ; « Afficher les modifs » ouvre le lecteur avec les notes ajoutées et
-  modifiées colorées et listées mesure par mesure ; un changement d'accordage est annoncé en une ligne
-  ([ADR 0035](docs/adr/0035-comparaison-guitar-pro.md), [ADR 0042](docs/adr/0042-modifications-guitar-pro-a-cote-du-fichier.md)).  
+  chaque fichier Guitar Pro ; « Afficher les modifs » ouvre le lecteur avec la nouvelle partition (ajouts
+  et modifications en vert) ou l'ancienne (ce qui a été retiré ou remplacé en rouge), et la liste mesure
+  par mesure ; un changement d'accordage est annoncé en une ligne
+  ([ADR 0035](docs/adr/0035-comparaison-guitar-pro.md), [ADR 0042](docs/adr/0042-modifications-guitar-pro-a-cote-du-fichier.md),
+  [ADR 0043](docs/adr/0043-comparaison-guitar-pro-vert-et-rouge.md)).  
 - **Tablature calée sur la maquette** : on tape le début de chaque mesure pendant que la maquette
   joue ; ensuite, le curseur de la tablature suit l'enregistrement
   ([ADR 0036](docs/adr/0036-tablature-calee-sur-la-maquette.md)).

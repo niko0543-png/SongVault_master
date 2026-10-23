@@ -54,10 +54,14 @@ test('liste les différences, les colore dans la partition, et un clic place la 
   await expect(changes).toHaveText(['Mesure 1 : ajoutée', 'Mesure 3 : 1 note modifiée, 1 note retirée'], { timeout: 30_000 })
   await expect(page.getByTestId('tab-play')).toBeEnabled({ timeout: 30_000 })
 
-  // La couleur double la liste : des éléments verts (ajout) et orange (modification) dans la partition
+  // La couleur double la liste : dans la nouvelle partition, ajouts et modifications en vert, rien en rouge
   const score = page.getByTestId('tab-score')
-  await expect(score.locator('[fill="#1A7F37"], [fill="#1a7f37"], [style*="26, 127, 55"]').first()).toBeAttached()
-  await expect(score.locator('[fill="#B35900"], [fill="#b35900"], [style*="179, 89, 0"]').first()).toBeAttached()
+  const green = '[fill="#1A7F37"], [fill="#1a7f37"], [style*="26, 127, 55"]'
+  const red = '[fill="#B42318"], [fill="#b42318"], [style*="180, 35, 24"]'
+  await expect(score.locator(green).first()).toBeAttached()
+  await expect(score.locator(red)).toHaveCount(0)
+  // #37 : le panneau des pistes reste en bas
+  await expect(page.getByTestId('tab-tracks')).toBeVisible()
 
   // #36 : la liste est à côté de la partition, qui défile seule dans son cadre
   const panel = await page.getByTestId('gp-changes-panel').boundingBox()
@@ -67,5 +71,11 @@ test('liste les différences, les colore dans la partition, et un clic place la 
   // Clic sur une différence : la mesure est sélectionnée dans la partition
   await changes.nth(1).click()
   await expect(score.locator('.at-selection div').first()).toBeVisible()
+
+  // #37 : l'ancienne partition, avec en rouge la note remplacée, et rien en vert
+  await page.getByTestId('gp-side-old').check()
+  await expect(page.getByTestId('tab-play')).toBeEnabled({ timeout: 30_000 })
+  await expect(page.getByTestId('tab-score').locator(red).first()).toBeAttached({ timeout: 30_000 })
+  await expect(page.getByTestId('tab-score').locator(green)).toHaveCount(0)
   expect(violations).toEqual([])
 })

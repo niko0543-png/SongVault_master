@@ -37,6 +37,18 @@ export function describeBar(change: BarChange, barCount: number): string {
   return t('guitarpro.compare.modified', { bar: change.barB + 1, details: details.join(', ') })
 }
 
+/**
+ * #37 : la mesure de A qui correspond à une différence, pour placer l'ancienne partition.
+ * Une mesure ajoutée n'existe pas dans A : c'est la mesure de A qui suit l'endroit où elle a été insérée.
+ * `changes` : les différences de la piste, dans l'ordre ; `barCountA` : nombre de mesures de A.
+ */
+export function targetBarA(change: BarChange, changes: BarChange[], barCountA: number): number {
+  if (change.kind !== 'added') return change.barA
+  const added = changes.filter((c) => c.kind === 'added' && c.barB < change.barB).length
+  const removed = changes.filter((c) => c.kind === 'removed' && c.beforeB <= change.barB).length
+  return Math.max(0, Math.min(change.barB - added + removed, barCountA - 1))
+}
+
 /** La mesure de B où placer la partition pour une différence. */
 export function targetBar(change: BarChange, barCount: number): number {
   return change.kind === 'removed' ? Math.min(change.beforeB, barCount - 1) : change.barB
