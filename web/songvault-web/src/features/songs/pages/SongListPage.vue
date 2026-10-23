@@ -93,6 +93,10 @@ onMounted(() => {
         <RouterLink v-if="bands.can('write')" :to="{ name: 'song-create' }">{{ t('songs.list.new') }}</RouterLink>
     </header>
     <BandStorageGauge />
+    <!-- #38 : un morceau sorti quitte cette liste -->
+    <p class="muted released-hint">
+      <small>{{ t('songs.list.releasedHint') }} <RouterLink :to="{ name: 'releases' }">{{ t('songs.list.releasedLink') }}</RouterLink>.</small>
+    </p>
     <SearchBar v-model:search="search" v-model:status="status" />
 
     <LoadingState v-if="isLoading || (!isLoaded && !error)" />
@@ -121,4 +125,5 @@ onMounted(() => {
 
 <style scoped>
 .song-list { list-style: none; padding: 0; display: grid; gap: .75rem; }
+.released-hint { margin: 0 0 .5rem; }
 </style>

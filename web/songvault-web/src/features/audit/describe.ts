@@ -45,6 +45,9 @@ export function describe(item: AuditItem, myId: string | null): string {
     // #22 : details résume ce qui a été enregistré (« 3 crédits, ISWC T-034.524.680-1 »)
     case 'CreditsChanged':
       return did('audit.describe.actions.creditsChanged') + (item.details ? ` (${item.details})` : '')
+    // #38 : details dit la version et ce qui est parti (« v3 sur « Nocturne » ; 2 versions à la corbeille »)
+    case 'SongReleased':
+      return did('audit.describe.actions.songReleased') + (item.details ? ` (${item.details})` : '')
     case 'ShareLinkCreated': return did('audit.describe.actions.shareLinkCreated')
     case 'ShareLinkRevoked': return did('audit.describe.actions.shareLinkRevoked')
     case 'ShareLinkDeleted': return did('audit.describe.actions.shareLinkDeleted')

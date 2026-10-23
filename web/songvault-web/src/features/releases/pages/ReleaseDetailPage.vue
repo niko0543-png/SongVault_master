@@ -9,6 +9,7 @@ import {
 import { formatReleaseDate } from '../format'
 import ReleaseForm from '../components/ReleaseForm.vue'
 import ReleaseExportSection from '../components/ReleaseExportSection.vue'
+import ReleaseDistributionSection from '../components/ReleaseDistributionSection.vue'
 import ShareLinksPanel from '@/features/sharing/components/ShareLinksPanel.vue'
 import { rightsApi } from '@/features/rights/api/rightsApi'
 import { songsApi } from '@/features/songs/api/songsApi'
@@ -264,7 +265,10 @@ async function onRemoveCover() {
             <template #default="{ item }">
               <div class="track" data-testid="release-track">
                 <span class="number">{{ item.trackNumber }}.</span>
-                <RouterLink :to="{ name: 'song-detail', params: { songId: item.songId } }">{{ item.songTitle }}</RouterLink>
+                <span class="title">
+                  <RouterLink :to="{ name: 'song-detail', params: { songId: item.songId } }">{{ item.songTitle }}</RouterLink>
+                  <small v-if="item.isReleasedHere" class="released-badge">{{ t('releases.detail.releasedHere') }}</small>
+                </span>
                 <select v-if="canWrite" :value="item.versionId" :disabled="savingTracks"
                         :aria-label="t('releases.detail.versionOf', { songTitle: item.songTitle })" @change="onChangeVersion(item, $event)">
                   <option v-for="v in item.versions" :key="v.id" :value="v.id">
@@ -296,6 +300,7 @@ async function onRemoveCover() {
           </form>
         </SectionCard>
       </div>
+      <ReleaseDistributionSection :release="release" :can-write="canWrite" @saved="(saved) => (release = saved)" />
       <ReleaseExportSection :release-id="release.id" :can-write="canWrite" />
       <ShareLinksPanel v-if="canWrite" :target="{ type: 'Release', id: release.id }" />
     </template>
@@ -308,9 +313,11 @@ async function onRemoveCover() {
 @media (max-width: 800px) { .layout { grid-template-columns: 1fr; } }
 .cover { width: 100%; max-width: 320px; aspect-ratio: 1; object-fit: cover; border-radius: var(--radius); display: block; margin-bottom: .75rem; }
 .file-label { display: grid; gap: .25rem; margin-bottom: .5rem; }
-.track { display: grid; grid-template-columns: 2rem minmax(0, 1fr) minmax(0, 14rem) auto; gap: .5rem; align-items: center; }
+.track { display: grid; grid-template-columns: 2rem minmax(6rem, 1fr) minmax(0, 12rem) auto; gap: .5rem; align-items: center; }
 .track a { overflow-wrap: anywhere; }
 .number { color: var(--muted); text-align: right; }
+.title { min-width: 0; }
+.released-badge { display: inline-block; padding: 0 .4rem; border: 1px solid currentColor; border-radius: 999px; font-size: .75rem; color: var(--muted); }
 .add-track { margin-top: 1rem; display: grid; gap: .4rem; }
 .search-row { display: flex; gap: .5rem; }
 .results { list-style: none; padding: 0; margin: 0; display: grid; gap: .3rem; }

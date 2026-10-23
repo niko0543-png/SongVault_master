@@ -31,6 +31,8 @@ const fr = {
     submit: 'Créer',
   },
   detail: {
+    released: 'Ce morceau est sorti : il est dans l’onglet Sorties.',
+    seeRelease: 'Voir la sortie',
     deleteTitle: 'Supprimer ce morceau ?',
     deleteMessage: '« {title} », ses versions et ses fichiers vont à la corbeille du groupe : on pourra les restaurer pendant 30 jours.',
     deleted: '« {title} » est dans la corbeille.',
@@ -52,6 +54,8 @@ const fr = {
     new: '+ Nouveau morceau',
     clearFilters: 'Effacer les filtres',
     createFirst: 'Créer le premier morceau',
+    releasedHint: 'Les morceaux sortis sont dans l’onglet',
+    releasedLink: 'Sorties',
     count: {
       one: '{count} morceau',
       other: '{count} morceaux',
@@ -89,6 +93,8 @@ const en: Widen<typeof fr> = {
     submit: 'Create',
   },
   detail: {
+    released: 'This song is released: it is in the Releases tab.',
+    seeRelease: 'See the release',
     deleteTitle: 'Delete this song?',
     deleteMessage: '“{title}”, its versions and its files go to the band’s trash: they can be restored for 30 days.',
     deleted: '“{title}” is in the trash.',
@@ -110,6 +116,8 @@ const en: Widen<typeof fr> = {
     new: '+ New song',
     clearFilters: 'Clear the filters',
     createFirst: 'Create the first song',
+    releasedHint: 'Released songs are in the tab',
+    releasedLink: 'Releases',
     count: {
       one: '{count} song',
       other: '{count} songs',

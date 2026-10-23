@@ -1,6 +1,8 @@
 import { request } from '@/shared/api/httpClient'
 import { bandPath } from '@/shared/api/bandPath'
-import type { Release, ReleaseInput, ReleaseSummary, TrackChoice } from '../types'
+import type {
+  Release, ReleaseDistributionInput, ReleaseInput, ReleaseSummary, SongReleaseInput, SongReleaseResult, TrackChoice,
+} from '../types'
 
 const path = (suffix = '') => bandPath(`/releases${suffix}`)
 
@@ -19,6 +21,14 @@ export const releasesApi = {
     return request<void>(path(`/${id}/cover`), { method: 'PUT', body: form })
   },
   removeCover: (id: string) => request<void>(path(`/${id}/cover`), { method: 'DELETE' }),
+  /** #38 : label, code-barres et liens d'écoute ; renvoie la sortie à jour. */
+  setDistribution: (id: string, input: ReleaseDistributionInput) =>
+    request<Release>(path(`/${id}/distribution`), { method: 'PUT', body: input }),
+  /** #38 : infos de sortie de la dernière version (Final) ; le morceau passe dans les sorties. */
+  releaseSong: (songId: string, input: SongReleaseInput) =>
+    request<SongReleaseResult>(bandPath(`/songs/${songId}/release`), { method: 'POST', body: input }),
+  /** #38 : remet le morceau dans la liste des morceaux ; la sortie reste. */
+  unreleaseSong: (songId: string) => request<void>(bandPath(`/songs/${songId}/release`), { method: 'DELETE' }),
   /** Adresse de l'image, pour un <img> ; version (updatedAt) change l'adresse après un nouvel envoi. */
   coverUrl: (id: string, version?: string) =>
     `/api${path(`/${id}/cover`)}${version ? `?v=${encodeURIComponent(version)}` : ''}`,

@@ -20,6 +20,8 @@ import CommentsPanel from '@/features/comments/components/CommentsPanel.vue'
 import ShareLinksPanel from '@/features/sharing/components/ShareLinksPanel.vue'
 import StemsSection from '@/features/stems/components/StemsSection.vue'
 import LyricsPanel from '@/features/chords/components/LyricsPanel.vue'
+import SongReleaseSection from '@/features/releases/components/SongReleaseSection.vue'
+import type { SongReleaseResult } from '@/features/releases/types'
 import { usePlayerStore } from '@/features/player/stores/playerStore'
 import { toTrack, type Track } from '@/features/player/track'
 import { useBandStore } from '@/features/bands/stores/bandStore'
@@ -35,7 +37,7 @@ import { t } from '@/shared/i18n'
 
 const props = defineProps<{ songId: string; versionId: string }>()
 
-const { song, version, previous, next, isLoading, error, isSaving, saveError, save, reload } =
+const { song, version, previous, next, isLoading, error, isSaving, saveError, save, reload, siblings } =
   useVersion(() => props.songId, () => props.versionId)
 const player = usePlayerStore()
 const bands = useBandStore()
@@ -231,6 +233,17 @@ async function onDeleteVersion() {
   }
 }
 
+// ================= Sortie du morceau (#38) =================
+/** Le morceau est sorti : les versions écartées disparaissent de la navigation, sans recharger la page. */
+function onReleased(result: SongReleaseResult) {
+  if (song.value) song.value = { ...song.value, releaseId: result.releaseId, releasedAt: new Date().toISOString() }
+  siblings.value = siblings.value.filter((s) => !result.removedVersions.includes(s.number))
+}
+
+function onUnreleased() {
+  if (song.value) song.value = { ...song.value, releaseId: null, releasedAt: null }
+}
+
 // ================= Lecture (semaine 4) =================
 function trackOf(file: SongFile): Track {
   return toTrack({
@@ -364,6 +377,12 @@ const commentedFile = computed(() =>
           <button type="submit" :disabled="!canSave">{{ isSaving ? t('common.actions.saving') : t('common.actions.save') }}</button>
         </div>
       </form>
+
+      <!-- #38 : infos de sortie, sur la dernière version au statut Final (celui qui est enregistré) -->
+      <SongReleaseSection v-if="song" :song-id="songId" :song-title="song.title" :version-id="version.id"
+                          :version-number="version.number" :version-status="version.status" :is-latest="!next"
+                          :other-version-count="Math.max(0, siblings.length - 1)" :release-id="song.releaseId ?? null"
+                          @released="onReleased" @unreleased="onUnreleased" />
 
       <SectionCard :title="t('versions.detail.files')">
         <p v-if="fileError" class="field-error" role="alert">{{ fileError }}</p>
