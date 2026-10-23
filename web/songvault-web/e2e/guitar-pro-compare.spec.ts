@@ -87,3 +87,32 @@ test('liste les différences, les colore dans la partition, et un clic place la 
   await expect(page.getByTestId('tab-bar')).toHaveAttribute('aria-label', 'Mesure 3 sur 5', { timeout: 30_000 })
   expect(violations).toEqual([])
 })
+
+test('#37 : en changeant de version, on reste sur la mesure cliquée, ou sur celle du haut si on a seulement fait défiler', async ({ page }) => {
+  test.setTimeout(90_000)
+  await page.goto(`${server.resolvedUrls!.local[0]}e2e/harness/guitar-pro-compare.html?a=demo-tracks&b=demo-tracks`)
+  await expect(page.getByTestId('tab-play')).toBeEnabled({ timeout: 30_000 })
+  const desk = page.locator('.desk')
+  const bar = page.getByTestId('tab-bar')
+  const ready = () => expect(page.getByTestId('tab-play')).toBeEnabled({ timeout: 30_000 })
+
+  // Un clic sur une note plus bas dans la partition : le curseur y va, puis on passe à l'ancienne version
+  await desk.evaluate((frame) => { frame.scrollTop = 600 })
+  const box = (await desk.boundingBox())!
+  await page.mouse.click(box.x + box.width / 2, box.y + 150)
+  await expect(bar).not.toHaveAttribute('aria-label', 'Mesure 1 sur 16')
+  const clicked = await bar.getAttribute('aria-label')
+  await page.getByTestId('gp-side-old').check()
+  await ready()
+  await expect(bar).toHaveAttribute('aria-label', clicked!)
+  await expect.poll(() => desk.evaluate((frame) => frame.scrollTop)).toBeGreaterThan(300)   // la partition n'est pas revenue au début
+  const cursor = await page.locator('.at-cursor-beat').boundingBox()
+  expect(cursor!.y).toBeGreaterThan(box.y)
+  expect(cursor!.y).toBeLessThan(box.y + box.height)                                       // le curseur est à l'écran
+
+  // Sans clic : on fait défiler tout en bas, la nouvelle version s'ouvre sur la première mesure visible
+  await desk.evaluate((frame) => { frame.scrollTop = frame.scrollHeight })
+  await page.getByTestId('gp-side-new').check()
+  await ready()
+  await expect.poll(async () => Number((await bar.getAttribute('aria-label'))!.split(' ')[1])).toBeGreaterThan(8)
+})

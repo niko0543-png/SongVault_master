@@ -26,7 +26,11 @@ retiré en rouge.
   sa mesure (`position()`), la comparaison les retrouve dans l'autre version (pistes associées par
   l'ADR 0035, mesure par l'alignement des différences de la piste : `matchingBar`) et les redonne
   au nouveau lecteur (`startTracks`, `startBar`). Une mesure qui n'existe que d'un côté renvoie à
-  la suivante de l'autre.
+  la suivante de l'autre. La mesure retenue est celle du curseur (un clic sur une note l'y
+  place) si on la voit, sinon la première mesure visible en haut du cadre.
+- Le nouveau lecteur ne se place qu'une fois la partition dessinée et ses mesures placées
+  (`postRenderFinished`) et le son prêt ; alphaTab refait alors défiler le cadre vers l'ancienne
+  place de son curseur, on refait défiler après lui.
 
 ## Conséquences
 - Front seulement : pas de changement d'API, pas de migration, pas de nouveau paquet npm.

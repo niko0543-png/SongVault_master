@@ -23,6 +23,8 @@ const fake = vi.hoisted(() => {
     isLooping = false
     scoreLoaded = emitter()
     renderFinished = emitter()
+    postRenderFinished = emitter()
+    beatMouseDown = emitter()
     playerReady = emitter()
     playerStateChanged = emitter()
     error = emitter()
@@ -519,6 +521,7 @@ describe('GuitarProViewer dans la comparaison (#30)', () => {
     api().score = score as never
     api().scoreLoaded.fire(score)
     api().renderFinished.fire()
+    api().postRenderFinished.fire()
     await nextTick()
     return wrapper
   }
@@ -548,16 +551,27 @@ describe('GuitarProViewer dans la comparaison (#30)', () => {
     scrollTo.mockRestore()
   })
 
-  it('#37 : reprend les pistes et la mesure données, et dit où il en est', async () => {
+  it('#37 : reprend les pistes et la mesure données, une fois la partition placée et le son prêt', async () => {
     const wrapper = await mountWithScore({ startTracks: [0, 1], startBar: 2 })
 
     expect(api().renderScore).toHaveBeenCalledWith(score, [0, 1])
+    expect(api().tickPosition).toBe(0)                                  // avant le son, alphaTab remettrait le curseur au début
+    api().playerReady.fire()
+    await nextTick()
     expect(api().tickPosition).toBe(7680)                               // placé sur la mesure 3
     expect((wrapper.vm as unknown as { position: () => unknown }).position()).toEqual({ tracks: [0, 1], bar: 2 })
-    api().renderFinished.fire()                                         // un nouveau rendu (zoom…) ne le replace pas
-    api().tickPosition = 0
-    api().renderFinished.fire()
+    api().tickPosition = 0                                              // un nouveau rendu (zoom…) ne le replace pas
+    api().postRenderFinished.fire()
+    await nextTick()
     expect(api().tickPosition).toBe(0)
+  })
+
+  it('#37 : un clic sur une note change la mesure en cours', async () => {
+    const wrapper = await mountWithScore()
+    api().beatMouseDown.fire({ voice: { bar: { index: 1 } } })
+    await nextTick()
+    expect(wrapper.get('[data-testid="tab-bar"]').attributes('aria-label')).toBe('Mesure 2 sur 3')
+    expect((wrapper.vm as unknown as { position: () => { bar: number } }).position().bar).toBe(1)
   })
 })
 
