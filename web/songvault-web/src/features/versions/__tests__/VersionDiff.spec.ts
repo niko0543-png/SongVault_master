@@ -91,4 +91,14 @@ describe('VersionDiff', () => {
     expect(w.find('ins').exists()).toBe(false)
     w.unmount()
   })
+
+  it('#36 : l’emplacement `file` reçoit chaque fichier de B, ajouté ou gardé, pas ceux supprimés', async () => {
+    const left = version({ files: [file('f1', 'maquette.mp3'), file('f0', 'vieux.wav')] })
+    const wrapper = mount(VersionDiff, {
+      props: { a: left, b },
+      slots: { file: '<template #file="{ file }"><em class="extra">{{ file.id }}</em></template>' },
+    })
+    await flushPromises()
+    expect(wrapper.findAll('.extra').map((e) => e.text())).toEqual(['f2', 'f1'])
+  })
 })

@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, useTemplateRef, watch } from 'vue'
 import type { SongVersion } from '../types'
+import type { SongFile } from '@/features/files/types'
 import { diffFields, diffFiles } from '../diff'
 import TextDiff from './TextDiff.vue'
 import { t } from '@/shared/i18n'
 
-/** Différences de A (avant) vers B (après) : champs, notes, paroles et fichiers (#9). */
+/**
+ * Différences de A (avant) vers B (après) : champs, notes, paroles et fichiers (#9).
+ * #36 : l'emplacement `file` reçoit chaque fichier de B (ajouté ou gardé), pour y montrer ce qui a changé dedans.
+ */
 const props = defineProps<{ a: SongVersion; b: SongVersion }>()
+defineSlots<{ file?: (props: { file: SongFile }) => unknown }>()
 
 const fields = computed(() => diffFields(props.a, props.b))
 const files = computed(() => diffFiles(props.a.files, props.b.files))
@@ -75,11 +80,12 @@ function go(step: 1 | -1) {
       <ul>
         <li v-for="f in files.added" :key="f.id" class="file--added">
           <ins><span aria-hidden="true">+ </span><span class="visually-hidden">{{ t('versions.diff.added') }} </span>{{ f.originalFileName }}</ins>
+          <slot name="file" :file="f" />
         </li>
         <li v-for="f in files.removed" :key="f.id" class="file--removed">
           <del><span aria-hidden="true">− </span><span class="visually-hidden">{{ t('versions.diff.removed') }} </span>{{ f.originalFileName }}</del>
         </li>
-        <li v-for="f in files.kept" :key="f.id" class="muted">{{ f.originalFileName }}</li>
+        <li v-for="f in files.kept" :key="f.id"><span class="muted">{{ f.originalFileName }}</span><slot name="file" :file="f" /></li>
       </ul>
       <p v-if="files.kept.length + files.added.length + files.removed.length === 0" class="muted">{{ t('versions.diff.noFiles') }}</p>
     </section>

@@ -59,6 +59,11 @@ test('liste les différences, les colore dans la partition, et un clic place la 
   await expect(score.locator('[fill="#1A7F37"], [fill="#1a7f37"], [style*="26, 127, 55"]').first()).toBeAttached()
   await expect(score.locator('[fill="#B35900"], [fill="#b35900"], [style*="179, 89, 0"]').first()).toBeAttached()
 
+  // #36 : la liste est à côté de la partition, qui défile seule dans son cadre
+  const panel = await page.getByTestId('gp-changes-panel').boundingBox()
+  const frame = await score.boundingBox()
+  expect(panel!.x + panel!.width).toBeLessThanOrEqual(frame!.x)
+
   // Clic sur une différence : la mesure est sélectionnée dans la partition
   await changes.nth(1).click()
   await expect(score.locator('.at-selection div').first()).toBeVisible()

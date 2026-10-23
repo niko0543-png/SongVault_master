@@ -17,7 +17,8 @@ import { t } from '@/shared/i18n'
 import { guitarProFiles } from '@/features/guitarpro/compare/files'
 
 // #30 : alphaTab n'est téléchargé que si les deux versions ont un fichier Guitar Pro
-const GuitarProCompare = defineAsyncComponent(() => import('@/features/guitarpro/components/GuitarProCompare.vue'))
+// #36 : le résumé se place à côté du fichier de B ; le détail s'ouvre sur la page de la tablature
+const GuitarProChangeSummary = defineAsyncComponent(() => import('@/features/guitarpro/components/GuitarProChangeSummary.vue'))
 
 type Side = 'a' | 'b'
 
@@ -141,9 +142,12 @@ async function listen(side: Side) {
       </div>
 
       <!-- Notes, paroles et fichiers ne sont plus affichés deux fois : seulement leurs différences (#9) -->
-      <VersionDiff v-if="sides.a && sides.b" :a="sides.a" :b="sides.b" class="card diff-card" />
-            <GuitarProCompare v-if="sides.a && sides.b && guitarProFiles(sides.a.files).length > 0 && guitarProFiles(sides.b.files).length > 0"
-                        :key="`${sides.a.id}-${sides.b.id}`" :song-id="songId" :a="sides.a" :b="sides.b" class="card diff-card" />
+      <VersionDiff v-if="sides.a && sides.b" :a="sides.a" :b="sides.b" class="card diff-card">
+        <template #file="{ file }">
+          <GuitarProChangeSummary v-if="guitarProFiles(sides.a.files).length > 0 && guitarProFiles([file]).length > 0"
+                                  :key="`${sides.a.id}-${file.id}`" :song-id="songId" :a="sides.a" :b="sides.b" :file="file" />
+        </template>
+      </VersionDiff>
     </template>
   </section>
 </template>

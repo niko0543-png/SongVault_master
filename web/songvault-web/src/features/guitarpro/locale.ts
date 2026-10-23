@@ -63,6 +63,12 @@ const fr = {
     exitFullscreen: 'Quitter le plein écran',
     notFound: 'Cette tablature n’est plus dans la version.',
     unreadable: 'Ce fichier n’est pas encore lisible : l’analyse antivirus est en cours, ou il a été bloqué.',
+    // #36 : la page ouverte depuis l'écran A/B, avec les différences
+    changesSince: 'Modifications depuis la v{number}',
+    changesSinceOther: 'Modifications depuis une autre version',
+    backToCompare: 'Retour à la comparaison',
+    withoutChanges: 'Sans les modifs',
+    changes: 'Liste des modifications',
   },
   // #29 : tablature calée sur une maquette de la même version
   sync: {
@@ -116,6 +122,17 @@ const fr = {
     otherVoice: 'modifiée dans une autre voix ou le chiffrage',
     goTo: 'Placer la partition sur la mesure {bar}',
     done: 'Comparaison terminée.',
+    // #36 : le résumé à côté du fichier, dans l'écran A/B
+    summary: {
+      label: 'Modifications de {file}',
+      none: 'Aucune différence de notes, de tempo ni d’accordage.',
+      track: '{track} : {details}',
+      barsModified: { one: '{count} mesure modifiée', other: '{count} mesures modifiées' },
+      barsAdded: { one: '{count} mesure ajoutée', other: '{count} mesures ajoutées' },
+      barsRemoved: { one: '{count} mesure supprimée', other: '{count} mesures supprimées' },
+      show: 'Afficher les modifs',
+      showLabel: 'Afficher les modifications de {file} dans le lecteur Guitar Pro',
+    },
   },
 }
 
@@ -177,6 +194,11 @@ const en: Widen<typeof fr> = {
     exitFullscreen: 'Exit full screen',
     notFound: 'This tablature is no longer in the version.',
     unreadable: 'This file cannot be read yet: the virus scan is running, or it was blocked.',
+    changesSince: 'Changes since v{number}',
+    changesSinceOther: 'Changes since another version',
+    backToCompare: 'Back to the comparison',
+    withoutChanges: 'Without the changes',
+    changes: 'List of changes',
   },
   sync: {
     source: 'Sound',
@@ -228,6 +250,16 @@ const en: Widen<typeof fr> = {
     otherVoice: 'changed in another voice or the time signature',
     goTo: 'Move the score to bar {bar}',
     done: 'Comparison finished.',
+    summary: {
+      label: 'Changes in {file}',
+      none: 'No differences in notes, tempo or tuning.',
+      track: '{track}: {details}',
+      barsModified: { one: '{count} bar changed', other: '{count} bars changed' },
+      barsAdded: { one: '{count} bar added', other: '{count} bars added' },
+      barsRemoved: { one: '{count} bar removed', other: '{count} bars removed' },
+      show: 'Show the changes',
+      showLabel: 'Show the changes in {file} in the Guitar Pro player',
+    },
   },
 }
 
