@@ -2,6 +2,7 @@
 import { computed, reactive, ref } from 'vue'
 import type { SongInput } from '../types'
 import { SONG_ARTIST_MAX, SONG_DESCRIPTION_MAX, SONG_TITLE_MAX } from '../rules'
+import { t } from '@/shared/i18n'
 
 type Field = 'title' | 'artist' | 'description'
 
@@ -12,7 +13,7 @@ const props = withDefaults(
     serverErrors?: Record<string, string>
     submitLabel?: string
   }>(),
-  { submitting: false, serverErrors: () => ({}), submitLabel: 'Enregistrer' },
+  { submitting: false, serverErrors: () => ({}), submitLabel: t('common.actions.save') },
 )
 
 const emit = defineEmits<{ submit: [input: SongInput]; cancel: [] }>()
@@ -28,11 +29,11 @@ const submitted = ref(false)
 const clientErrors = computed(() => {
   const errors: Partial<Record<Field, string>> = {}
   const title = form.title.trim()
-  if (!title) errors.title = 'Le titre est obligatoire.'
-  else if (title.length > SONG_TITLE_MAX) errors.title = `${SONG_TITLE_MAX} caractères maximum.`
-  if (form.artist.trim().length > SONG_ARTIST_MAX) errors.artist = `${SONG_ARTIST_MAX} caractères maximum.`
+  if (!title) errors.title = t('songs.form.titleRequired')
+  else if (title.length > SONG_TITLE_MAX) errors.title = t('songs.form.maxLength', { max: SONG_TITLE_MAX })
+  if (form.artist.trim().length > SONG_ARTIST_MAX) errors.artist = t('songs.form.maxLength', { max: SONG_ARTIST_MAX })
   if (form.description.trim().length > SONG_DESCRIPTION_MAX)
-    errors.description = `${SONG_DESCRIPTION_MAX} caractères maximum.`
+    errors.description = t('songs.form.maxLength', { max: SONG_DESCRIPTION_MAX })
   return errors
 })
 
@@ -57,7 +58,7 @@ function onSubmit() {
 <template>
   <form novalidate class="card" @submit.prevent="onSubmit">
     <div class="field">
-      <label for="song-title">Titre *</label>
+      <label for="song-title">{{ t('songs.form.title') }}</label>
       <input
         id="song-title"
         v-model="form.title"
@@ -72,20 +73,20 @@ function onSubmit() {
     </div>
 
     <div class="field">
-      <label for="song-artist">Artiste</label>
+      <label for="song-artist">{{ t('songs.form.artist') }}</label>
       <input id="song-artist" v-model="form.artist" data-testid="artist-input" :maxlength="SONG_ARTIST_MAX" />
       <p v-if="errorFor('artist')" class="field-error">{{ errorFor('artist') }}</p>
     </div>
 
     <div class="field">
-      <label for="song-description">Description</label>
+      <label for="song-description">{{ t('songs.form.description') }}</label>
       <textarea id="song-description" v-model="form.description" rows="4" :maxlength="SONG_DESCRIPTION_MAX" />
       <p v-if="errorFor('description')" class="field-error">{{ errorFor('description') }}</p>
     </div>
 
     <div class="form-actions">
-      <button type="submit" :disabled="submitting">{{ submitting ? 'Envoi…' : submitLabel }}</button>
-      <button type="button" class="secondary" @click="emit('cancel')">Annuler</button>
+      <button type="submit" :disabled="submitting">{{ submitting ? t('songs.form.sending') : submitLabel }}</button>
+      <button type="button" class="secondary" @click="emit('cancel')">{{ t('common.actions.cancel') }}</button>
     </div>
   </form>
 </template>

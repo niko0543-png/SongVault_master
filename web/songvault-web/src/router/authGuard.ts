@@ -1,12 +1,13 @@
 import type { RouteLocationNormalized, RouteLocationRaw } from 'vue-router'
+import type { MessageKey } from '@/shared/i18n'
 
 // Champs meta propres à SongVault, typés pour tout le routeur
 declare module 'vue-router' {
   interface RouteMeta {
     public?: boolean
     guestOnly?: boolean
-    /** Titre affiché dans l'onglet du navigateur. */
-    title?: string
+    /** Titre affiché dans l'onglet du navigateur : une clé, traduite à chaque navigation (#26). */
+    title?: MessageKey
     /** Page d'écriture : un Guest est renvoyé à la liste des morceaux (#2). */
     write?: boolean
     /** Page réservée aux propriétaires du groupe : les autres sont renvoyés à la liste des morceaux (#16). */

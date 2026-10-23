@@ -89,6 +89,20 @@ public sealed class ReleasesController : ControllerBase
         return ReleaseResponse.From(await handler.HandleAsync(new SetReleaseTracksCommand(id, tracks), ct));
     }
 
+    /// <summary>Label, code-barres UPC/EAN et liens d'écoute (#38), qui remplacent les anciens.</summary>
+    /// <remarks>La plateforme de chaque lien est reconnue à son adresse (Spotify, Deezer, Apple Music…) ; sinon Other.</remarks>
+    /// <response code="200">La sortie à jour.</response>
+    /// <response code="422">Lien qui n'est pas une adresse http(s), en double, plus de 12 liens, code-barres invalide.</response>
+    [HttpPut("{id:guid}/distribution")]
+    [ProducesResponseType<ReleaseResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<ReleaseResponse> SetDistribution(
+        Guid id, ReleaseDistributionRequest request, [FromServices] SetReleaseDistributionHandler handler, CancellationToken ct)
+        => ReleaseResponse.From(await handler.HandleAsync(
+            new SetReleaseDistributionCommand(id, request.Label, request.Upc, request.StreamingLinks), ct));
+
     /// <summary>Envoie ou remplace la pochette : JPEG, PNG ou WebP de 5 Mo au plus.</summary>
     /// <response code="204">Pochette enregistrée.</response>
     /// <response code="400">Format non accepté, ou contenu qui ne correspond pas à l'extension.</response>

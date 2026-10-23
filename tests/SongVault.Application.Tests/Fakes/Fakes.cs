@@ -34,6 +34,7 @@ internal sealed class FakeSongRepository : ISongRepository
     public (int Page, int PageSize)? LastListRequest { get; private set; }
     public string? LastSearch { get; private set; }
     public SongVersionStatus? LastStatus { get; private set; }
+    public bool? LastReleased { get; private set; }
 
     public void Add(Song song) => Songs.Add(song);
 
@@ -41,11 +42,12 @@ internal sealed class FakeSongRepository : ISongRepository
         => Task.FromResult(Live.SingleOrDefault(s => s.Id == id));
 
     public Task<PagedResult<SongDto>> ListAsync(
-        int page, int pageSize, string? search, SongVersionStatus? status, CancellationToken ct)
+        int page, int pageSize, string? search, SongVersionStatus? status, bool? released, CancellationToken ct)
     {
         LastListRequest = (page, pageSize);
         LastSearch = search;
         LastStatus = status;
+        LastReleased = released;
 
         // Même logique que le vrai repository, mais en LINQ to Objects
         IEnumerable<Song> query = Live;
@@ -53,6 +55,8 @@ internal sealed class FakeSongRepository : ISongRepository
             query = query.Where(s =>
                 s.Title.Contains(search, StringComparison.OrdinalIgnoreCase) ||
                 (s.Artist?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false));
+        if (released is not null)
+            query = query.Where(s => s.IsReleased == released);
         if (status is not null)
             query = query.Where(s =>
                 s.Versions.Where(v => !v.IsDeleted).OrderByDescending(v => v.Number).Select(v => (SongVersionStatus?)v.Status).FirstOrDefault() == status);
@@ -74,6 +78,9 @@ internal sealed class FakeSongRepository : ISongRepository
 
     public Task<bool> ExistsAsync(Guid songId, CancellationToken ct)
         => Task.FromResult(Live.Any(s => s.Id == songId));
+
+    public Task<IReadOnlyList<Song>> ListReleasedOnAsync(Guid releaseId, CancellationToken ct)
+        => Task.FromResult<IReadOnlyList<Song>>([.. Live.Where(s => s.ReleaseId == releaseId)]);
 
     public Task<IReadOnlyList<SongVersionSummaryDto>> ListVersionsAsync(Guid songId, CancellationToken ct)
     {
@@ -171,10 +178,11 @@ internal sealed class FakeReleaseRepository(FakeSongRepository? songs = null) : 
             var song = songs?.Songs.SingleOrDefault(s => s.Id == t.SongId);
             return new ReleaseTrackDto(t.TrackNumber, t.SongId, song?.Title ?? "", t.VersionId,
                 [.. (song?.Versions ?? []).OrderBy(v => v.Number)
-                    .Select(v => new ReleaseVersionOptionDto(v.Id, v.Number, v.Title, v.Status))]);
+                    .Select(v => new ReleaseVersionOptionDto(v.Id, v.Number, v.Title, v.Status))],
+                song?.ReleaseId == r.Id);
         });
         return Task.FromResult<ReleaseDto?>(new ReleaseDto(r.Id, r.Title, r.Type, r.ReleaseDate,
-            r.CoverStorageKey is not null, r.CreatedAt, r.UpdatedAt, [.. tracks]));
+            r.CoverStorageKey is not null, r.CreatedAt, r.UpdatedAt, [.. tracks], r.Label, r.Upc?.Value, r.StreamingLinks));
     }
 
     public Task<IReadOnlyList<string>> ListTitlesWithSongAsync(Guid songId, CancellationToken ct)
@@ -277,6 +285,11 @@ internal sealed class FakeFileStorageService : IFileStorageService
         return Task.CompletedTask;
     }
 
+    /// <summary>Comme le stockage objet : un flux sans retour en arrière, fichier visible une fois le flux fermé.</summary>
+    public Task<Stream> OpenWriteAsync(string storageKey, CancellationToken ct)
+        => Files.ContainsKey(storageKey)
+            ? throw new IOException($"Le fichier {storageKey} existe déjà.")
+            : Task.FromResult<Stream>(new ForwardOnlyWriteStream(bytes => Files[storageKey] = bytes));
 
     public Task<long?> GetLengthAsync(string storageKey, CancellationToken ct)
         => Task.FromResult(Files.TryGetValue(storageKey, out var bytes) ? bytes.Length : (long?)null);
@@ -298,9 +311,9 @@ internal sealed class FakeCurrentUser(string userId = "owner-1", string? email =
 }
 
 /// <summary>Groupe actif figé, comme si [BandScoped] avait validé l'adhésion.</summary>
-internal sealed class FakeBandContext(Guid bandId) : IBandContext
+internal sealed class FakeBandContext(Guid bandId, BandRole role = BandRole.Owner) : IBandContext
 {
     public Guid? BandId { get; } = bandId;
-    public BandRole? Role { get; } = BandRole.Owner;
+    public BandRole? Role { get; } = role;
     public Guid RequiredBandId { get; } = bandId;
 }

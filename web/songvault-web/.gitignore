@@ -37,6 +37,9 @@ __screenshots__/
 
 # Vite
 *.timestamp-*-*.mjs
+# #28 : police et banque de sons d'alphaTab, copiées par son greffon Vite à chaque construction
+/public/font/
+/public/soundfont/
 
 playwright-report/
 test-results/

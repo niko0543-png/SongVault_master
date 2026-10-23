@@ -7,18 +7,19 @@ import { getErrorMessage } from '@/shared/api/ApiError'
 import { formatDate } from '@/shared/utils/format'
 import { accountApi } from '../api/accountApi'
 import type { AccountEvent, AccountEventType } from '../types'
+import { t } from '@/shared/i18n'
 
 const LABELS: Record<AccountEventType, string> = {
-  SignedIn: 'Connexion',
-  SignedInWithCode: 'Connexion avec code',
-  SignedInWithRecoveryCode: 'Connexion avec un code de secours',
-  SignInFailed: 'Mot de passe incorrect',
-  CodeRejected: 'Code refusé',
-  LockedOut: 'Compte verrouillé après trop d’essais',
-  PasswordChanged: 'Mot de passe changé',
-  TwoFactorEnabled: 'Double authentification activée',
-  TwoFactorDisabled: 'Double authentification désactivée',
-  RecoveryCodesRegenerated: 'Nouveaux codes de secours',
+  SignedIn: t('account.events.kinds.login'),
+  SignedInWithCode: t('account.events.kinds.loginWithCode'),
+  SignedInWithRecoveryCode: t('account.events.kinds.loginWithRecovery'),
+  SignInFailed: t('account.events.kinds.wrongPassword'),
+  CodeRejected: t('account.events.kinds.codeRejected'),
+  LockedOut: t('account.events.kinds.lockedOut'),
+  PasswordChanged: t('account.events.kinds.passwordChanged'),
+  TwoFactorEnabled: t('account.events.kinds.twoFactorEnabled'),
+  TwoFactorDisabled: t('account.events.kinds.twoFactorDisabled'),
+  RecoveryCodesRegenerated: t('account.events.kinds.recoveryCodesReset'),
 }
 /** Ce qui mérite un coup d'œil : quelqu'un a peut-être essayé d'entrer. */
 const WARNINGS: AccountEventType[] = ['SignInFailed', 'CodeRejected', 'LockedOut']
@@ -39,21 +40,20 @@ defineExpose({ load })        // rechargé par la page après un changement de d
 </script>
 
 <template>
-  <SectionCard title="Connexions récentes">
+  <SectionCard :title="t('account.events.title')">
     <p class="muted">
-      Les 50 derniers événements (90 jours au plus). Une ligne que vous ne reconnaissez pas ?
-      Changez votre mot de passe et activez la double authentification.
+      {{ t('account.events.intro') }}
     </p>
     <ErrorState v-if="error" :message="getErrorMessage(error)" @retry="load" />
     <LoadingState v-else-if="!events" />
-    <p v-else-if="events.length === 0" class="muted">Rien pour l’instant.</p>
-    <ul v-else class="events" aria-label="Connexions récentes">
+    <p v-else-if="events.length === 0" class="muted">{{ t('account.events.empty') }}</p>
+    <ul v-else class="events" :aria-label="t('account.events.title')">
       <li v-for="e in events" :key="e.id" :class="{ warning: WARNINGS.includes(e.type) }" data-testid="account-event">
         <span class="what">{{ LABELS[e.type] ?? e.type }}</span>
         <span class="muted">
           <time :datetime="e.occurredAt">{{ formatDate(e.occurredAt) }}</time>
           <template v-if="e.device"> · {{ e.device }}</template>
-          <template v-if="e.network"> · réseau {{ e.network }}</template>
+          <template v-if="e.network"> {{ t('account.events.network', { network: e.network }) }}</template>
         </span>
       </li>
     </ul>

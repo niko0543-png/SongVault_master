@@ -13,6 +13,7 @@ import { formatDate } from '@/shared/utils/format'
 import { useConfirm } from '@/shared/composables/useConfirm'
 import { useToast } from '@/shared/composables/useToast'
 import InvitationsPanel from '@/features/invitations/components/InvitationsPanel.vue'
+import { t } from '@/shared/i18n'
 
 const bands = useBandStore()
 const { active } = storeToRefs(bands)
@@ -21,7 +22,7 @@ const router = useRouter()
 const { confirm } = useConfirm()
 const toast = useToast()
 
-const roleLabels: Record<BandRole, string> = { Owner: 'Propriétaire', Member: 'Membre', Guest: 'Invité' }
+const roleLabels: Record<BandRole, string> = { Owner: t('bands.members.roles.Owner'), Member: t('bands.members.roles.Member'), Guest: t('bands.members.roles.Guest') }
 const ROLES: BandRole[] = ['Owner', 'Member', 'Guest']
 
 const members = ref<BandMember[]>([])
@@ -74,15 +75,15 @@ async function onChangeRole(member: BandMember, event: Event) {
 
 async function onRemove(member: BandMember) {
   const confirmed = await confirm({
-    title: 'Retirer ce membre ?',
-    message: `${member.email} n'aura plus accès aux morceaux du groupe.`,
-    confirmLabel: 'Retirer',
+    title: t('bands.members.removeTitle'),
+    message: t('bands.members.removeMessage', { email: member.email }),
+    confirmLabel: t('bands.members.remove'),
     danger: true,
   })
   if (!confirmed) return
   if (await run(member.userId, () => membersApi.remove(member.userId))) {
     members.value = members.value.filter((m) => m.userId !== member.userId)
-    toast.success(`${member.email} a été retiré du groupe.`)
+    toast.success(t('bands.members.removed', { email: member.email }))
   }
 }
 
@@ -90,15 +91,15 @@ async function onLeave() {
   const band = active.value
   if (!band) return
   const confirmed = await confirm({
-    title: 'Quitter ce groupe ?',
-    message: `Vous n'aurez plus accès aux morceaux de « ${band.name} ».`,
-    confirmLabel: 'Quitter',
+    title: t('bands.members.leaveTitle'),
+    message: t('bands.members.leaveMessage', { name: band.name }),
+    confirmLabel: t('bands.members.leave'),
     danger: true,
   })
   if (!confirmed) return
   if (await run(myId.value ?? '', membersApi.leave)) {
     bands.remove(band.id)
-    toast.success(`Vous avez quitté « ${band.name} ».`)
+    toast.success(t('bands.members.left', { name: band.name }))
     await router.push({ name: 'home' })
   }
 }
@@ -107,8 +108,8 @@ async function onLeave() {
 <template>
   <section>
     <header class="page-header">
-      <h1>Membres</h1>
-      <button type="button" class="secondary" :disabled="busyId !== null" @click="onLeave">Quitter le groupe</button>
+      <h1>{{ t('bands.members.title') }}</h1>
+      <button type="button" class="secondary" :disabled="busyId !== null" @click="onLeave">{{ t('bands.members.leaveButton') }}</button>
     </header>
     <p v-if="actionError" class="field-error" role="alert">{{ actionError }}</p>
 
@@ -118,16 +119,16 @@ async function onLeave() {
     <ul v-else class="member-list">
       <li v-for="member in members" :key="member.userId" class="card member" data-testid="member-item">
         <div class="member-info">
-          <span>{{ member.email }}<template v-if="member.userId === myId"> (vous)</template></span>
-          <small class="muted">Arrivé le {{ formatDate(member.joinedAt) }}</small>
+          <span>{{ member.email }}<template v-if="member.userId === myId"> {{ t('bands.members.you') }}</template></span>
+          <small class="muted">{{ t('bands.members.joined', { joinedAt: formatDate(member.joinedAt) }) }}</small>
         </div>
         <select v-if="isAdmin" :value="member.role" :disabled="busyId === member.userId"
-                :aria-label="`Rôle de ${member.email}`" @change="onChangeRole(member, $event)">
+                :aria-label="t('bands.members.roleOf', { email: member.email })" @change="onChangeRole(member, $event)">
           <option v-for="role in ROLES" :key="role" :value="role">{{ roleLabels[role] }}</option>
         </select>
         <span v-else>{{ roleLabels[member.role] }}</span>
         <button v-if="isAdmin && member.userId !== myId" type="button" class="secondary"
-                :disabled="busyId === member.userId" @click="onRemove(member)">Retirer</button>
+                :disabled="busyId === member.userId" @click="onRemove(member)">{{ t('bands.members.remove') }}</button>
       </li>
     </ul>
     <InvitationsPanel v-if="isAdmin" />

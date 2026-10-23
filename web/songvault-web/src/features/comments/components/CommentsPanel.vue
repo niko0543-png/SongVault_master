@@ -13,6 +13,7 @@ import { getErrorMessage } from '@/shared/api/ApiError'
 import { formatTime } from '@/shared/utils/format'
 import { useConfirm } from '@/shared/composables/useConfirm'
 import { useToast } from '@/shared/composables/useToast'
+import { t } from '@/shared/i18n'
 
 /** target : le fichier audio commenté ; track : la même piste pour le lecteur (clic sur un horodatage). */
 const props = defineProps<{ target: CommentTarget; track: Track }>()
@@ -124,11 +125,11 @@ function onEdit(comment: Comment, body: string) {
 async function onDelete(comment: Comment) {
   const replies = comment.replies.length
   const confirmed = await confirm({
-    title: 'Supprimer ce commentaire ?',
+    title: t('comments.panel.deleteTitle'),
     message: replies > 0
-      ? `Le commentaire et ${replies === 1 ? 'sa réponse seront supprimés' : `ses ${replies} réponses seront supprimés`}.`
-      : 'Le commentaire sera supprimé définitivement.',
-    confirmLabel: 'Supprimer',
+      ? t('comments.panel.deleteWithReplies', { count: replies })
+      : t('comments.panel.deleteMessage'),
+    confirmLabel: t('common.actions.delete'),
     danger: true,
   })
   if (confirmed) void act(() => commentsApi.remove(props.target, comment.id))
@@ -137,50 +138,50 @@ async function onDelete(comment: Comment) {
 
 <template>
   <form class="new-comment" novalidate @submit.prevent="onCreate">
-    <label for="comment-body">Nouveau commentaire</label>
+    <label for="comment-body">{{ t('comments.panel.newComment') }}</label>
      <textarea id="comment-body" ref="body-input" v-model="draft.body" rows="2" :maxlength="COMMENT_BODY_MAX"
-              placeholder="ex. la basse décale au refrain" aria-describedby="comment-mention-help" />
+              :placeholder="t('comments.panel.placeholder')" aria-describedby="comment-mention-help" />
     <small id="comment-mention-help" class="muted">
-      Pour prévenir un membre par e-mail, écrivez @ suivi de son adresse (ex. @ana@exemple.fr).
+      {{ t('comments.panel.mentionHelp') }}
     </small>
     <div class="new-comment-bar">
       <button v-if="draft.position === null" type="button" class="secondary" :disabled="!isPlayingThisFile"
               data-testid="capture-position" @click="capturePosition">
-        Commenter à {{ formatTime(isPlayingThisFile ? currentTime : 0) }}
+        {{ t('comments.panel.commentAt', { currentTime: formatTime(isPlayingThisFile ? currentTime : 0) }) }}
       </button>
       <span v-else class="position-chip" data-testid="draft-position">
-        À {{ formatTime(draft.position) }}
-        <button type="button" class="secondary" aria-label="Retirer la position" @click="draft.position = null">✕</button>
+        {{ t('comments.panel.at', { position: formatTime(draft.position) }) }}
+        <button type="button" class="secondary" :aria-label="t('comments.panel.removePosition')" @click="draft.position = null">✕</button>
       </span>
-      <small v-if="!isPlayingThisFile" class="muted">Écoutez ce fichier pour commenter un instant précis.</small>
-      <button type="submit" class="publish" :disabled="busy || !draft.body.trim()">Publier</button>
+      <small v-if="!isPlayingThisFile" class="muted">{{ t('comments.panel.listenHelp') }}</small>
+      <button type="submit" class="publish" :disabled="busy || !draft.body.trim()">{{ t('comments.panel.publish') }}</button>
     </div>
   </form>
 
   <p v-if="loadError" class="field-error" role="alert">{{ loadError }}</p>
   <LoadingState v-else-if="isLoading && threads.length === 0" />
-  <p v-else-if="threads.length === 0" class="muted">Aucun commentaire sur ce fichier.</p>
+  <p v-else-if="threads.length === 0" class="muted">{{ t('comments.panel.empty') }}</p>
   <ol v-else class="threads">
     <li v-for="thread in threads" :key="thread.id" class="thread" :class="{ resolved: thread.resolvedAt }"
         data-testid="comment-thread">
       <div class="thread-head">
         <button v-if="thread.positionMs !== null" type="button" class="timestamp"
-                :aria-label="`Écouter à partir de ${formatTime(thread.positionMs / 1000)}`" @click="onListen(thread)">
+                :aria-label="t('comments.panel.listenFrom', { positionMs: formatTime(thread.positionMs / 1000) })" @click="onListen(thread)">
           ▶ {{ formatTime(thread.positionMs / 1000) }}
         </button>
-        <span v-else class="muted">Général</span>
+        <span v-else class="muted">{{ t('comments.panel.general') }}</span>
         <span v-if="thread.resolvedAt" class="resolved-badge">
-          Résolu<template v-if="thread.resolvedByEmail"> par {{ thread.resolvedByEmail }}</template>
+          {{ t('comments.panel.resolved') }}<template v-if="thread.resolvedByEmail"> {{ t('comments.panel.resolvedBy', { email: thread.resolvedByEmail }) }}</template>
         </span>
       </div>
 
       <CommentEntry :comment="thread" :can-edit="isMine(thread)" :can-delete="canDelete(thread)" :busy="busy"
                     @save="onEdit(thread, $event)" @remove="onDelete(thread)">
         <template #actions>
-          <button type="button" class="secondary" :disabled="busy" @click="openReply(thread)">Répondre</button>
+          <button type="button" class="secondary" :disabled="busy" @click="openReply(thread)">{{ t('comments.panel.reply') }}</button>
           <button v-if="canResolve(thread)" type="button" class="secondary" :disabled="busy"
                   @click="onToggleResolved(thread)">
-            {{ thread.resolvedAt ? 'Rouvrir' : 'Résoudre' }}
+            {{ thread.resolvedAt ? t('comments.panel.reopen') : t('comments.panel.resolve') }}
           </button>
         </template>
       </CommentEntry>
@@ -193,10 +194,10 @@ async function onDelete(comment: Comment) {
       </ul>
 
       <form v-if="replyTo === thread.id" class="reply-form" novalidate @submit.prevent="onReply(thread)">
-        <textarea v-model="replyBody" rows="2" :maxlength="COMMENT_BODY_MAX" aria-label="Votre réponse" />
+        <textarea v-model="replyBody" rows="2" :maxlength="COMMENT_BODY_MAX" :aria-label="t('comments.panel.yourReply')" />
         <div class="reply-actions">
-          <button type="button" class="secondary" @click="replyTo = null">Annuler</button>
-          <button type="submit" :disabled="busy || !replyBody.trim()">Envoyer la réponse</button>
+          <button type="button" class="secondary" @click="replyTo = null">{{ t('common.actions.cancel') }}</button>
+          <button type="submit" :disabled="busy || !replyBody.trim()">{{ t('comments.panel.sendReply') }}</button>
         </div>
       </form>
     </li>

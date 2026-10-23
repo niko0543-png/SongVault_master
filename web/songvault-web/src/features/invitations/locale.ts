@@ -1,0 +1,96 @@
+import type { Widen } from '@/shared/i18n/types'
+
+/** #26 : textes de src/features/invitations (ADR 0033). Le français fait référence ; l'anglais a les mêmes clés. */
+const fr = {
+  panel: {
+    roles: {
+      Member: 'Membre',
+      Guest: 'Invité',
+    },
+    badEmail: 'Adresse e-mail invalide.',
+    sent: 'Invitation envoyée à {email}.',
+    copied: 'Lien copié.',
+    copyFailed: 'Copie impossible : sélectionnez le lien et copiez-le à la main.',
+    revoked: 'Invitation de {email} annulée.',
+    title: "Inviter quelqu'un",
+    role: 'Rôle',
+    sending: 'Envoi…',
+    invite: 'Inviter',
+    created: "Lien envoyé à {email}, valable jusqu'au {expiresAt}. Il ne sera plus affiché ensuite.",
+    mailFailed: "L'e-mail n'a pas pu partir. Envoyez ce lien vous-même à {email} :",
+    linkLabel: "Lien d'invitation",
+    copy: 'Copier le lien',
+    pending: 'En attente',
+    empty: 'Aucune invitation en attente.',
+    expires: 'Expire le {expiresAt}',
+    revoke: 'Révoquer',
+  },
+  invite: {
+    roles: {
+      Member: 'membre (créer et modifier les morceaux)',
+      Guest: 'invité (lire et écouter)',
+    },
+    notFound: "Ce lien d'invitation n'existe pas. Vérifiez qu'il a été copié en entier.",
+    expired: "Cette invitation n'est plus valable (déjà utilisée, annulée ou expirée). Demandez un nouveau lien à la personne qui vous a invité.",
+    title: 'Invitation',
+    home: "Retour à l'accueil",
+    invitedTo: 'Vous êtes invité à rejoindre',
+    asRole: 'en tant que {role}.',
+    forEmail: "Invitation pour {email}, valable jusqu'au {expiresAt}.",
+    createOrLogin: 'Créez un compte avec cette adresse, ou connectez-vous si vous en avez déjà un.',
+    register: 'Créer un compte',
+    haveAccount: "J'ai déjà un compte",
+    wrongAccount: 'Vous êtes connecté avec {email}. Cette invitation est destinée à {email2} : connectez-vous avec ce compte pour la valider.',
+    switchAccount: 'Changer de compte',
+    joining: 'Adhésion…',
+    join: 'Rejoindre le groupe',
+  },
+}
+
+const en: Widen<typeof fr> = {
+  panel: {
+    roles: {
+      Member: 'Member',
+      Guest: 'Guest',
+    },
+    badEmail: 'Invalid e-mail address.',
+    sent: 'Invitation sent to {email}.',
+    copied: 'Link copied.',
+    copyFailed: 'Cannot copy: select the link and copy it by hand.',
+    revoked: 'Invitation for {email} cancelled.',
+    title: 'Invite someone',
+    role: 'Role',
+    sending: 'Sending…',
+    invite: 'Invite',
+    created: 'Link sent to {email}, valid until {expiresAt}. It will not be shown again.',
+    mailFailed: 'The e-mail could not be sent. Send this link to {email} yourself:',
+    linkLabel: 'Invitation link',
+    copy: 'Copy the link',
+    pending: 'Pending',
+    empty: 'No pending invitations.',
+    expires: 'Expires on {expiresAt}',
+    revoke: 'Revoke',
+  },
+  invite: {
+    roles: {
+      Member: 'member (create and edit songs)',
+      Guest: 'guest (read and listen)',
+    },
+    notFound: 'This invitation link does not exist. Check that it was copied in full.',
+    expired: 'This invitation is no longer valid (already used, cancelled or expired). Ask the person who invited you for a new link.',
+    title: 'Invitation',
+    home: 'Back to home',
+    invitedTo: 'You are invited to join',
+    asRole: 'as {role}.',
+    forEmail: 'Invitation for {email}, valid until {expiresAt}.',
+    createOrLogin: 'Create an account with this address, or sign in if you already have one.',
+    register: 'Create an account',
+    haveAccount: 'I already have an account',
+    wrongAccount: 'You are signed in as {email}. This invitation is for {email2}: sign in with that account to accept it.',
+    switchAccount: 'Use another account',
+    joining: 'Joining…',
+    join: 'Join the band',
+  },
+}
+
+export const invitationsMessages = { fr, en }

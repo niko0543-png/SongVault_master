@@ -13,3 +13,6 @@ public sealed record DataExportResponse(
 
     public sealed record DeleteAccountRequest([Required] string? Password);
 }
+
+/// <summary>#26 : « fr » ou « en ».</summary>
+public sealed record LocaleRequest([Required] string? Locale);

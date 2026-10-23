@@ -30,7 +30,7 @@ public sealed class SongsController : ControllerBase
     public async Task<ActionResult<PagedResponse<SongResponse>>> List(
         [FromQuery] ListSongsRequest request, [FromServices] ListSongsHandler handler, CancellationToken ct)
     {
-        var result = await handler.HandleAsync(new ListSongsQuery(request.Page, request.PageSize, request.Search, request.Status), ct);
+        var result = await handler.HandleAsync(new ListSongsQuery(request.Page, request.PageSize, request.Search, request.Status, request.Released), ct);
         return Ok(new PagedResponse<SongResponse>(
             [.. result.Items.Select(SongResponse.From)],
             result.Page, result.PageSize, result.TotalCount, result.TotalPages));

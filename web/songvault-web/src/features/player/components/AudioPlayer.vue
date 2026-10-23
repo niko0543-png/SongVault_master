@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useTemplateRef } from 'vue'
+import { computed, useTemplateRef, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { usePlayerStore } from '../stores/playerStore'
 import { useAudioPlayer } from '../composables/useAudioPlayer'
@@ -7,13 +7,23 @@ import { SKIP_SECONDS, useMediaSession } from '../composables/useMediaSession'
 import { formatTime } from '@/shared/utils/format'
 import { onBeforeUnmount, onMounted } from 'vue'
 import { isGlobalShortcut } from '@/shared/utils/keyboard'
+import { t } from '@/shared/i18n'
 
 const audioElement = useTemplateRef<HTMLAudioElement>('audio-element')
 useAudioPlayer(audioElement)
 useMediaSession()                                   // #14 : commandes de l'écran verrouillé
 
 const player = usePlayerStore()
-const { track, isPlaying, currentTime, duration, error } = storeToRefs(player)
+const { track, isPlaying, currentTime, duration, error, volume, muted } = storeToRefs(player)
+
+// Volume du lecteur, gardé sur l'appareil ; l'icône suit le niveau entendu
+const heard = computed(() => (muted.value ? 0 : volume.value))
+const volumeIcon = computed(() => (heard.value === 0 ? '🔇' : heard.value < 0.5 ? '🔉' : '🔊'))
+const volumeText = computed(() => `${Math.round(heard.value * 100)} %`)
+
+function onVolume(event: Event) {
+  player.setVolume(Number((event.target as HTMLInputElement).value))
+}
 
 function onSeek(event: Event) {
   player.seek(Number((event.target as HTMLInputElement).value))
@@ -28,21 +38,41 @@ function onKeydown(event: KeyboardEvent) {
 }
 onMounted(() => window.addEventListener('keydown', onKeydown))
 onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
+
+// #31 : la hauteur de la barre, pour que le panneau des pistes de la tablature se pose juste au-dessus
+const bar = useTemplateRef<HTMLElement>('player-bar')
+let observer: ResizeObserver | null = null
+const rootStyle = () => document.documentElement.style
+watch(bar, (element) => {
+  observer?.disconnect()
+  observer = null
+  if (!element) {
+    rootStyle().removeProperty('--audio-player-height')
+    return
+  }
+  if (typeof ResizeObserver === 'undefined') return
+  observer = new ResizeObserver(() => rootStyle().setProperty('--audio-player-height', `${element.offsetHeight}px`))
+  observer.observe(element)
+})
+onBeforeUnmount(() => {
+  observer?.disconnect()
+  rootStyle().removeProperty('--audio-player-height')
+})
 </script>
 
 <template>
   <!-- TOUJOURS rendu (même sans piste) : c'est l'unique <audio> de l'application -->
   <audio ref="audio-element" preload="metadata" />
 
-  <div v-if="track" class="player" role="region" aria-label="Lecteur audio">
+  <div v-if="track" ref="player-bar" class="player" role="region" :aria-label="t('player.audio.label')">
     <div class="controls">
-      <button type="button" class="secondary skip" :aria-label="`Reculer de ${SKIP_SECONDS} secondes`"
+      <button type="button" class="secondary skip" :aria-label="t('player.audio.back', { skipSeconds: SKIP_SECONDS })"
               :disabled="!duration" @click="player.skip(-SKIP_SECONDS)">−{{ SKIP_SECONDS }}</button>
-      <button type="button" class="play" :aria-label="isPlaying ? 'Mettre en pause' : 'Lire'"
-          aria-keyshortcuts="Space k" :title="isPlaying ? 'Pause (Espace)' : 'Lecture (Espace)'" @click="player.toggle()">
+      <button type="button" class="play" :aria-label="isPlaying ? t('player.audio.pause') : t('player.audio.play')"
+          aria-keyshortcuts="Space k" :title="isPlaying ? t('player.audio.pauseHint') : t('player.audio.playHint')" @click="player.toggle()">
         {{ isPlaying ? '⏸' : '▶' }}
       </button>
-      <button type="button" class="secondary skip" :aria-label="`Avancer de ${SKIP_SECONDS} secondes`"
+      <button type="button" class="secondary skip" :aria-label="t('player.audio.forward', { skipSeconds: SKIP_SECONDS })"
               :disabled="!duration" @click="player.skip(SKIP_SECONDS)">+{{ SKIP_SECONDS }}</button>
     </div>
     <div class="info">
@@ -52,11 +82,19 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
     <input
       class="seek" type="range" min="0" step="0.1"
       :max="duration || 0" :value="currentTime" :disabled="!duration"
-      aria-label="Position de lecture"
-      :aria-valuetext="`${formatTime(currentTime)} sur ${formatTime(duration)}`"
+      :aria-label="t('player.audio.position')"
+      :aria-valuetext="t('shared.time.positionOf', { position: formatTime(currentTime), duration: formatTime(duration) })"
       @input="onSeek"
     />
     <span class="time">{{ formatTime(currentTime) }} / {{ formatTime(duration) }}</span>
+    <div class="volume" data-testid="player-volume">
+      <button type="button" class="secondary mute" :aria-pressed="muted" data-testid="player-mute"
+              :aria-label="muted ? t('player.audio.unmute') : t('player.audio.mute')" @click="player.toggleMute()">
+        <span aria-hidden="true">{{ volumeIcon }}</span>
+      </button>
+      <input class="level" type="range" min="0" max="1" step="0.05" :value="heard" data-testid="player-volume-level"
+             :aria-label="t('player.audio.volume')" :aria-valuetext="volumeText" :title="volumeText" @input="onVolume" />
+    </div>
     <p v-if="error" class="field-error error" role="alert">{{ error }}</p>
   </div>
 </template>
@@ -64,7 +102,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 <style scoped>
 /* #14 : le bas de l'écran reste libre pour la barre d'accueil de l'iPhone (safe-area) */
 .player { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; display: grid;
-          grid-template-columns: auto minmax(8rem, 1fr) 3fr auto; gap: 1rem; align-items: center;
+          grid-template-columns: auto minmax(8rem, 1fr) 3fr auto auto; gap: 1rem; align-items: center;
           padding: .75rem 1.5rem calc(.75rem + env(safe-area-inset-bottom));
           background: var(--surface); border-top: 1px solid var(--border); }
 .controls { display: flex; align-items: center; gap: .5rem; }
@@ -75,13 +113,19 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 .seek { width: 100%; padding: 0; }
 .time { font-variant-numeric: tabular-nums; }
 .error { grid-column: 1 / -1; }
+.volume { display: flex; align-items: center; gap: .35rem; }
+.mute { padding: .25rem .45rem; line-height: 1; }
+.level { width: 6rem; padding: 0; }
 
 /* #14 : téléphone. Ligne 1 : titre et temps ; ligne 2 : la barre de position, pleine largeur ;
    ligne 3 : les trois boutons, centrés sous le pouce */
 @media (max-width: 720px) {
-  .player { grid-template-columns: minmax(0, 1fr) auto; gap: .25rem .75rem; padding: .5rem 1rem calc(.5rem + env(safe-area-inset-bottom)); }
+  .player { grid-template-columns: minmax(0, 1fr) auto auto; gap: .25rem .75rem; padding: .5rem 1rem calc(.5rem + env(safe-area-inset-bottom)); }
   .info { grid-column: 1; grid-row: 1; }
   .time { grid-column: 2; grid-row: 1; font-size: .9rem; }
+  /* Sur téléphone, les boutons de l'appareil règlent le volume (iOS ignore celui de la page) : reste le bouton muet */
+  .volume { grid-column: 3; grid-row: 1; }
+  .level { display: none; }
   .seek { grid-column: 1 / -1; grid-row: 2; height: 32px; }
   .controls { grid-column: 1 / -1; grid-row: 3; justify-content: center; gap: 1.5rem; }
   .play { width: 3.25rem; height: 3.25rem; font-size: 1.25rem; }

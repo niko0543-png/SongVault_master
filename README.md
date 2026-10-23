@@ -85,7 +85,8 @@ docker compose down -v       # supprime aussi la base et les fichiers
   Jusqu'à 2 Go, **envoyés directement au stockage** (Azure Blob) par une URL signée, avec la
   progression ; extension, taille et **signature binaire** vérifiées à la confirmation.
 - **Lecteur audio global** qui reste actif d'une page à l'autre, avec déplacement dans le
-  morceau (requêtes HTTP `Range`) et raccourci clavier lecture/pause.
+  morceau (requêtes HTTP `Range`), raccourci clavier lecture/pause, et volume et muet gardés sur
+  l'appareil ([ADR 0045](docs/adr/0045-onglet-morceaux-et-volumes.md)).
 - **Comparaison A/B** de deux versions d'un même morceau, avec une URL partageable, et leurs
   différences : lignes ajoutées et supprimées des paroles et des notes, champs et fichiers modifiés.
 - **Commentaires horodatés** sur les fichiers audio (« à 1:42, la basse décale ») : un clic
@@ -149,6 +150,28 @@ docker compose down -v       # supprime aussi la base et les fichiers
 - **Pistes séparées** : jusqu'à 8 fichiers audio d'une version (voix, guitare, batterie…) lus
   ensemble, calés à l'échantillon près, avec muet, solo et volume pour chacun
   ([ADR 0030](docs/adr/0030-pistes-separees-et-melangeur.md)).  
+- **Archive pour le distributeur** : un ZIP de la sortie (fichiers audio des versions choisies,
+  pistes séparées, paroles, crédits et pochette) préparé en arrière-plan, annoncé par e-mail et
+  téléchargeable 24 heures ([ADR 0031](docs/adr/0031-archive-complete-d-une-sortie.md)).
+- **Paroles avec accords** : les accords au-dessus des paroles (`[Am]Je marche…`), lisibles sur
+  téléphone, et la transposition par demi-tons sans jamais toucher au texte enregistré
+  ([ADR 0032](docs/adr/0032-paroles-avec-accords.md)).
+- **Français et anglais** : l'interface dans les deux langues, choisie en bas de page et gardée
+  dans le compte ; les messages d'erreur de l'API suivent la même langue
+  ([ADR 0033](docs/adr/0033-interface-multilingue.md)).
+- **Lecteur Guitar Pro** : la partition et la tablature d'un fichier Guitar Pro (GP3 à GP8)
+  s'affichent et se jouent dans la page, avec tempo ralenti, boucle, transposition, muet et solo
+  par piste, volume général de toutes les pistes, sans jamais toucher au fichier
+  ([ADR 0034](docs/adr/0034-lecteur-guitar-pro.md), [ADR 0045](docs/adr/0045-onglet-morceaux-et-volumes.md)).  
+- **Comparaison Guitar Pro** : dans l'écran A/B, un résumé des modifications s'affiche à côté de
+  chaque fichier Guitar Pro ; « Afficher les modifs » ouvre le lecteur avec la nouvelle partition (ajouts
+  en vert, modifications en orange) ou l'ancienne (ce qui a été retiré en rouge), et la liste mesure
+  par mesure ; un changement d'accordage est annoncé en une ligne
+  ([ADR 0035](docs/adr/0035-comparaison-guitar-pro.md), [ADR 0042](docs/adr/0042-modifications-guitar-pro-a-cote-du-fichier.md),
+  [ADR 0043](docs/adr/0043-comparaison-guitar-pro-vert-et-rouge.md)).  
+- **Tablature calée sur la maquette** : on tape le début de chaque mesure pendant que la maquette
+  joue ; ensuite, le curseur de la tablature suit l'enregistrement
+  ([ADR 0036](docs/adr/0036-tablature-calee-sur-la-maquette.md)).
 
 ---
 
@@ -355,6 +378,10 @@ npm ci
 npm run test:unit -- --run                    # front
 npx playwright test                           # E2E (application lancée sur :8080)
 npx playwright test e2e/stems-drift.spec.ts   # dérive du mélangeur, sans l'application
+npx playwright test e2e/chords-mobile.spec.ts # accords à 360 px, sans l'application
+npx playwright test e2e/guitar-pro.spec.ts    # lecteur Guitar Pro, sans l'application
+npx playwright test e2e/guitar-pro-compare.spec.ts # comparaison Guitar Pro, sans l'application
+npx playwright test e2e/guitar-pro-sync.spec.ts # tablature calée sur la maquette, sans l'application
 ```
 
 ---

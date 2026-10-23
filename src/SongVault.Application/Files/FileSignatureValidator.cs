@@ -14,7 +14,8 @@ public static class FileSignatureValidator
         ".pdf" => header.StartsWith("%PDF-"u8),
         ".gp" => header.StartsWith((ReadOnlySpan<byte>)[0x50, 0x4B, 0x03, 0x04]),
         ".gpx" => header.StartsWith("BCFZ"u8) || header.StartsWith("BCFS"u8),
-        ".gp5" => header.Length > 1 && header[1..].StartsWith("FICHIER GUITAR PRO"u8),
+        // #28 : GP3 à GP5 commencent par la longueur de leur en-tête puis « FICHIER GUITAR PRO v3.00 » (v4.06, v5.10…)
+        ".gp3" or ".gp4" or ".gp5" => header.Length > 1 && header[1..].StartsWith("FICHIER GUITAR PRO"u8),
         ".txt" => header.Length > 0 && !header.Contains((byte)0),
         // Pochettes des sorties (#10)
         ".jpg" or ".jpeg" => header.StartsWith((ReadOnlySpan<byte>)[0xFF, 0xD8, 0xFF]),

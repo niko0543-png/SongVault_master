@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 
 using SongVault.Api.Contracts.Me;
+using SongVault.Api.Localization;
+using SongVault.Application.Common.Exceptions;
 using SongVault.Api.Security;
 using SongVault.Application.Accounts;
 
@@ -47,6 +49,24 @@ public sealed class MeController : ControllerBase
         return this.ToResult(file, asAttachment: true, enableRangeProcessing: false);
     }
 
+
+    /// <summary>Enregistre la langue de l'interface sur le compte (#26) ; elle suit l'utilisateur sur ses appareils.</summary>
+    /// <response code="204">Langue enregistrée.</response>
+    /// <response code="400">Langue non prise en charge (fr ou en).</response>
+    [HttpPut("locale")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> SaveLocale(LocaleRequest request, [FromServices] UserManager<IdentityUser> users)
+    {
+        if (!AccountLocale.Supported.Contains(request.Locale))
+        {
+            ModelState.AddModelError(nameof(request.Locale), "Langue non prise en charge : choisissez fr ou en.");
+            return ValidationProblem(ModelState);
+        }
+        var user = await users.GetUserAsync(User) ?? throw new NotFoundException("Account", "connecté");
+        await AccountLocale.SetAsync(users, user, request.Locale!);
+        return NoContent();
+    }
 
     /// <summary>Supprime votre compte : désactivé tout de suite, effacé définitivement 30 jours plus tard.</summary>
     /// <remarks>

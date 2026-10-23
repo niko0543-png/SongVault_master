@@ -7,18 +7,21 @@ import StatusSelect from '../components/StatusSelect.vue'
 import {
   MUSICAL_KEY_MAX, MUSICAL_KEY_PATTERN,
   VERSION_BPM_MAX, VERSION_BPM_MIN,
-  VERSION_LYRICS_MAX, VERSION_NOTES_MAX, VERSION_TITLE_MAX,
+  VERSION_NOTES_MAX, VERSION_TITLE_MAX,
   type SongVersionStatus,
 } from '../types'
 import FileList from '@/features/files/components/FileList.vue'
 import FileUploader from '@/features/files/components/FileUploader.vue'
-import type { SongFile } from '@/features/files/types'
+import { isReadable, type SongFile } from '@/features/files/types'
 import { filesApi } from '@/features/files/api/filesApi'
 import { usePreviewPolling } from '@/features/files/composables/usePreviewPolling'
 import { versionsApi } from '../api/versionsApi'
 import CommentsPanel from '@/features/comments/components/CommentsPanel.vue'
 import ShareLinksPanel from '@/features/sharing/components/ShareLinksPanel.vue'
 import StemsSection from '@/features/stems/components/StemsSection.vue'
+import LyricsPanel from '@/features/chords/components/LyricsPanel.vue'
+import SongReleaseSection from '@/features/releases/components/SongReleaseSection.vue'
+import type { SongReleaseResult } from '@/features/releases/types'
 import { usePlayerStore } from '@/features/player/stores/playerStore'
 import { toTrack, type Track } from '@/features/player/track'
 import { useBandStore } from '@/features/bands/stores/bandStore'
@@ -30,15 +33,18 @@ import { mapProblemErrors } from '@/shared/api/mapProblemErrors'
 import { formatDate } from '@/shared/utils/format'
 import { useConfirm } from '@/shared/composables/useConfirm'
 import { useToast } from '@/shared/composables/useToast'
+import { t } from '@/shared/i18n'
 
 const props = defineProps<{ songId: string; versionId: string }>()
 
-const { song, version, previous, next, isLoading, error, isSaving, saveError, save, reload } =
+const { song, version, previous, next, isLoading, error, isSaving, saveError, save, reload, siblings } =
   useVersion(() => props.songId, () => props.versionId)
 const player = usePlayerStore()
 const bands = useBandStore()
 const canWrite = computed(() => bands.can('write'))
 const isNotFound = computed(() => error.value instanceof ApiError && error.value.status === 404)
+/** #34 : les tablatures lisibles de la version, ouvertes depuis l'en-tête. */
+const tablatures = computed(() => version.value?.files.filter((f) => f.fileType === 'Tablature' && isReadable(f)) ?? [])
 const { confirm } = useConfirm()
 const toast = useToast()
 const router = useRouter()
@@ -84,12 +90,12 @@ const bpmError = computed(() => {
   if (form.bpm === '') return undefined
   return Number.isInteger(form.bpm) && form.bpm >= VERSION_BPM_MIN && form.bpm <= VERSION_BPM_MAX
     ? undefined
-    : `Nombre entier entre ${VERSION_BPM_MIN} et ${VERSION_BPM_MAX}.`
+    : t('versions.detail.bpmRange', { versionBpmMin: VERSION_BPM_MIN, versionBpmMax: VERSION_BPM_MAX })
 })
 
 const keyError = computed(() => {
   const key = form.key.trim()
-  return key === '' || MUSICAL_KEY_PATTERN.test(key) ? undefined : 'Format attendu : C, F#m, Bb…'
+  return key === '' || MUSICAL_KEY_PATTERN.test(key) ? undefined : t('versions.detail.keyFormat')
 })
 
 const canSave = computed(() =>
@@ -112,13 +118,20 @@ async function onSave() {
   })
 }
 
+/** #25 : « Enregistrer dans cette tonalité » réécrit les accords (et la tonalité, si la version en a une). */
+async function onSaveTransposed(lyrics: string, key: string | null) {
+  form.lyrics = lyrics
+  if (key) form.key = key
+  await onSave()
+}
+
 // ================= Modifications non enregistrées =================
 async function confirmLeave(): Promise<boolean> {
   if (!isDirty.value) return true
   return confirm({
-    title: 'Quitter sans enregistrer ?',
-    message: 'Vos modifications de cette version seront perdues.',
-    confirmLabel: 'Quitter',
+    title: t('versions.detail.leaveTitle'),
+    message: t('versions.detail.leaveMessage'),
+    confirmLabel: t('versions.detail.leave'),
     danger: true,
   })
 }
@@ -173,9 +186,9 @@ async function onRetryScan(file: SongFile) {
 async function onDeleteFile(file: SongFile) {
   if (!version.value) return
   const confirmed = await confirm({
-    title: 'Supprimer ce fichier ?',
-           message: `« ${file.originalFileName} » va à la corbeille, avec ses commentaires : on pourra le restaurer pendant 30 jours.`,
-    confirmLabel: 'Supprimer',
+    title: t('versions.detail.deleteFileTitle'),
+    message: t('versions.detail.deleteFileMessage', { originalFileName: file.originalFileName }),
+    confirmLabel: t('common.actions.delete'),
     danger: true,
   })
   if (!confirmed) return
@@ -184,7 +197,7 @@ async function onDeleteFile(file: SongFile) {
   try {
     await filesApi.remove(props.songId, version.value.id, file.id)
     version.value.files = version.value.files.filter((f) => f.id !== file.id)
-    toast.success('Fichier mis à la corbeille.')
+    toast.success(t('versions.detail.fileTrashed'))
   } catch (e) {
     fileError.value = getErrorMessage(e)
   } finally {
@@ -200,9 +213,9 @@ async function onDeleteVersion() {
   const v = version.value
   if (!v) return
   const confirmed = await confirm({
-    title: 'Supprimer cette version ?',
-    message: `La version ${v.number} « ${v.title} » et ses fichiers vont à la corbeille du groupe : on pourra les restaurer pendant 30 jours.`,
-    confirmLabel: 'Supprimer',
+    title: t('versions.detail.deleteTitle'),
+    message: t('versions.detail.deleteMessage', { number: v.number, title: v.title }),
+    confirmLabel: t('common.actions.delete'),
     danger: true,
   })
   if (!confirmed) return
@@ -211,13 +224,24 @@ async function onDeleteVersion() {
   try {
     await versionsApi.remove(props.songId, v.id)
     resetForm()                     // plus rien à enregistrer : « Quitter sans enregistrer ? » ne se pose pas
-    toast.success(`La version ${v.number} est dans la corbeille.`)
+    toast.success(t('versions.detail.deleted', { number: v.number }))
     await router.push({ name: 'song-detail', params: { songId: props.songId } })
   } catch (e) {
     versionError.value = getErrorMessage(e)     // 409 : une sortie l'utilise
   } finally {
     isDeletingVersion.value = false
   }
+}
+
+// ================= Sortie du morceau (#38) =================
+/** Le morceau est sorti : les versions écartées disparaissent de la navigation, sans recharger la page. */
+function onReleased(result: SongReleaseResult) {
+  if (song.value) song.value = { ...song.value, releaseId: result.releaseId, releasedAt: new Date().toISOString() }
+  siblings.value = siblings.value.filter((s) => !result.removedVersions.includes(s.number))
+}
+
+function onUnreleased() {
+  if (song.value) song.value = { ...song.value, releaseId: null, releasedAt: null }
 }
 
 // ================= Lecture (semaine 4) =================
@@ -257,31 +281,36 @@ const commentedFile = computed(() =>
 
 <template>
   <section>
-    <RouterLink :to="{ name: 'song-detail', params: { songId } }">← {{ song?.title ?? 'Retour au morceau' }}</RouterLink>
+    <RouterLink :to="{ name: 'song-detail', params: { songId } }">← {{ song?.title ?? t('versions.detail.backToSong') }}</RouterLink>
 
     <LoadingState v-if="isLoading" />
-    <div v-else-if="isNotFound" class="card" role="alert"><p>Cette version n'existe pas ou a été supprimée.</p></div>
+    <div v-else-if="isNotFound" class="card" role="alert"><p>{{ t('versions.detail.notFound') }}</p></div>
     <ErrorState v-else-if="error" :message="getErrorMessage(error)" @retry="reload()" />
 
     <template v-else-if="version">
       <header class="page-header">
         <h1>v{{ version.number }} — {{ version.title }}</h1>
         <StatusBadge :status="version.status" />
+        <!-- #34 : la tablature s'ouvre d'ici, sans descendre jusqu'aux fichiers -->
+        <RouterLink v-for="tab in tablatures" :key="tab.id" class="tab-link" data-testid="open-tablature"
+                    :to="{ name: 'tablature', params: { songId, versionId: version.id, fileId: tab.id } }">
+          🎸 {{ tablatures.length > 1 ? t('versions.detail.openTablatureNamed', { name: tab.originalFileName }) : t('versions.detail.openTablature') }}
+        </RouterLink>
         <button v-if="canWrite" type="button" class="danger" :disabled="isDeletingVersion" @click="onDeleteVersion">
-          Supprimer la version
+          {{ t('versions.detail.delete') }}
         </button>
       </header>
       <p v-if="versionError" class="field-error" role="alert">{{ versionError }}</p>
       <p class="muted">
         <small>
-          Créée le {{ formatDate(version.createdAt) }} · modifiée le {{ formatDate(version.updatedAt) }}
+          {{ t('versions.detail.dates', { createdAt: formatDate(version.createdAt), updatedAt: formatDate(version.updatedAt) }) }}
           <template v-if="version.bpm || version.key">
             · {{ version.bpm ? `${version.bpm} BPM` : '' }} {{ version.key ?? '' }}
           </template>
         </small>
       </p>
 
-      <nav class="version-nav" aria-label="Navigation entre versions">
+      <nav class="version-nav" :aria-label="t('versions.detail.navLabel')">
         <RouterLink v-if="previous" :to="{ name: 'version-detail', params: { songId, versionId: previous.id } }">
           ← v{{ previous.number }}
         </RouterLink>
@@ -294,15 +323,15 @@ const commentedFile = computed(() =>
         <form novalidate @submit.prevent="onSave">
         <!-- #2 : un fieldset désactivé désactive tous les champs qu'il contient -->
         <fieldset class="bare" :disabled="!canWrite">
-        <SectionCard title="Informations">
+        <SectionCard :title="t('versions.detail.info')">
             <div class="field">
-              <label for="v-title">Titre *</label>
+              <label for="v-title">{{ t('versions.detail.titleLabel') }}</label>
               <input id="v-title" v-model="form.title" :maxlength="VERSION_TITLE_MAX" />
               <p v-if="fieldErrors.title" class="field-error">{{ fieldErrors.title }}</p>
             </div>
 
             <div class="field">
-              <label for="v-status">Statut</label>
+              <label for="v-status">{{ t('versions.detail.status') }}</label>
               <StatusSelect id="v-status" v-model="form.status" />
             </div>
 
@@ -311,7 +340,7 @@ const commentedFile = computed(() =>
               <div class="field">
                 <label for="v-bpm">BPM</label>
                 <input id="v-bpm" v-model="form.bpm" type="number" inputmode="numeric" step="1"
-                      :min="VERSION_BPM_MIN" :max="VERSION_BPM_MAX" placeholder="ex. 92"
+                      :min="VERSION_BPM_MIN" :max="VERSION_BPM_MAX" :placeholder="t('versions.detail.bpmPlaceholder')"
                       :aria-invalid="!!(bpmError || fieldErrors.bpm)" aria-describedby="v-bpm-error" />
                 <p v-if="bpmError || fieldErrors.bpm" id="v-bpm-error" class="field-error">
                   {{ bpmError ?? fieldErrors.bpm }}
@@ -319,8 +348,8 @@ const commentedFile = computed(() =>
               </div>
 
               <div class="field">
-                <label for="v-key">Tonalité</label>
-                <input id="v-key" v-model="form.key" :maxlength="MUSICAL_KEY_MAX" placeholder="ex. F#m"
+                <label for="v-key">{{ t('versions.detail.key') }}</label>
+                <input id="v-key" v-model="form.key" :maxlength="MUSICAL_KEY_MAX" :placeholder="t('versions.detail.keyPlaceholder')"
                       autocomplete="off" spellcheck="false"
                       :aria-invalid="!!(keyError || fieldErrors.key)" aria-describedby="v-key-error" />
                 <p v-if="keyError || fieldErrors.key" id="v-key-error" class="field-error">
@@ -330,23 +359,32 @@ const commentedFile = computed(() =>
             </div>
           </SectionCard>
 
-          <SectionCard title="Notes">
-            <textarea v-model="form.notes" rows="4" :maxlength="VERSION_NOTES_MAX" aria-label="Notes" />
+          <SectionCard :title="t('versions.detail.notes')">
+            <textarea v-model="form.notes" rows="4" :maxlength="VERSION_NOTES_MAX" :aria-label="t('versions.detail.notes')" />
           </SectionCard>
 
-          <SectionCard title="Paroles">
-            <textarea v-model="form.lyrics" class="lyrics" rows="14" :maxlength="VERSION_LYRICS_MAX" aria-label="Paroles" />
-          </SectionCard>
-        </fieldset>
+    </fieldset>
+
+        <!-- #25 : hors du fieldset, pour qu'un invité puisse transposer ; le panneau désactive lui-même le texte -->
+        <SectionCard :title="t('versions.detail.lyrics')">
+          <LyricsPanel :key="version.id" v-model="form.lyrics" :musical-key="form.key" :can-write="canWrite"
+                       :dirty="isDirty" @save-transposed="onSaveTransposed" />
+        </SectionCard>
         <div v-if="canWrite" class="save-bar">
-          <span v-if="isDirty" class="muted" role="status">Modifications non enregistrées</span>
+          <span v-if="isDirty" class="muted" role="status">{{ t('versions.detail.unsaved') }}</span>
           <p v-if="globalSaveError" class="field-error" role="alert">{{ globalSaveError }}</p>
-          <button type="button" class="secondary" :disabled="!isDirty || isSaving" @click="resetForm">Annuler</button>
-          <button type="submit" :disabled="!canSave">{{ isSaving ? 'Enregistrement…' : 'Enregistrer' }}</button>
+          <button type="button" class="secondary" :disabled="!isDirty || isSaving" @click="resetForm">{{ t('common.actions.cancel') }}</button>
+          <button type="submit" :disabled="!canSave">{{ isSaving ? t('common.actions.saving') : t('common.actions.save') }}</button>
         </div>
       </form>
 
-      <SectionCard title="Fichiers">
+      <!-- #38 : infos de sortie, sur la dernière version au statut Final (celui qui est enregistré) -->
+      <SongReleaseSection v-if="song" :song-id="songId" :song-title="song.title" :version-id="version.id"
+                          :version-number="version.number" :version-status="version.status" :is-latest="!next"
+                          :other-version-count="Math.max(0, siblings.length - 1)" :release-id="song.releaseId ?? null"
+                          @released="onReleased" @unreleased="onUnreleased" />
+
+      <SectionCard :title="t('versions.detail.files')">
         <p v-if="fileError" class="field-error" role="alert">{{ fileError }}</p>
         <FileList :song-id="songId" :version-id="version.id" :files="version.files" :readonly="!canWrite"
                                     :busy-id="deletingId" :playing="playing"
@@ -357,9 +395,9 @@ const commentedFile = computed(() =>
       <StemsSection v-if="audioFiles.length > 0" :song-id="songId" :version-id="version.id" :files="version.files"
                     :readonly="!canWrite" />
       <ShareLinksPanel v-if="canWrite" :target="{ type: 'Version', id: version.id }" />
-      <SectionCard v-if="commentedFile" title="Commentaires">
+      <SectionCard v-if="commentedFile" :title="t('versions.detail.comments')">
         <template v-if="audioFiles.length > 1" #actions>
-          <select :value="commentedFile.id" aria-label="Fichier commenté" class="commented-file"
+          <select :value="commentedFile.id" :aria-label="t('versions.detail.commentedFile')" class="commented-file"
                   @change="commentedId = ($event.target as HTMLSelectElement).value">
             <option v-for="file in audioFiles" :key="file.id" :value="file.id">{{ file.originalFileName }}</option>
           </select>
@@ -379,4 +417,5 @@ const commentedFile = computed(() =>
 @media (max-width: 600px) { .row { grid-template-columns: 1fr; } }
 .bare { border: 0; padding: 0; margin: 0; min-width: 0; }
 .commented-file { width: auto; max-width: 16rem; }
+.tab-link { padding: .5rem 1rem; border: 1px solid var(--primary); border-radius: var(--radius); text-decoration: none; }
 </style>

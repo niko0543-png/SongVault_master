@@ -1,6 +1,7 @@
 import { onScopeDispose, ref, shallowRef } from 'vue'
 import { createMixer, type Mixer } from '../mixerEngine'
 import type { Stem } from '../types'
+import { t } from '@/shared/i18n'
 
 export type MixerState = 'idle' | 'loading' | 'ready' | 'error'
 
@@ -18,7 +19,7 @@ export function useStemMixer(urlOf: (stem: Stem) => string) {
 
   async function decode(audio: AudioContext, stem: Stem) {
     const response = await fetch(urlOf(stem))
-    if (!response.ok) throw new Error(`La piste « ${stem.name} » n'a pas pu être chargée (${response.status}).`)
+    if (!response.ok) throw new Error(t('stems.engine.loadFailed', { name: stem.name, status: response.status }))
     const buffer = await audio.decodeAudioData(await response.arrayBuffer())
     loaded.value++
     return buffer
@@ -38,7 +39,7 @@ export function useStemMixer(urlOf: (stem: Stem) => string) {
       if (ctx !== audio) return
       dispose()
       state.value = 'error'
-      error.value = e instanceof Error ? e.message : 'Chargement des pistes impossible.'
+      error.value = e instanceof Error ? e.message : t('stems.engine.loadError')
     }
   }
 

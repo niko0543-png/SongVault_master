@@ -1,131 +1,119 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
 import { publisher } from '../publisher'
+import { locale, t } from '@/shared/i18n'
 </script>
 
 <template>
   <article class="legal">
-    <h1>Politique de confidentialité</h1>
-    <p class="muted">Dernière mise à jour : {{ publisher.updatedAt }}</p>
+    <h1>{{ t('legal.privacy.title') }}</h1>
+    <p v-if="locale === 'en'" class="muted" data-testid="french-prevails">{{ t('legal.englishNote') }}</p>
+    <p class="muted">{{ t('legal.privacy.updated', { updatedAt: publisher.updatedAt }) }}</p>
 
-    <h2>Qui traite vos données</h2>
+    <h2>{{ t('legal.privacy.who') }}</h2>
     <p>
-      {{ publisher.name }}, {{ publisher.address }}, responsable du traitement.
-      Contact : <a :href="`mailto:${publisher.email}`">{{ publisher.email }}</a>.
+      {{ t('legal.privacy.controller', { name: publisher.name, address: publisher.address }) }} <a :href="`mailto:${publisher.email}`">{{ publisher.email }}</a>.
     </p>
 
-    <h2>Ce que nous traitons, et pourquoi</h2>
+    <h2>{{ t('legal.privacy.what') }}</h2>
     <table>
-      <caption class="visually-hidden">Données traitées, finalité, base légale et durée de conservation</caption>
+      <caption class="visually-hidden">{{ t('legal.privacy.caption') }}</caption>
       <thead>
-        <tr><th scope="col">Données</th><th scope="col">Pourquoi</th><th scope="col">Base légale</th><th scope="col">Combien de temps</th></tr>
+        <tr><th scope="col">{{ t('legal.privacy.colData') }}</th><th scope="col">{{ t('legal.privacy.colWhy') }}</th><th scope="col">{{ t('legal.privacy.colBasis') }}</th><th scope="col">{{ t('legal.privacy.colHowLong') }}</th></tr>
       </thead>
       <tbody>
         <tr>
-          <td>Adresse e-mail, mot de passe (stocké sous forme d'empreinte, jamais lisible)</td>
-          <td>Créer et protéger votre compte</td>
-          <td>Contrat</td>
-          <td>Tant que le compte existe, puis 30 jours après une demande de suppression</td>
+          <td :data-label="t('legal.privacy.colData')">{{ t('legal.privacy.accountData') }}</td>
+          <td :data-label="t('legal.privacy.colWhy')">{{ t('legal.privacy.accountWhy') }}</td>
+          <td :data-label="t('legal.privacy.colBasis')">{{ t('legal.privacy.contract') }}</td>
+          <td :data-label="t('legal.privacy.colHowLong')">{{ t('legal.privacy.accountHowLong') }}</td>
         </tr>
         <tr>
-          <td>Groupes, rôles, morceaux, versions, paroles, notes et fichiers</td>
-          <td>Fournir le service aux membres du groupe</td>
-          <td>Contrat</td>
-          <td>Tant que le groupe existe ; un groupe dont vous êtes le seul membre est effacé avec votre compte</td>
+          <td :data-label="t('legal.privacy.colData')">{{ t('legal.privacy.bandData') }}</td>
+          <td :data-label="t('legal.privacy.colWhy')">{{ t('legal.privacy.bandWhy') }}</td>
+          <td :data-label="t('legal.privacy.colBasis')">{{ t('legal.privacy.contract') }}</td>
+          <td :data-label="t('legal.privacy.colHowLong')">{{ t('legal.privacy.bandHowLong') }}</td>
         </tr>
         <tr>
-          <td>Commentaires sur les fichiers audio : texte, position dans l'enregistrement, auteur</td>
-          <td>Échanger avec les membres du groupe</td>
-          <td>Contrat</td>
-          <td>Tant que le fichier existe ; après la suppression de votre compte, ceux des groupes partagés restent sans votre nom</td>
+          <td :data-label="t('legal.privacy.colData')">{{ t('legal.privacy.commentData') }}</td>
+          <td :data-label="t('legal.privacy.colWhy')">{{ t('legal.privacy.commentWhy') }}</td>
+          <td :data-label="t('legal.privacy.colBasis')">{{ t('legal.privacy.contract') }}</td>
+          <td :data-label="t('legal.privacy.colHowLong')">{{ t('legal.privacy.commentHowLong') }}</td>
         </tr>
         <tr>
-          <td>Invitations : adresse invitée, rôle proposé</td>
-          <td>Ajouter une personne à un groupe</td>
-          <td>Intérêt légitime du groupe</td>
-          <td>Avec l'historique du groupe ; effacées avec le compte qui porte cette adresse</td>
+          <td :data-label="t('legal.privacy.colData')">{{ t('legal.privacy.invitationData') }}</td>
+          <td :data-label="t('legal.privacy.colWhy')">{{ t('legal.privacy.invitationWhy') }}</td>
+          <td :data-label="t('legal.privacy.colBasis')">{{ t('legal.privacy.bandInterest') }}</td>
+          <td :data-label="t('legal.privacy.colHowLong')">{{ t('legal.privacy.invitationHowLong') }}</td>
         </tr>
         <tr>
-          <td>
-            Lien de partage ouvert sans compte : date, fichier écouté, navigateur, et une empreinte de
-            votre adresse IP (jamais l'adresse elle-même)
+          <td :data-label="t('legal.privacy.colData')">
+            {{ t('legal.privacy.shareData') }}
           </td>
-          <td>Montrer au groupe qui vous a envoyé le lien s'il a été ouvert et écouté</td>
-          <td>Intérêt légitime du groupe</td>
-          <td>Tant que le lien existe ; effacé quand le groupe le supprime</td>
+          <td :data-label="t('legal.privacy.colWhy')">{{ t('legal.privacy.shareWhy') }}</td>
+          <td :data-label="t('legal.privacy.colBasis')">{{ t('legal.privacy.bandInterest') }}</td>
+          <td :data-label="t('legal.privacy.colHowLong')">{{ t('legal.privacy.shareHowLong') }}</td>
         </tr>
         <tr>
-          <td>
-            Abonnement d'un groupe : formule, état, identifiants Stripe du client et de l'abonnement
-            (jamais le numéro de carte, que seul Stripe reçoit)
+          <td :data-label="t('legal.privacy.colData')">
+            {{ t('legal.privacy.billingData') }}
           </td>
-          <td>Encaisser l'abonnement et appliquer la formule</td>
-          <td>Contrat</td>
-          <td>Tant que le groupe existe ; les factures sont gardées 10 ans par Stripe (obligation comptable)</td>
+          <td :data-label="t('legal.privacy.colWhy')">{{ t('legal.privacy.billingWhy') }}</td>
+          <td :data-label="t('legal.privacy.colBasis')">{{ t('legal.privacy.contract') }}</td>
+          <td :data-label="t('legal.privacy.colHowLong')">{{ t('legal.privacy.billingHowLong') }}</td>
         </tr>
-           <tr>
-          <td>
-            Historique de connexion : date, résultat (connexion, échec, code refusé…), réseau d'origine
-            (adresse IP sans son dernier nombre) et navigateur (« Firefox sur Windows »)
+        <tr>
+          <td :data-label="t('legal.privacy.colData')">
+            {{ t('legal.privacy.loginData') }}
           </td>
-          <td>Vous montrer les connexions à votre compte, repérer une tentative d'intrusion</td>
-          <td>Intérêt légitime (sécurité du compte)</td>
-          <td>90 jours ; effacé avec le compte</td>
+          <td :data-label="t('legal.privacy.colWhy')">{{ t('legal.privacy.loginWhy') }}</td>
+          <td :data-label="t('legal.privacy.colBasis')">{{ t('legal.privacy.securityInterest') }}</td>
+          <td :data-label="t('legal.privacy.colHowLong')">{{ t('legal.privacy.loginHowLong') }}</td>
         </tr>
         <tr>
-          <td>
-            Journal d'audit du groupe : qui a supprimé, invité, retiré ou changé quoi, avec le titre ou le nom
-            concerné et l'adresse invitée masquée
+          <td :data-label="t('legal.privacy.colData')">
+            {{ t('legal.privacy.auditData') }}
           </td>
-          <td>Permettre aux Owner de savoir qui a fait quoi dans le groupe</td>
-          <td>Intérêt légitime du groupe</td>
-          <td>1 an ; effacé avec le groupe. Après la suppression de votre compte, vos lignes restent, sans votre nom</td>
+          <td :data-label="t('legal.privacy.colWhy')">{{ t('legal.privacy.auditWhy') }}</td>
+          <td :data-label="t('legal.privacy.colBasis')">{{ t('legal.privacy.bandInterest') }}</td>
+          <td :data-label="t('legal.privacy.colHowLong')">{{ t('legal.privacy.auditHowLong') }}</td>
         </tr>
         <tr>
-          <td>Archive de vos données</td>
-          <td>Vous remettre vos données</td>
-          <td>Obligation légale</td>
-          <td>7 jours</td>
+          <td :data-label="t('legal.privacy.colData')">{{ t('legal.privacy.exportData') }}</td>
+          <td :data-label="t('legal.privacy.colWhy')">{{ t('legal.privacy.exportWhy') }}</td>
+          <td :data-label="t('legal.privacy.colBasis')">{{ t('legal.privacy.legalObligation') }}</td>
+          <td :data-label="t('legal.privacy.colHowLong')">{{ t('legal.privacy.sevenDays') }}</td>
         </tr>
         <tr>
-          <td>Journaux techniques (date, requête, erreurs)</td>
-          <td>Sécurité et diagnostic</td>
-          <td>Intérêt légitime</td>
-          <td>30 jours</td>
+          <td :data-label="t('legal.privacy.colData')">{{ t('legal.privacy.logsData') }}</td>
+          <td :data-label="t('legal.privacy.colWhy')">{{ t('legal.privacy.logsWhy') }}</td>
+          <td :data-label="t('legal.privacy.colBasis')">{{ t('legal.privacy.legitimateInterest') }}</td>
+          <td :data-label="t('legal.privacy.colHowLong')">{{ t('legal.privacy.thirtyDays') }}</td>
         </tr>
       </tbody>
     </table>
 
-    <h2>Qui y a accès</h2>
+    <h2>{{ t('legal.privacy.access') }}</h2>
    <p>
-      Les membres de vos groupes, selon leur rôle. Nos sous-traitants, tous dans l'Union européenne :
-      l'hébergeur (Microsoft Azure, en France) et Brevo, qui envoie les e-mails. Pour les abonnements payants,
-      Stripe Payments Europe (Irlande) reçoit votre adresse e-mail et votre carte ; Stripe peut traiter ces
-      données aux États-Unis, dans le cadre du Data Privacy Framework UE-États-Unis. Aucune donnée n'est vendue
-      ni utilisée à des fins publicitaires.
+      {{ t('legal.privacy.accessText') }}
     </p>
-    <h2>Cookies et stockage du navigateur</h2>
+    <h2>{{ t('legal.privacy.cookies') }}</h2>
     <ul>
-      <li><code>songvault.auth</code> : cookie de session, indispensable pour rester connecté (7 jours au plus).</li>
-      <li><code>songvault.band</code> : dernier groupe ouvert, stocké dans votre navigateur.</li>
-      <li><code>songvault.afterConfirm</code> : page à rouvrir après la confirmation de votre adresse.</li>
-      <li><code>songvault.2fa</code> : navigateur reconnu après une connexion avec code de double authentification (14 jours au plus).</li>
-      <li><code>songvault.share</code> : mot de passe d'un lien de partage déjà donné (12 heures au plus, pour ce lien seulement).</li>
+      <li><code>songvault.auth</code> {{ t('legal.privacy.cookieSession') }}</li>
+      <li><code>songvault.band</code> {{ t('legal.privacy.storageBand') }}</li>
+      <li><code>songvault.afterConfirm</code> {{ t('legal.privacy.storageRedirect') }}</li>
+      <li><code>songvault.2fa</code> {{ t('legal.privacy.cookieTwoFactor') }}</li>
+        <li><code>songvault.share</code> {{ t('legal.privacy.cookieShare') }}</li>
     </ul>
-    <p>Aucun cookie de publicité ni de mesure d'audience : aucun consentement n'est donc demandé.</p>
+    <p>{{ t('legal.privacy.noConsent') }}</p>
 
-    <h2>Vos droits</h2>
+    <h2>{{ t('legal.privacy.rights') }}</h2>
     <p>
-      Vous pouvez accéder à vos données, les corriger, les faire effacer, en limiter l'usage, vous y opposer
-      et les récupérer. Depuis <RouterLink :to="{ name: 'account' }">Mon compte</RouterLink> : exporter vos
-      données et supprimer votre compte. Pour toute autre demande, écrivez à
-      <a :href="`mailto:${publisher.email}`">{{ publisher.email }}</a> : réponse sous un mois.
-      Vous pouvez aussi saisir la CNIL (<a href="https://www.cnil.fr/fr/plaintes" rel="noopener">cnil.fr</a>).
+      {{ t('legal.privacy.rightsText') }} <RouterLink :to="{ name: 'account' }">{{ t('legal.privacy.accountLink') }}</RouterLink> {{ t('legal.privacy.rightsAccount') }}
+      <a :href="`mailto:${publisher.email}`">{{ publisher.email }}</a> {{ t('legal.privacy.rightsAnswer') }}<a href="https://www.cnil.fr/fr/plaintes" rel="noopener">cnil.fr</a>).
     </p>
     <p>
-            Après une suppression, vos données restent dans les sauvegardes jusqu'à leur rotation : 7 jours pour
-      la base de données, 14 jours pour les fichiers.
-      Les invitations que vous avez envoyées dans des groupes partagés restent dans ces groupes.
+            {{ t('legal.privacy.backups') }}
     </p>
   </article>
 </template>
@@ -140,9 +128,6 @@ th, td { text-align: left; vertical-align: top; padding: .5rem; border-bottom: 1
   tr { display: block; padding: .5rem 0; border-bottom: 1px solid var(--border); }
   td { display: block; border: 0; padding: .15rem 0; }
   td::before { display: block; font-weight: 600; font-size: .85rem; color: var(--muted); }
-  td:nth-child(1)::before { content: 'Données'; }
-  td:nth-child(2)::before { content: 'Pourquoi'; }
-  td:nth-child(3)::before { content: 'Base légale'; }
-  td:nth-child(4)::before { content: 'Combien de temps'; }
+  td::before { content: attr(data-label); }
 }
 </style>

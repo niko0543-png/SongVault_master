@@ -27,13 +27,19 @@ internal sealed class SongRepository(SongVaultDbContext db, IBandContext bandCon
     public Task<Song?> GetByIdAsync(Guid id, CancellationToken ct)
         => BandSongs.FirstOrDefaultAsync(s => s.Id == id, ct);
 
+    public async Task<IReadOnlyList<Song>> ListReleasedOnAsync(Guid releaseId, CancellationToken ct)
+        => await BandSongs.Where(s => s.ReleaseId == releaseId).ToListAsync(ct);
+
     public Task<bool> ExistsAsync(Guid songId, CancellationToken ct)
         => BandSongs.AnyAsync(s => s.Id == songId, ct);
 
     public async Task<PagedResult<SongDto>> ListAsync(
-        int page, int pageSize, string? search, SongVersionStatus? status, CancellationToken ct)
+        int page, int pageSize, string? search, SongVersionStatus? status, bool? released, CancellationToken ct)
     {
         var query = BandSongs.AsNoTracking();
+
+        if (released is not null)
+            query = released.Value ? query.Where(s => s.ReleaseId != null) : query.Where(s => s.ReleaseId == null);
 
         if (search is not null)
             query = query.Where(s => s.Title.Contains(search) || (s.Artist != null && s.Artist.Contains(search)));
@@ -60,6 +66,14 @@ internal sealed class SongRepository(SongVaultDbContext db, IBandContext bandCon
                  Song = s,
                  SeenAt = db.SongViews.Where(v => v.SongId == s.Id && v.UserId == me)
                     .Select(v => (DateTimeOffset?)v.SeenAt).FirstOrDefault(),
+                 // #34 : la tablature à ouvrir depuis la liste : dans la dernière version qui en a une lisible
+                 Tablature = s.Versions
+                    .SelectMany(v => v.Files
+                        .Where(f => f.FileType == SongFileType.Tablature && db.FileScans.Any(sc => sc.SongFileId == f.Id
+                            && (sc.Status == FileScanStatus.Clean || sc.Status == FileScanStatus.NotScanned)))
+                        .Select(f => new { v.Number, VersionId = v.Id, FileId = f.Id, f.UploadedAt }))
+                    .OrderByDescending(t => t.Number).ThenBy(t => t.UploadedAt)
+                    .FirstOrDefault(),
              })
             .Select(x => new SongDto(
                 x.Song.Id, x.Song.Title, x.Song.Artist, x.Song.Description, x.Song.CreatedAt, x.Song.UpdatedAt,
@@ -67,7 +81,11 @@ internal sealed class SongRepository(SongVaultDbContext db, IBandContext bandCon
                 !db.ActivityEvents.Any(e => e.SongId == x.Song.Id && e.ActorId != me
                                             && e.CreatedAt > (x.SeenAt ?? joinedAt))
                     ? SongBadge.None
-                    : x.SeenAt == null ? SongBadge.New : SongBadge.Updated))
+                    : x.SeenAt == null ? SongBadge.New : SongBadge.Updated,
+                x.Tablature == null ? null : x.Tablature.VersionId,
+                x.Tablature == null ? null : x.Tablature.FileId,
+                x.Song.ReleaseId,
+                x.Song.ReleaseId == null ? null : x.Song.ReleasedAt))
             .ToListAsync(ct);
 
         return new PagedResult<SongDto>(items, page, pageSize, total);
@@ -106,7 +124,14 @@ internal sealed class SongRepository(SongVaultDbContext db, IBandContext bandCon
         => await BandVersions.AsNoTracking()
             .Where(v => v.SongId == songId)
             .OrderBy(v => v.Number)
-            .Select(v => new SongVersionSummaryDto(v.Id, v.Number, v.Title, v.Status, v.CreatedAt))
+            .Select(v => new SongVersionSummaryDto(v.Id, v.Number, v.Title, v.Status, v.CreatedAt,
+                // #34 : la première tablature lisible (l'antivirus l'a déclarée saine, ou ne l'analyse pas)
+                v.Files
+                    .Where(f => f.FileType == SongFileType.Tablature && db.FileScans.Any(sc => sc.SongFileId == f.Id
+                        && (sc.Status == FileScanStatus.Clean || sc.Status == FileScanStatus.NotScanned)))
+                    .OrderBy(f => f.UploadedAt)
+                    .Select(f => (Guid?)f.Id)
+                    .FirstOrDefault()))
             .ToListAsync(ct);
 
     public Task<SongVersionDto?> GetVersionAsync(Guid songId, Guid versionId, CancellationToken ct)

@@ -1,11 +1,17 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, useTemplateRef, watch } from 'vue'
 import type { SongVersion } from '../types'
+import type { SongFile } from '@/features/files/types'
 import { diffFields, diffFiles } from '../diff'
 import TextDiff from './TextDiff.vue'
+import { t } from '@/shared/i18n'
 
-/** Différences de A (avant) vers B (après) : champs, notes, paroles et fichiers (#9). */
+/**
+ * Différences de A (avant) vers B (après) : champs, notes, paroles et fichiers (#9).
+ * #36 : l'emplacement `file` reçoit chaque fichier de B (ajouté ou gardé), pour y montrer ce qui a changé dedans.
+ */
 const props = defineProps<{ a: SongVersion; b: SongVersion }>()
+defineSlots<{ file?: (props: { file: SongFile }) => unknown }>()
 
 const fields = computed(() => diffFields(props.a, props.b))
 const files = computed(() => diffFiles(props.a.files, props.b.files))
@@ -33,26 +39,26 @@ function go(step: 1 | -1) {
   const target = targets.value[current.value]!
   target.focus()
   target.scrollIntoView?.({ block: 'center' })
-  position.value = `Changement ${current.value + 1} sur ${count}`
+  position.value = t('versions.diff.change', { current: current.value + 1, count })
 }
 </script>
 
 <template>
   <div ref="root" class="version-diff">
     <div class="diff-nav">
-      <h2>Différences de v{{ a.number }} à v{{ b.number }}</h2>
+      <h2>{{ t('versions.diff.title', { number: a.number, number2: b.number }) }}</h2>
       <template v-if="targets.length > 0">
-        <button type="button" class="secondary" @click="go(-1)">Changement précédent</button>
-        <button type="button" class="secondary" @click="go(1)">Changement suivant</button>
+        <button type="button" class="secondary" @click="go(-1)">{{ t('versions.diff.previous') }}</button>
+        <button type="button" class="secondary" @click="go(1)">{{ t('versions.diff.next') }}</button>
       </template>
-      <p v-else class="muted">Aucune différence.</p>
+      <p v-else class="muted">{{ t('versions.diff.none') }}</p>
       <p class="muted" role="status" aria-live="polite">{{ position }}</p>
     </div>
 
     <table class="fields">
-      <caption class="visually-hidden">Champs de v{{ a.number }} et v{{ b.number }}</caption>
+      <caption class="visually-hidden">{{ t('versions.diff.fields', { number: a.number, number2: b.number }) }}</caption>
       <thead>
-        <tr><th scope="col">Champ</th><th scope="col">v{{ a.number }}</th><th scope="col">v{{ b.number }}</th><th scope="col">État</th></tr>
+        <tr><th scope="col">{{ t('versions.diff.field') }}</th><th scope="col">v{{ a.number }}</th><th scope="col">v{{ b.number }}</th><th scope="col">{{ t('versions.diff.state') }}</th></tr>
       </thead>
       <tbody>
         <tr v-for="f in fields" :key="f.key" :class="f.changed ? 'changed' : 'same'"
@@ -60,27 +66,28 @@ function go(step: 1 | -1) {
           <th scope="row">{{ f.label }}</th>
           <td>{{ f.before }}</td>
           <td>{{ f.after }}</td>
-          <td>{{ f.changed ? 'Modifié' : 'Identique' }}</td>
+          <td>{{ f.changed ? t('versions.diff.changed') : t('versions.diff.same') }}</td>
         </tr>
       </tbody>
     </table>
 
-    <TextDiff title="Notes" :before="a.notes" :after="b.notes" />
-    <TextDiff title="Paroles" :before="a.lyrics" :after="b.lyrics" />
+    <TextDiff :title="t('versions.diff.notes')" :before="a.notes" :after="b.notes" />
+    <TextDiff :title="t('versions.diff.lyrics')" :before="a.lyrics" :after="b.lyrics" />
 
     <section class="files" aria-labelledby="diff-files" :data-change="filesChanged ? '' : undefined"
              :tabindex="filesChanged ? -1 : undefined">
-      <h3 id="diff-files">Fichiers <small v-if="!filesChanged" class="muted">· Identiques</small></h3>
+      <h3 id="diff-files">{{ t('versions.diff.files') }} <small v-if="!filesChanged" class="muted">{{ t('versions.diff.filesSame') }}</small></h3>
       <ul>
         <li v-for="f in files.added" :key="f.id" class="file--added">
-          <ins><span aria-hidden="true">+ </span><span class="visually-hidden">Ajouté : </span>{{ f.originalFileName }}</ins>
+          <ins><span aria-hidden="true">+ </span><span class="visually-hidden">{{ t('versions.diff.added') }} </span>{{ f.originalFileName }}</ins>
+          <slot name="file" :file="f" />
         </li>
         <li v-for="f in files.removed" :key="f.id" class="file--removed">
-          <del><span aria-hidden="true">− </span><span class="visually-hidden">Retiré : </span>{{ f.originalFileName }}</del>
+          <del><span aria-hidden="true">− </span><span class="visually-hidden">{{ t('versions.diff.removed') }} </span>{{ f.originalFileName }}</del>
         </li>
-        <li v-for="f in files.kept" :key="f.id" class="muted">{{ f.originalFileName }}</li>
+        <li v-for="f in files.kept" :key="f.id"><span class="muted">{{ f.originalFileName }}</span><slot name="file" :file="f" /></li>
       </ul>
-      <p v-if="files.kept.length + files.added.length + files.removed.length === 0" class="muted">Aucun fichier.</p>
+      <p v-if="files.kept.length + files.added.length + files.removed.length === 0" class="muted">{{ t('versions.diff.noFiles') }}</p>
     </section>
   </div>
 </template>

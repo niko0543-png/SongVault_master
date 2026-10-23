@@ -9,6 +9,7 @@ export default defineConfig({
     baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:8080',   // la pile Docker Compose
     trace: 'retain-on-failure',                                        // trace complète en cas d'échec
     screenshot: 'only-on-failure',
+    locale: 'fr-FR',                                                   // #26 : la langue vient du navigateur
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
 })

@@ -4,6 +4,7 @@ import { RouterLink, useRoute } from 'vue-router'
 import { notificationsApi } from '../api/notificationsApi'
 import { KIND_LABELS, type UnsubscribeResult } from '../types'
 import { ApiError, getErrorMessage } from '@/shared/api/ApiError'
+import { t } from '@/shared/i18n'
 
 const route = useRoute()
 const token = computed(() => (typeof route.query.token === 'string' ? route.query.token : ''))
@@ -13,7 +14,7 @@ const result = ref<UnsubscribeResult | null>(null)
 const errorMessage = ref('')
 
 const what = computed(() =>
-  result.value?.kind ? `les e-mails « ${KIND_LABELS[result.value.kind].title} »` : 'aucun e-mail de notification')
+  result.value?.kind ? t('notifications.unsubscribe.kindEmails', { title: KIND_LABELS[result.value.kind].title }) : t('notifications.unsubscribe.noEmails'))
 
 async function unsubscribe() {
   state.value = 'sending'
@@ -32,23 +33,23 @@ async function unsubscribe() {
 
 <template>
   <section class="unsubscribe">
-    <h1>Se désinscrire</h1>
+    <h1>{{ t('notifications.unsubscribe.title') }}</h1>
     <div v-if="state === 'ask' || state === 'sending'" class="card">
-      <p>Ne plus recevoir ce type d’e-mail de SongVault ?</p>
+      <p>{{ t('notifications.unsubscribe.question') }}</p>
       <button type="button" :disabled="state === 'sending'" @click="unsubscribe">
-        {{ state === 'sending' ? 'Désinscription…' : 'Me désinscrire' }}
+        {{ state === 'sending' ? t('notifications.unsubscribe.working') : t('notifications.unsubscribe.submit') }}
       </button>
     </div>
     <div v-else-if="state === 'done'" class="card" role="status">
-      <p>C’est fait : vous ne recevrez plus {{ what }}.</p>
-      <RouterLink :to="{ name: 'account' }">Choisir mes notifications</RouterLink>
+      <p>{{ t('notifications.unsubscribe.done', { what }) }}</p>
+      <RouterLink :to="{ name: 'account' }">{{ t('notifications.unsubscribe.choose') }}</RouterLink>
     </div>
     <div v-else class="card" role="alert">
       <p v-if="state === 'invalid'">
-        Ce lien de désinscription est incomplet ou a été modifié. Choisissez vos notifications dans « Mon compte ».
+        {{ t('notifications.unsubscribe.invalid') }}
       </p>
       <p v-else>{{ errorMessage }}</p>
-      <RouterLink :to="{ name: 'account' }">Aller à « Mon compte »</RouterLink>
+      <RouterLink :to="{ name: 'account' }">{{ t('notifications.unsubscribe.goToAccount') }}</RouterLink>
     </div>
   </section>
 </template>

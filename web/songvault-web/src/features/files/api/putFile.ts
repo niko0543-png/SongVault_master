@@ -1,4 +1,5 @@
 import { ApiError } from '@/shared/api/ApiError'
+import { t } from '@/shared/i18n'
 
 /**
  * Envoie le fichier par PUT à l'adresse reçue à l'annonce : le stockage lui-même, ou l'API en stockage local.
@@ -20,9 +21,9 @@ export function putFile(
     }
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) resolve()
-      else reject(new ApiError(xhr.status, { title: 'Envoi refusé', status: xhr.status, detail: detailOf(xhr) }))
+      else reject(new ApiError(xhr.status, { title: t('files.upload.refused'), status: xhr.status, detail: detailOf(xhr) }))
     }
-    xhr.onerror = () => reject(new ApiError(0, { title: 'Serveur injoignable', status: 0 }))
+    xhr.onerror = () => reject(new ApiError(0, { title: t('common.errors.unreachableTitle'), status: 0 }))
     xhr.send(file)
   })
 }

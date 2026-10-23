@@ -31,7 +31,11 @@ internal sealed class ReleaseRepository(SongVaultDbContext db, IBandContext band
     {
         var release = await BandReleases.AsNoTracking()
             .Where(r => r.Id == releaseId)
-            .Select(r => new { r.Id, r.Title, r.Type, r.ReleaseDate, HasCover = r.CoverStorageKey != null, r.CreatedAt, r.UpdatedAt })
+            .Select(r => new
+            {
+                r.Id, r.Title, r.Type, r.ReleaseDate, HasCover = r.CoverStorageKey != null, r.CreatedAt, r.UpdatedAt,
+                r.Label, r.Upc, r.StreamingLinks,
+            })
             .FirstOrDefaultAsync(ct);
         if (release is null) return null;
 
@@ -44,6 +48,7 @@ internal sealed class ReleaseRepository(SongVaultDbContext db, IBandContext band
                 t.SongId,
                 t.VersionId,
                 SongTitle = db.Songs.Where(s => s.Id == t.SongId).Select(s => s.Title).FirstOrDefault() ?? "",
+                SongReleaseId = db.Songs.Where(s => s.Id == t.SongId).Select(s => s.ReleaseId).FirstOrDefault(),
             })
             .ToListAsync(ct);
 
@@ -59,7 +64,9 @@ internal sealed class ReleaseRepository(SongVaultDbContext db, IBandContext band
 
         return new ReleaseDto(release.Id, release.Title, release.Type, release.ReleaseDate, release.HasCover,
             release.CreatedAt, release.UpdatedAt,
-            [.. tracks.Select(t => new ReleaseTrackDto(t.TrackNumber, t.SongId, t.SongTitle, t.VersionId, [.. versions[t.SongId]]))]);
+            [.. tracks.Select(t => new ReleaseTrackDto(t.TrackNumber, t.SongId, t.SongTitle, t.VersionId, [.. versions[t.SongId]],
+                t.SongReleaseId == release.Id))],
+            release.Label, release.Upc?.Value, release.StreamingLinks);
     }
 
     public async Task<IReadOnlyList<string>> ListTitlesWithSongAsync(Guid songId, CancellationToken ct)

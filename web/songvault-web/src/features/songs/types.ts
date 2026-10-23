@@ -9,6 +9,12 @@ export interface Song {
   createdAt: string // ISO 8601 : le JSON n'a pas de type date
   updatedAt: string
   badge: SongBadge
+  /** #34 : la tablature à ouvrir depuis la liste (dernière version qui en a une lisible) ; null sinon */
+  tablatureVersionId?: string | null
+  tablatureFileId?: string | null
+  /** #38 : la sortie où le morceau est paru ; null tant qu'il est en travail */
+  releaseId?: string | null
+  releasedAt?: string | null
 }
 
 /** Données envoyées par POST et PUT (le serveur attribue id et dates). */

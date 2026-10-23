@@ -1,8 +1,9 @@
-const dayFormatter = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'full', timeZone: 'UTC' })
+import { intlLocale, t } from '@/shared/i18n'
 
 /** "2026-11-28" → "samedi 28 novembre 2026" ; null → "Sans date" */
 export function formatSetlistDate(date: string | null): string {
-  return date ? dayFormatter.format(new Date(`${date}T00:00:00Z`)) : 'Sans date'
+  if (!date) return t('setlists.format.noDate')
+  return new Intl.DateTimeFormat(intlLocale(), { dateStyle: 'full', timeZone: 'UTC' }).format(new Date(`${date}T00:00:00Z`))
 }
 
 /** Durée d'un morceau : 187431 → "3:07" ; null → "" */
@@ -18,7 +19,7 @@ export function formatTotal(ms: number): string {
   const h = Math.floor(seconds / 3600)
   const min = Math.floor((seconds % 3600) / 60)
   const s = String(seconds % 60).padStart(2, '0')
-  return h > 0 ? `${h} h ${String(min).padStart(2, '0')} min ${s} s` : `${min} min ${s} s`
+  return h > 0 ? t('setlists.format.hms', { h, min: String(min).padStart(2, '0'), s }) : t('setlists.format.ms', { min, s })
 }
 
 /**

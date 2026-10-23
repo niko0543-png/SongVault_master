@@ -18,7 +18,10 @@ public static class FileTypePolicy
         new(".mp3",  SongFileType.Audio,     "audio/mpeg"),
         new(".wav",  SongFileType.Audio,     "audio/wav"),
         new(".flac", SongFileType.Audio,     "audio/flac"),
+        // Guitar Pro (#28) : .gp3 à .gp5 (GP3 à GP5), .gpx (GP6), .gp (GP7 et 8)
         new(".gp",   SongFileType.Tablature, "application/octet-stream"),
+        new(".gp3",  SongFileType.Tablature, "application/octet-stream"),
+        new(".gp4",  SongFileType.Tablature, "application/octet-stream"),
         new(".gp5",  SongFileType.Tablature, "application/octet-stream"),
         new(".gpx",  SongFileType.Tablature, "application/octet-stream"),
         new(".pdf",  SongFileType.Document,  "application/pdf"),

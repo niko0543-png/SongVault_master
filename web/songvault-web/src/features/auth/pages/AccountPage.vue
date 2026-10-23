@@ -12,6 +12,7 @@ import TwoFactorSection from '@/features/account/components/TwoFactorSection.vue
 import AccountEventsSection from '@/features/account/components/AccountEventsSection.vue'
 import { useAsyncAction } from '@/shared/composables/useAsyncAction'
 import { useToast } from '@/shared/composables/useToast'
+import { t } from '@/shared/i18n'
 
 const auth = useAuthStore()
 const { user } = storeToRefs(auth)
@@ -33,42 +34,42 @@ async function onSubmit() {
   if (error.value) return
   Object.assign(form, { current: '', password: '', confirm: '' })
   submitted.value = false
-  toast.success('Mot de passe modifié. Vos autres appareils seront déconnectés d’ici une minute.')
+  toast.success(t('auth.account.passwordChanged'))
   void history.value?.load()
 }
 </script>
 
 <template>
   <section>
-    <h1>Mon compte</h1>
-    <SectionCard title="Adresse e-mail">
+    <h1>{{ t('auth.account.title') }}</h1>
+    <SectionCard :title="t('auth.account.email')">
       <p>{{ user?.email }}</p>
     </SectionCard>
 
-    <SectionCard title="Sécurité">
+    <SectionCard :title="t('auth.account.security')">
       <form class="password-form" novalidate @submit.prevent="onSubmit">
         <div class="field">
-          <label for="account-current">Mot de passe actuel</label>
+          <label for="account-current">{{ t('auth.account.currentPassword') }}</label>
           <input id="account-current" v-model="form.current" type="password" autocomplete="current-password" required />
         </div>
         <div class="field">
-          <label for="account-password">Nouveau mot de passe</label>
+          <label for="account-password">{{ t('auth.account.newPassword') }}</label>
           <input id="account-password" v-model="form.password" type="password" autocomplete="new-password"
                  aria-describedby="account-rules" required />
           <small id="account-rules" class="muted">
-            6 caractères minimum, avec une majuscule, une minuscule, un chiffre et un caractère spécial.
+            {{ t('auth.account.passwordRules') }}
           </small>
         </div>
         <div class="field">
-          <label for="account-confirm">Confirmer le nouveau mot de passe</label>
+          <label for="account-confirm">{{ t('auth.account.confirmPassword') }}</label>
           <input id="account-confirm" v-model="form.confirm" type="password" autocomplete="new-password"
                  :aria-invalid="mismatch" required />
-          <p v-if="mismatch" class="field-error">Les deux mots de passe ne correspondent pas.</p>
+          <p v-if="mismatch" class="field-error">{{ t('auth.account.mismatch') }}</p>
         </div>
         <ul v-if="messages.length" class="field-error" role="alert">
           <li v-for="m in messages" :key="m">{{ m }}</li>
         </ul>
-        <button type="submit" :disabled="isLoading">{{ isLoading ? 'Enregistrement…' : 'Changer le mot de passe' }}</button>
+        <button type="submit" :disabled="isLoading">{{ isLoading ? t('common.actions.saving') : t('auth.account.changePassword') }}</button>
       </form>
     </SectionCard>
     <TwoFactorSection @changed="history?.load()" />

@@ -13,6 +13,7 @@ import ErrorState from '@/shared/components/ErrorState.vue'
 import { getErrorMessage } from '@/shared/api/ApiError'
 import { useDebouncedRef } from '@/shared/composables/useDebouncedRef'
 import { SONG_VERSION_STATUSES, type SongVersionStatus } from '@/features/versions/types'
+import { t } from '@/shared/i18n'
 
 const route = useRoute()
 const router = useRouter()
@@ -41,7 +42,7 @@ const debouncedSearch = useDebouncedRef(search, 300)
 const hasFilters = computed(() => search.value.trim() !== '' || status.value !== '')
 
 const emptyMessage = computed(() =>
-  hasFilters.value ? 'Aucun morceau ne correspond à la recherche.' : "Aucun morceau pour l'instant.")
+  hasFilters.value ? t('songs.list.noMatch') : t('songs.list.empty'))
 
 // Filtres → URL + chargement
 watch([debouncedSearch, status], ([s, st]) => {
@@ -88,10 +89,14 @@ onMounted(() => {
 <template>
   <section>
     <header class="page-header">
-      <h1>Morceaux</h1>
-        <RouterLink v-if="bands.can('write')" :to="{ name: 'song-create' }">+ Nouveau morceau</RouterLink>
+      <h1>{{ t('songs.list.title') }}</h1>
+        <RouterLink v-if="bands.can('write')" :to="{ name: 'song-create' }">{{ t('songs.list.new') }}</RouterLink>
     </header>
     <BandStorageGauge />
+    <!-- #38 : un morceau sorti quitte cette liste -->
+    <p class="muted released-hint">
+      <small>{{ t('songs.list.releasedHint') }} <RouterLink :to="{ name: 'releases' }">{{ t('songs.list.releasedLink') }}</RouterLink>.</small>
+    </p>
     <SearchBar v-model:search="search" v-model:status="status" />
 
     <LoadingState v-if="isLoading || (!isLoaded && !error)" />
@@ -100,14 +105,14 @@ onMounted(() => {
 
     <EmptyState v-else-if="items.length === 0" :message="emptyMessage">
       <button v-if="hasFilters" type="button" class="secondary" @click="clearFilters">
-        Effacer les filtres
+        {{ t('songs.list.clearFilters') }}
       </button>
-       <RouterLink v-else-if="bands.can('write')" :to="{ name: 'song-create' }">Créer le premier morceau</RouterLink>
+       <RouterLink v-else-if="bands.can('write')" :to="{ name: 'song-create' }">{{ t('songs.list.createFirst') }}</RouterLink>
     </EmptyState>
 
     <template v-else>
       <p class="muted" role="status">
-        <small>{{ items.length }} morceau{{ items.length > 1 ? 'x' : '' }}</small>
+        <small>{{ t('songs.list.count', { count: items.length }) }}</small>
       </p>
       <ul class="song-list">
         <li v-for="song in items" :key="song.id">
@@ -120,4 +125,5 @@ onMounted(() => {
 
 <style scoped>
 .song-list { list-style: none; padding: 0; display: grid; gap: .75rem; }
+.released-hint { margin: 0 0 .5rem; }
 </style>

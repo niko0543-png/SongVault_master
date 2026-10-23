@@ -1,4 +1,5 @@
 import { MAX_CREDITS, creditRoleLabels, type Credit, type CreditRole } from './types'
+import { intlLocale, t } from '@/shared/i18n'
 
 /** Une ligne de l'éditeur : la part reste le texte saisi (« 33,33 ») tant qu'on n'enregistre pas. */
 export interface CreditRow {
@@ -39,11 +40,10 @@ export function totalCents(rows: CreditRow[]): number {
   return rows.reduce((sum, row) => sum + toCents(parseShare(row.share) ?? 0), 0)
 }
 
-const percent = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 })
 
 /** 9900 → « 99 % », 3333 → « 33,33 % ». */
 export function formatPercent(cents: number): string {
-  return `${percent.format(cents / 100)} %`
+  return `${new Intl.NumberFormat(intlLocale(), { maximumFractionDigits: 2 }).format(cents / 100)} %`
 }
 
 /**
@@ -52,21 +52,21 @@ export function formatPercent(cents: number): string {
  */
 export function creditsError(rows: CreditRow[]): string | null {
   if (rows.length === 0) return null
-  if (rows.length > MAX_CREDITS) return `Un morceau a au plus ${MAX_CREDITS} crédits.`
+  if (rows.length > MAX_CREDITS) return t('rights.rules.maxCredits', { maxCredits: MAX_CREDITS })
   const seen = new Set<string>()
   for (const row of rows) {
     const name = row.name.trim()
-    if (!name) return 'Donnez un nom à chaque ayant droit.'
+    if (!name) return t('rights.rules.nameRequired')
     const share = parseShare(row.share)
-    if (share === null) return `La part de ${name} n'est pas un nombre.`
-    if (share <= 0 || share > 100) return `La part de ${name} doit être comprise entre 0,01 et 100 %.`
-    if (Math.abs(share * 100 - toCents(share)) > 1e-9) return `La part de ${name} a au plus deux décimales.`
+    if (share === null) return t('rights.rules.notNumber', { name })
+    if (share <= 0 || share > 100) return t('rights.rules.outOfRange', { name })
+    if (Math.abs(share * 100 - toCents(share)) > 1e-9) return t('rights.rules.decimals', { name })
     const key = `${name.toLocaleLowerCase('fr-FR')}|${row.role}`
-    if (seen.has(key)) return `${name} apparaît deux fois comme ${creditRoleLabels[row.role].toLowerCase()} : regroupez ses parts.`
+    if (seen.has(key)) return t('rights.rules.duplicate', { name, role: creditRoleLabels[row.role].toLowerCase() })
     seen.add(key)
   }
   const total = totalCents(rows)
-  if (total !== 10000) return `Le total fait ${formatPercent(total)} : il doit faire exactement 100 %.`
+  if (total !== 10000) return t('rights.rules.total', { total: formatPercent(total) })
   return null
 }
 

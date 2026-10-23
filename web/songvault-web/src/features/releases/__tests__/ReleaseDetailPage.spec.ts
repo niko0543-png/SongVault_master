@@ -18,6 +18,8 @@ vi.mock('../api/releasesApi', async (importOriginal) => ({
     uploadCover: vi.fn(), removeCover: vi.fn(), coverUrl: () => '/cover',
   },
 }))
+
+vi.mock('../api/releaseExportsApi')                // #24 : section de l'archive, testée à part
 vi.mock('@/features/songs/api/songsApi')
 vi.mock('@/features/versions/api/versionsApi')
 
@@ -28,6 +30,7 @@ function track(songId: string, songTitle: string, trackNumber: number): ReleaseT
       { id: `${songId}-v1`, number: 1, title: 'Démo', status: 'Demo' },
       { id: `${songId}-v2`, number: 2, title: 'Master', status: 'Final' },
     ],
+    isReleasedHere: false,
   }
 }
 
@@ -35,6 +38,7 @@ const release: Release = {
   id: 'r1', title: 'Nuits blanches', type: 'EP', releaseDate: '2026-11-20', hasCover: false,
   createdAt: '2026-10-14T10:00:00Z', updatedAt: '2026-10-14T10:00:00Z',
   tracks: [track('a', 'Aube', 1), track('b', 'Brume', 2), track('c', 'Crépuscule', 3)],
+  label: null, upc: null, streamingLinks: [],
 }
 
 async function mountPage(role: BandRole = 'Member') {

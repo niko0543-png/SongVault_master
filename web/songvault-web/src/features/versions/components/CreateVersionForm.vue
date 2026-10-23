@@ -2,6 +2,7 @@
 import { computed, reactive, ref } from 'vue'
 import StatusSelect from './StatusSelect.vue'
 import { VERSION_NOTES_MAX, VERSION_TITLE_MAX, type SongVersionInput, type SongVersionStatus } from '../types'
+import { t } from '@/shared/i18n'
 
 const props = withDefaults(defineProps<{ submitting?: boolean; serverErrors?: Record<string, string> }>(), {
   submitting: false,
@@ -14,8 +15,8 @@ const submitted = ref(false)
 
 const titleError = computed(() => {
   const title = form.title.trim()
-  if (!title) return 'Le titre est obligatoire.'
-  if (title.length > VERSION_TITLE_MAX) return `${VERSION_TITLE_MAX} caractères maximum.`
+  if (!title) return t('versions.create.titleRequired')
+  if (title.length > VERSION_TITLE_MAX) return t('versions.create.maxLength', { versionTitleMax: VERSION_TITLE_MAX })
   return undefined
 })
 
@@ -35,22 +36,22 @@ function onSubmit() {
 
 <template>
   <form novalidate class="card" @submit.prevent="onSubmit">
-    <h3>Nouvelle version</h3>
+    <h3>{{ t('versions.create.title') }}</h3>
     <div class="field">
-      <label for="version-title">Titre *</label>
-      <input id="version-title" v-model="form.title" :maxlength="VERSION_TITLE_MAX" placeholder="Ex. : maquette guitare-voix" />
+      <label for="version-title">{{ t('versions.create.titleLabel') }}</label>
+      <input id="version-title" v-model="form.title" :maxlength="VERSION_TITLE_MAX" :placeholder="t('versions.create.titlePlaceholder')" />
       <p v-if="(submitted && titleError) || props.serverErrors.title" class="field-error">
         {{ (submitted && titleError) || props.serverErrors.title }}
       </p>
     </div>
     <div class="field">
-      <label for="version-status">Statut</label>
+      <label for="version-status">{{ t('versions.create.status') }}</label>
       <StatusSelect id="version-status" v-model="form.status" />
     </div>
     <div class="field">
-      <label for="version-notes">Notes</label>
+      <label for="version-notes">{{ t('versions.create.notes') }}</label>
       <textarea id="version-notes" v-model="form.notes" rows="3" :maxlength="VERSION_NOTES_MAX" />
     </div>
-    <button type="submit" :disabled="submitting">{{ submitting ? 'Création…' : 'Créer la version' }}</button>
+    <button type="submit" :disabled="submitting">{{ submitting ? t('versions.create.creating') : t('versions.create.submit') }}</button>
   </form>
 </template>

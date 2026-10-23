@@ -12,10 +12,17 @@ namespace SongVault.Application.Songs;
 /// <param name="CreatedAt">Date et heure de création de la chanson</param>
 /// <param name="UpdatedAt">Date et heure de la dernière mise à jour</param>
 /// <param name="Badge">Pastille pour l'utilisateur qui lit la liste (#11) ; None hors de la liste</param>
+/// <param name="TablatureVersionId">#34 : version de la tablature à ouvrir depuis la liste (la plus récente qui en a une lisible) ; null hors de la liste</param>
+/// <param name="TablatureFileId">#34 : cette tablature (la première envoyée dans la version)</param>
+/// <param name="ReleaseId">#38 : la sortie où le morceau est paru ; null tant qu'il est en travail</param>
+/// <param name="ReleasedAt">#38 : quand ses infos de sortie ont été enregistrées</param>
 public sealed record SongDto(
     Guid Id, string Title, string? Artist, string? Description,
-     DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, SongBadge Badge = SongBadge.None)
+     DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, SongBadge Badge = SongBadge.None,
+    Guid? TablatureVersionId = null, Guid? TablatureFileId = null,
+    Guid? ReleaseId = null, DateTimeOffset? ReleasedAt = null)
 {
     public static SongDto From(Song song) =>
-        new(song.Id, song.Title, song.Artist, song.Description, song.CreatedAt, song.UpdatedAt);
+        new(song.Id, song.Title, song.Artist, song.Description, song.CreatedAt, song.UpdatedAt,
+            ReleaseId: song.ReleaseId, ReleasedAt: song.IsReleased ? song.ReleasedAt : null);
 }

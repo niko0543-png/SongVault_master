@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { SONG_VERSION_STATUSES, statusLabels, type SongVersionStatus } from '@/features/versions/types'
+import { t } from '@/shared/i18n'
 
 const search = defineModel<string>('search', { required: true })
 const status = defineModel<SongVersionStatus | ''>('status', { required: true })
@@ -7,11 +8,11 @@ const status = defineModel<SongVersionStatus | ''>('status', { required: true })
 
 <template>
   <div class="search-bar" role="search">
-    <label for="song-search" class="visually-hidden">Rechercher un morceau</label>
-    <input id="song-search" v-model="search" type="search" placeholder="Rechercher par titre ou artiste…" maxlength="100" />
-    <label for="song-status" class="visually-hidden">Filtrer par statut</label>
+    <label for="song-search" class="visually-hidden">{{ t('songs.search.label') }}</label>
+    <input id="song-search" v-model="search" type="search" :placeholder="t('songs.search.placeholder')" maxlength="100" />
+    <label for="song-status" class="visually-hidden">{{ t('songs.search.statusLabel') }}</label>
     <select id="song-status" v-model="status">
-      <option value="">Tous les statuts</option>
+      <option value="">{{ t('songs.search.allStatuses') }}</option>
       <option v-for="s in SONG_VERSION_STATUSES" :key="s" :value="s">{{ statusLabels[s] }}</option>
     </select>
   </div>

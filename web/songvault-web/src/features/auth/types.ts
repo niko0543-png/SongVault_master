@@ -1,6 +1,8 @@
 export interface CurrentUser {
   id: string
   email: string
+  /** #26 : langue enregistrée sur le compte ; null tant que l'utilisateur n'en a pas choisi */
+  locale?: string | null
 }
 
 export interface Credentials {

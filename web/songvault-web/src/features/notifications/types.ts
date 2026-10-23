@@ -1,3 +1,5 @@
+import { labels, t } from '@/shared/i18n'
+
 export type NotificationKind = 'NewVersion' | 'Comment' | 'Mention'
 export type NotificationMode = 'Off' | 'Immediate' | 'Daily'
 
@@ -14,14 +16,19 @@ export interface UnsubscribeResult {
 }
 
 /** Libellés, dans l'ordre d'affichage. */
-export const KIND_LABELS: Record<NotificationKind, { title: string; help: string }> = {
-  NewVersion: { title: 'Nouvelle version', help: 'Un membre ajoute une version à un morceau du groupe.' },
-  Comment: { title: 'Commentaires et réponses', help: 'Un membre commente un fichier ou répond à un commentaire.' },
-  Mention: { title: 'Mentions', help: 'Un membre écrit « @ » suivi de votre adresse dans un commentaire.' },
+const kindLabel = (kind: NotificationKind) => ({
+  get title() { return t(`notifications.kinds.${kind}.title` as const) },
+  get help() { return t(`notifications.kinds.${kind}.help` as const) },
+})
+
+export const KIND_LABELS: Readonly<Record<NotificationKind, { readonly title: string; readonly help: string }>> = {
+  NewVersion: kindLabel('NewVersion'),
+  Comment: kindLabel('Comment'),
+  Mention: kindLabel('Mention'),
 }
 
-export const MODE_LABELS: Record<NotificationMode, string> = {
-  Immediate: 'Tout de suite',
-  Daily: 'Dans le résumé du matin',
-  Off: 'Jamais',
-}
+export const MODE_LABELS = labels<NotificationMode>({
+  Immediate: 'notifications.modes.Immediate',
+  Daily: 'notifications.modes.Daily',
+  Off: 'notifications.modes.Off',
+})

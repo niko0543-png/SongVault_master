@@ -36,3 +36,18 @@ l'ancien, qui passe au statut « remplacé par ADR NNNN ».
 | [0028](0028-setlists.md) | Setlists : liste ordonnée des sorties, durée totale calculée par l'API, feuille imprimée sans bibliothèque | accepté |
 | [0029](0029-credits-et-repartition-des-droits.md) | Crédits et répartition des droits : règle des 100 % dans le domaine, ISWC sur le morceau, ISRC sur la version, CSV écrit sans bibliothèque | accepté |
 | [0030](0030-pistes-separees-et-melangeur.md) | Pistes séparées : la piste portée par le fichier, mélangeur Web Audio calé sur l'horloge audio | accepté |
+| [0031](0031-archive-complete-d-une-sortie.md) | Archive complète d'une sortie : ZIP écrit en flux dans le stockage, téléchargeable 24 h après connexion | accepté |
+| [0032](0032-paroles-avec-accords.md) | Paroles avec accords : ChordPro dans le champ paroles, transposition à l'affichage | accepté |
+| [0033](0033-interface-multilingue.md) | Interface multilingue : catalogues TypeScript, erreurs de l'API traduites à la sortie | accepté |
+| [0034](0034-lecteur-guitar-pro.md) | Lecteur Guitar Pro : alphaTab chargé à la demande, en lecture seule | accepté |
+| [0035](0035-comparaison-guitar-pro.md) | Comparaison de deux fichiers Guitar Pro : empreintes de mesures, diff dans un Web Worker | accepté |
+| [0036](0036-tablature-calee-sur-la-maquette.md) | Tablature calée sur la maquette : points de synchronisation d'alphaTab, enregistrés par fichier | accepté |
+| [0037](0037-rendu-facon-guitar-pro.md) | Rendu de la tablature façon Guitar Pro : réglages d'alphaTab, sans nouvelle bibliothèque | accepté |
+| [0038](0038-page-du-lecteur-guitar-pro.md) | Page du lecteur Guitar Pro : un seul bloc en plein écran, piloté au clavier | accepté |
+| [0039](0039-confort-du-lecteur-guitar-pro.md) | Confort du lecteur Guitar Pro : boucle par mesures, réglages gardés sur l'appareil | accepté |
+| [0040](0040-finitions-du-lecteur-guitar-pro.md) | Finitions du lecteur Guitar Pro : temps, icônes, double-clic, accès direct | accepté |
+| [0041](0041-barre-facon-guitar-pro.md) | Barre du lecteur façon Guitar Pro et panneau des pistes redimensionnable | accepté |
+| [0042](0042-modifications-guitar-pro-a-cote-du-fichier.md) | Modifications Guitar Pro résumées à côté du fichier, détail dans le lecteur | accepté |
+| [0044](0044-sortie-d-un-morceau.md) | Sortie d'un morceau : infos de sortie sur la dernière version Final, liens d'écoute, versions gardées | accepté |
+| [0045](0045-onglet-morceaux-et-volumes.md) | Onglet « Morceaux » et réglages de volume (lecteur audio, piste « Général » du lecteur Guitar Pro) | accepté |
+| [0043](0043-comparaison-guitar-pro-vert-et-rouge.md) | Comparaison Guitar Pro : ajouté en vert, modifié en orange, retiré en rouge, pistes en bas | accepté |

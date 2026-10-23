@@ -41,5 +41,7 @@ public sealed record SongVersionDto(
 /// <param name="Title">Titre de la version</param>
 /// <param name="Status">Statut de la version (Demo, Final, etc.)</param>
 /// <param name="CreatedAt">Date et heure de création de la version</param>
-public sealed record SongVersionSummaryDto(Guid Id, int Number, string Title, SongVersionStatus Status, DateTimeOffset CreatedAt);
+/// <param name="TablatureFileId">#34 : la première tablature lisible de la version, à ouvrir depuis la liste ; null sinon</param>
+public sealed record SongVersionSummaryDto(Guid Id, int Number, string Title, SongVersionStatus Status, DateTimeOffset CreatedAt,
+    Guid? TablatureFileId = null);
 

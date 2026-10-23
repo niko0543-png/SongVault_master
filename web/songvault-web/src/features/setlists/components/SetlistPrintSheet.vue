@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import type { Setlist } from '../types'
 import { formatDuration, formatSetlistDate, formatTotal } from '../format'
+import { t } from '@/shared/i18n'
 
 /**
  * Feuille de scène : invisible à l'écran, seule imprimée (main.css, #21). Gros caractères, une page :
@@ -36,9 +37,9 @@ const size = computed(() => {
       </li>
     </ol>
     <footer>
-      Durée totale : {{ formatTotal(setlist.totalDurationMs) }}
+      {{ t('setlists.print.total', { totalDurationMs: formatTotal(setlist.totalDurationMs) }) }}
       <template v-if="setlist.missingDurationCount > 0">
-        (+ {{ setlist.missingDurationCount }} {{ setlist.missingDurationCount > 1 ? 'morceaux' : 'morceau' }} sans durée)
+        {{ t('setlists.missingDuration', { count: setlist.missingDurationCount }) }}
       </template>
     </footer>
   </section>

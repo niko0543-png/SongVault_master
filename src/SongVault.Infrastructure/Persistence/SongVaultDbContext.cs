@@ -52,6 +52,8 @@ public sealed class SongVaultDbContext(
     public DbSet<NotificationDigestItem> NotificationDigestItems => Set<NotificationDigestItem>();
     /// <summary>Sorties (single, EP, album) et leurs pistes (ADR 0016).</summary>
     public DbSet<Release> Releases => Set<Release>();
+    /// <summary>Archives ZIP des sorties pour le distributeur (ADR 0031).</summary>
+    public DbSet<ReleaseExport> ReleaseExports => Set<ReleaseExport>();
     /// <summary>Setlists de concert et leurs lignes (ADR 0028).</summary>
     public DbSet<Setlist> Setlists => Set<Setlist>();
     /// <summary>Liens de partage externes et leur journal (ADR 0019).</summary>

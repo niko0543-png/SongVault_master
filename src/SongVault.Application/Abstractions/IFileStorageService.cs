@@ -8,6 +8,12 @@ public interface IFileStorageService
     /// <exception cref="FileNotFoundException">Aucun fichier sous cette clé.</exception>
     Task<Stream> OpenReadAsync(string storageKey, CancellationToken ct);
 
+    /// <summary>
+    /// Flux d'écriture d'un fichier neuf, envoyé au fur et à mesure sans tout garder en mémoire (#24).
+    /// Échoue si la clé existe déjà. Le fichier n'est complet qu'une fois le flux fermé.
+    /// </summary>
+    Task<Stream> OpenWriteAsync(string storageKey, CancellationToken ct);
+
     /// <summary>Supprime le fichier ; ne fait rien s'il n'existe pas.</summary>
     Task DeleteAsync(string storageKey, CancellationToken ct);
 

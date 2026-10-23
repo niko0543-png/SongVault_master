@@ -3,6 +3,7 @@ import type { SongVersionStatus, SongVersionSummary } from '../types'
 import StatusBadge from './StatusBadge.vue'
 import StatusSelect from './StatusSelect.vue'
 import { formatDate } from '@/shared/utils/format'
+import { t } from '@/shared/i18n'
 
 // readonly : Guest du groupe (#2), le statut s'affiche sans sélecteur
 defineProps<{ songId: string; versions: SongVersionSummary[]; savingId?: string | null; readonly?: boolean }>()
@@ -12,7 +13,7 @@ const emit = defineEmits<{ changeStatus: [versionId: string, status: SongVersion
 
 <template>
   <p v-if="versions.length === 0" class="muted">
-    Aucune version pour l'instant.<template v-if="!readonly"> Créez la première ci-dessous.</template>
+    {{ t('versions.timeline.empty') }}<template v-if="!readonly"> {{ t('versions.timeline.createBelow') }}</template>
   </p>
   <ol v-else class="timeline">
     <li v-for="version in versions" :key="version.id" class="card timeline-item" data-testid="version-item">
@@ -21,7 +22,14 @@ const emit = defineEmits<{ changeStatus: [versionId: string, status: SongVersion
         <RouterLink :to="{ name: 'version-detail', params: { songId, versionId: version.id } }">
           <strong>{{ version.title }}</strong>
         </RouterLink>
-        <small class="muted">{{ formatDate(version.createdAt) }}</small>
+        <small class="muted">
+          {{ formatDate(version.createdAt) }}
+          <!-- #34 : la tablature de la version, ouverte d'ici -->
+          <RouterLink v-if="version.tablatureFileId" class="tab-icon" data-testid="version-tablature"
+                      :to="{ name: 'tablature', params: { songId, versionId: version.id, fileId: version.tablatureFileId } }"
+                      :aria-label="t('versions.timeline.openTablature', { number: version.number })"
+                      :title="t('versions.timeline.openTablature', { number: version.number })">🎸</RouterLink>
+        </small>
       </div>
       <StatusBadge :status="version.status" />
       <!-- :model-value + @update plutôt que v-model : la valeur affichée ne change qu'après la réponse serveur -->
@@ -29,7 +37,7 @@ const emit = defineEmits<{ changeStatus: [versionId: string, status: SongVersion
         v-if="!readonly"
         :model-value="version.status"
         :disabled="savingId === version.id"
-        :label="`Statut de la version ${version.number}`"
+        :label="t('versions.timeline.statusOf', { number: version.number })"
         @update:model-value="(status) => emit('changeStatus', version.id, status)"
       />
     </li>
@@ -39,6 +47,7 @@ const emit = defineEmits<{ changeStatus: [versionId: string, status: SongVersion
 <style scoped>
 .timeline { list-style: none; padding: 0; display: grid; gap: .5rem; }
 .timeline-item { display: grid; grid-template-columns: auto 1fr auto auto; gap: .75rem; align-items: center; }
+.tab-icon { text-decoration: none; margin-left: .35rem; }
 .number { font-weight: 700; font-size: 1.2rem; color: var(--primary); }
 .timeline-item select { width: auto; }
 /* #14 : téléphone. Numéro et titre sur la première ligne, statut et sélecteur dessous */

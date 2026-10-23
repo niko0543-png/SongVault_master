@@ -9,6 +9,7 @@ import { useAuthStore } from '@/features/auth/stores/authStore'
 import LoadingState from '@/shared/components/LoadingState.vue'
 import ErrorState from '@/shared/components/ErrorState.vue'
 import { getErrorMessage } from '@/shared/api/ApiError'
+import { t } from '@/shared/i18n'
 
 const { isAuthenticated } = storeToRefs(useAuthStore())
 const catalog = ref<PlanCatalog | null>(null)
@@ -27,20 +28,20 @@ onMounted(load)
 
 <template>
   <section>
-    <h1>Formules</h1>
-    <p>Chaque groupe a sa formule : elle fixe la place pour ses fichiers. Les membres n'ont rien à payer.</p>
+    <h1>{{ t('billing.plans.title') }}</h1>
+    <p>{{ t('billing.plans.intro') }}</p>
 
     <ErrorState v-if="error" :message="getErrorMessage(error)" @retry="load" />
     <LoadingState v-else-if="!catalog" />
     <template v-else>
       <PlanCards :plans="catalog.plans" />
-      <p v-if="!catalog.onlinePayment" class="muted">Le paiement en ligne ouvrira bientôt.</p>
+      <p v-if="!catalog.onlinePayment" class="muted">{{ t('billing.plans.soon') }}</p>
       <p v-if="isAuthenticated">
-        Le propriétaire d'un groupe change sa formule depuis la page <strong>Facturation</strong> du groupe.
+        {{ t('billing.plans.ownerBefore') }} <strong>{{ t('billing.plans.billingLink') }}</strong> {{ t('billing.plans.ownerAfter') }}
       </p>
-      <p v-else><RouterLink :to="{ name: 'register' }">Créer un compte</RouterLink> : la formule Gratuit est appliquée d'office.</p>
+      <p v-else><RouterLink :to="{ name: 'register' }">{{ t('billing.plans.register') }}</RouterLink> {{ t('billing.plans.registerAfter') }}</p>
       <p class="muted">
-        <small>Prix TTC. <RouterLink :to="{ name: 'terms-of-sale' }">Conditions générales de vente</RouterLink>.</small>
+        <small>{{ t('billing.plans.vat') }} <RouterLink :to="{ name: 'terms-of-sale' }">{{ t('billing.plans.termsLink') }}</RouterLink>.</small>
       </p>
     </template>
   </section>

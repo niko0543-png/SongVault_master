@@ -4,6 +4,7 @@ import { filesApi } from '../api/filesApi'
 import type { AudioWaveform } from '../types'
 import { WAVEFORM_HEIGHT, waveformBars, waveformPath } from '../waveform'
 import { formatTime } from '@/shared/utils/format'
+import { t } from '@/shared/i18n'
 
 const BARS = 200
 const KEY_STEP_SECONDS = 5
@@ -52,9 +53,9 @@ function onKey(event: KeyboardEvent) {
 
 <template>
   <div v-if="waveform" class="waveform" role="slider" tabindex="0" data-testid="waveform"
-       :aria-label="`Position dans ${label}`" aria-valuemin="0" :aria-valuemax="Math.round(duration)"
+       :aria-label="t('files.waveform.position', { label })" aria-valuemin="0" :aria-valuemax="Math.round(duration)"
        :aria-valuenow="Math.round(position)"
-       :aria-valuetext="`${formatTime(position)} sur ${formatTime(duration)}`"
+       :aria-valuetext="t('shared.time.positionOf', { position: formatTime(position), duration: formatTime(duration) })"
        @click="onClick" @keydown="onKey">
     <svg :viewBox="`0 0 ${bars.length} ${WAVEFORM_HEIGHT}`" preserveAspectRatio="none" aria-hidden="true">
       <defs>
