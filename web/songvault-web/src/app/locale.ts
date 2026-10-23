@@ -6,6 +6,7 @@ const fr = {
   menu: { open: 'Menu', close: 'Fermer' },
   nav: {
     label: 'Navigation principale',
+    songs: 'Morceaux',
     releases: 'Sorties',
     setlists: 'Setlists',
     activity: 'Activité',
@@ -30,6 +31,7 @@ const en: Widen<typeof fr> = {
   menu: { open: 'Menu', close: 'Close' },
   nav: {
     label: 'Main navigation',
+    songs: 'Songs',
     releases: 'Releases',
     setlists: 'Setlists',
     activity: 'Activity',

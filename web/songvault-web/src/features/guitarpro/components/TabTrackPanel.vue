@@ -10,6 +10,8 @@ import { t } from '@/shared/i18n'
  * jouées, à la couleur de la piste dans le fichier). Un clic sur une case place la partition sur la mesure.
  * Le composant ne parle pas à alphaTab : il émet, et GuitarProViewer agit.
  * #35 : la poignée du haut change la hauteur des pistes (glisser, ou ↑ ↓ au clavier), gardée par GuitarProViewer.
+ * Piste « Général » en bas de la liste, comme la piste master de Guitar Pro : le volume de toutes les pistes à la
+ * fois (de 0 à 100 %), actif aussi quand la tablature suit une maquette (c'est alors le volume de la maquette).
  */
 const props = defineProps<{
   tracks: model.Track[]
@@ -39,6 +41,9 @@ const CELL = 16
 const open = defineModel<boolean>('open', { default: true })
 /** #35 : hauteur des pistes en px ; null = celle par défaut (40 % de l'écran au plus). */
 const height = defineModel<number | null>('height', { default: null })
+/** Volume général, de 0 à 1 ; GuitarProViewer le garde sur l'appareil. */
+const master = defineModel<number>('master', { default: 1 })
+const masterText = computed(() => `${Math.round(master.value * 100)} %`)
 const overview = ref<HTMLElement | null>(null)
 const anySolo = computed(() => props.solo.some(Boolean))
 /** #34 : une seule piste : ni case (elle reste affichée) ni muet/solo, mais le volume et la vue d'ensemble. */
@@ -125,6 +130,14 @@ watch(() => props.currentBar, (bar) => {
                  :aria-label="t('guitarpro.viewer.volumeTrack', { name: track.name })"
                  @input="emit('volume', i, Number(($event.target as HTMLInputElement).value))">
         </li>
+        <li class="master-row" data-testid="tab-master">
+          <span class="swatch" aria-hidden="true" />
+          <span class="name"><span>{{ t('guitarpro.viewer.master') }}</span></span>
+          <output class="level" aria-hidden="true">{{ masterText }}</output>
+          <input class="master-volume" type="range" min="0" max="1" step="0.05" :value="master" data-testid="tab-master-volume"
+                 :aria-label="t('guitarpro.viewer.masterVolume')" :aria-valuetext="masterText"
+                 @input="master = Number(($event.target as HTMLInputElement).value)">
+        </li>
       </ul>
 
       <!-- Vue d'ensemble : la souris y trouve vite une mesure ; au clavier, la partition reste le chemin -->
@@ -137,6 +150,7 @@ watch(() => props.currentBar, (bar) => {
             <span v-for="b in bars" :key="b" class="cell" :style="played[i]![b] ? { background: colorOf(track) } : undefined"
                   @click="emit('goToBar', b)" />
           </div>
+          <div class="master-lane" />
           <span class="now" :style="{ left: `${(currentBar - 1) * CELL}px` }" />
         </div>
       </div>
@@ -158,7 +172,7 @@ watch(() => props.currentBar, (bar) => {
 .body { --row: 2.25rem; display: grid; grid-template-columns: minmax(18rem, 24rem) 1fr; max-height: 40vh; overflow-y: auto;
         border-top: 1px solid #44444c; }
 .list { list-style: none; margin: 0; padding: 1.25rem 0 0; }
-.row { display: flex; align-items: center; gap: .4rem; height: var(--row); padding: 0 .5rem; border-bottom: 1px solid #3a3a42; }
+.row, .master-row { display: flex; align-items: center; gap: .4rem; height: var(--row); padding: 0 .5rem; border-bottom: 1px solid #3a3a42; }
 .row.silent .name, .lane.silent { opacity: .45; }
 .swatch { width: 4px; align-self: stretch; border-radius: 2px; }
 .name { display: inline-flex; align-items: center; gap: .35rem; flex: 1; min-width: 0; width: auto; margin: 0; }
@@ -168,7 +182,12 @@ watch(() => props.currentBar, (bar) => {
         border: 1px solid #55555e; font-weight: 700; }
 .mute[aria-pressed='true'] { background: #e0b400; border-color: #e0b400; color: #1d1d27; }
 .solo[aria-pressed='true'] { background: #d33; border-color: #d33; color: #fff; }
-.volume { width: 5rem; padding: 0; }
+.volume, .master-volume { width: 5rem; padding: 0; }
+.master-row { border-top: 1px solid #55555e; }
+.master-row .swatch { background: #c8c8d0; }
+.master-row .name { font-weight: 600; }
+.level { font-size: .75rem; color: #b8b8c0; font-variant-numeric: tabular-nums; min-width: 2.6rem; text-align: right; }
+.master-lane { height: var(--row); border-top: 1px solid #55555e; border-bottom: 1px solid #3a3a42; }
 .overview { overflow-x: auto; }
 .grid { position: relative; }
 .numbers { display: flex; height: 1.25rem; font-size: .7rem; color: #b8b8c0; }
@@ -183,5 +202,6 @@ watch(() => props.currentBar, (bar) => {
   .list { padding-top: 0; }
   .overview, .volume { display: none; }
   .chip { height: 36px; min-width: 40px; }
+  .master-volume { width: 7rem; }
 }
 </style>

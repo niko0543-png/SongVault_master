@@ -60,6 +60,7 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) — versions :
 - Lecteur Guitar Pro : barre du haut façon Guitar Pro (transport, écran avec piste, mesure, chiffrage, temps et tempo, métronome et décompte, boucle, vitesse par 5 %, transposition), réglages derrière ⋮, panneau des pistes redimensionnable à la souris ou au clavier, hauteur gardée sur l'appareil (ADR 0041).
 - Comparaison Guitar Pro : résumé des modifications à côté de chaque fichier Guitar Pro dans l'écran A/B, et bouton « Afficher les modifs » qui ouvre le lecteur en plein écran avec les différences colorées, leur liste à côté et le retour à la comparaison (ADR 0042).
 ### Modifié
+- Navigation : onglet « Morceaux » avant « Sorties », et l'onglet de la page affichée souligné. Lecteur audio : bouton muet et volume, gardés sur l'appareil. Lecteur Guitar Pro : piste « Général » en bas du panneau des pistes, pour le volume de toutes les pistes (ou de la maquette suivie) (ADR 0044).
 - Section « Paroles » d'une version : lecture par défaut, saisie par « Modifier le texte ». Dans l'archive d'une sortie, `paroles.txt` est sans accords et `accords.txt` garde la source ChordPro.
 - Les journaux de l'API ne nomment plus le destinataire d'un e-mail non parti, et une erreur 500 y est écrite avec un chemin sans jeton.
 - Le mot de passe se change par `POST /api/me/password`, sans reconnexion ; `/api/auth/manage/2fa` et `POST /api/auth/manage/info` d'Identity sont fermés (404).

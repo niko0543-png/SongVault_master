@@ -32,6 +32,8 @@ const fr = {
     metronome: 'Métronome',
     countIn: 'Décompte',
     volumeTrack: 'Volume de {name}',
+    master: 'Général',
+    masterVolume: 'Volume général',
     // #32 : page du lecteur
     tempoReset: 'Revenir à 100 %',
     shortcuts: 'Raccourcis : Espace lecture ou pause, ← et → mesure précédente ou suivante, L boucle, Échap retour au début.',
@@ -166,6 +168,8 @@ const en: Widen<typeof fr> = {
     metronome: 'Metronome',
     countIn: 'Count-in',
     volumeTrack: 'Volume of {name}',
+    master: 'Master',
+    masterVolume: 'Master volume',
     tempoReset: 'Back to 100 %',
     shortcuts: 'Shortcuts: Space play or pause, ← and → previous or next bar, L loop, Esc back to the start.',
     soundLoadingPercent: 'Loading the sounds… {percent} %',
