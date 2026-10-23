@@ -24,6 +24,8 @@ const fake = vi.hoisted(() => {
     isLooping = false
     scoreLoaded = emitter()
     renderFinished = emitter()
+    postRenderFinished = emitter()
+    beatMouseDown = emitter()
     playerReady = emitter()
     playerStateChanged = emitter()
     error = emitter()
@@ -524,15 +526,16 @@ describe('GuitarProViewer dans la comparaison (#30)', () => {
     masterBars: [bar(0), bar(3840), bar(7680)],
   }
 
-  async function mountWithScore() {
+  async function mountWithScore(start: { startTracks?: number[]; startBar?: number } = {}) {
     const wrapper = mount(GuitarProViewer, {
-      props: { score: score as never, track: 1, label: 'riff.gp' },
+      props: { score: score as never, track: 1, label: 'riff.gp', ...start },
       global: { plugins: [createTestingPinia({ createSpy: vi.fn, stubActions: false })] },
     })
     await flushPromises()
     api().score = score as never
     api().scoreLoaded.fire(score)
     api().renderFinished.fire()
+    api().postRenderFinished.fire()
     await nextTick()
     return wrapper
   }
@@ -542,7 +545,7 @@ describe('GuitarProViewer dans la comparaison (#30)', () => {
 
     expect(fetchMock).not.toHaveBeenCalled()
     expect(api().renderScore).toHaveBeenCalledWith(score, [1])
-    expect(wrapper.find('[data-testid="tab-tracks"]').exists()).toBe(false)   // la piste se choisit dans la comparaison
+    expect(wrapper.find('[data-testid="tab-tracks"]').exists()).toBe(true)    // #37 : le panneau des pistes reste dans la comparaison
     await wrapper.setProps({ track: 0 })
     expect(api().renderTracks).toHaveBeenLastCalledWith([score.tracks[0]])
   })
@@ -560,6 +563,29 @@ describe('GuitarProViewer dans la comparaison (#30)', () => {
     expect(api().tickPosition).toBe(3840)
     expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'smooth' }))
     scrollTo.mockRestore()
+  })
+
+  it('#37 : reprend les pistes et la mesure données, une fois la partition placée et le son prêt', async () => {
+    const wrapper = await mountWithScore({ startTracks: [0, 1], startBar: 2 })
+
+    expect(api().renderScore).toHaveBeenCalledWith(score, [0, 1])
+    expect(api().tickPosition).toBe(0)                                  // avant le son, alphaTab remettrait le curseur au début
+    api().playerReady.fire()
+    await nextTick()
+    expect(api().tickPosition).toBe(7680)                               // placé sur la mesure 3
+    expect((wrapper.vm as unknown as { position: () => unknown }).position()).toEqual({ tracks: [0, 1], bar: 2 })
+    api().tickPosition = 0                                              // un nouveau rendu (zoom…) ne le replace pas
+    api().postRenderFinished.fire()
+    await nextTick()
+    expect(api().tickPosition).toBe(0)
+  })
+
+  it('#37 : un clic sur une note change la mesure en cours', async () => {
+    const wrapper = await mountWithScore()
+    api().beatMouseDown.fire({ voice: { bar: { index: 1 } } })
+    await nextTick()
+    expect(wrapper.get('[data-testid="tab-bar"]').attributes('aria-label')).toBe('Mesure 2 sur 3')
+    expect((wrapper.vm as unknown as { position: () => { bar: number } }).position().bar).toBe(1)
   })
 })
 
