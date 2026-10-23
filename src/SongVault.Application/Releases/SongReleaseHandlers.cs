@@ -14,13 +14,15 @@ namespace SongVault.Application.Releases;
 public enum KeepVersions { All, LatestOnly }
 
 /// <summary>
-/// Les infos de sortie de la dernière version d'un morceau (#38, ADR 0044). ReleaseId null : un single à son titre est
-/// créé ; sinon le morceau rejoint cette sortie (EP, album). Date, label, code-barres et liens vont sur la sortie.
+/// Les infos de sortie de la dernière version d'un morceau (#38, ADR 0044). ReleaseId null : une sortie est créée, du type
+/// NewReleaseType (Single par défaut) et au titre NewReleaseTitle (celui du morceau par défaut) ; sinon le morceau rejoint
+/// cette sortie. Date, label, code-barres et liens vont sur la sortie : c'est le seul endroit où on les saisit (#39).
 /// PurgeNow : les versions écartées sont effacées tout de suite au lieu d'attendre 30 jours à la corbeille (Owner).
 /// </summary>
 public sealed record ReleaseSongCommand(
     Guid SongId, Guid VersionId, Guid? ReleaseId, DateOnly? ReleaseDate, string? Label, string? Upc,
-    IReadOnlyList<string> StreamingLinks, KeepVersions Keep, bool PurgeNow);
+    IReadOnlyList<string> StreamingLinks, KeepVersions Keep, bool PurgeNow,
+    ReleaseType? NewReleaseType = null, string? NewReleaseTitle = null);
 
 /// <summary>Une version qui n'a pas pu partir, et pourquoi : les sorties et les setlists qui l'utilisent encore.</summary>
 public sealed record KeptVersionDto(int Number, IReadOnlyList<string> Releases, IReadOnlyList<string> Setlists);
@@ -56,7 +58,8 @@ public sealed class ReleaseSongHandler(
         }
         else
         {
-            release = Release.Create(band.RequiredBandId, song.Title, ReleaseType.Single, command.ReleaseDate, now);
+            var title = string.IsNullOrWhiteSpace(command.NewReleaseTitle) ? song.Title : command.NewReleaseTitle;
+            release = Release.Create(band.RequiredBandId, title, command.NewReleaseType ?? ReleaseType.Single, command.ReleaseDate, now);
             releases.Add(release);
         }
         release.SetDistribution(command.Label, upc, command.StreamingLinks, now);

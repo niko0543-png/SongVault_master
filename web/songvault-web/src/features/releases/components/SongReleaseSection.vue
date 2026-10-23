@@ -3,23 +3,24 @@ import { computed, reactive, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { releasesApi } from '../api/releasesApi'
 import {
-  RELEASE_LABEL_MAX, UPC_INPUT_MAX, releaseTypeLabels,
-  type KeepVersions, type Release, type ReleaseSummary, type SongReleaseResult,
+  RELEASE_LABEL_MAX, RELEASE_TITLE_MAX, RELEASE_TYPES, UPC_INPUT_MAX, releaseTypeLabels,
+  type KeepVersions, type Release, type ReleaseSummary, type ReleaseType, type SongReleaseResult,
 } from '../types'
 import { formatReleaseDate } from '../format'
 import StreamingLinksEditor from './StreamingLinksEditor.vue'
-import StreamingLinkList from './StreamingLinkList.vue'
+import ReleaseDistributionSection from './ReleaseDistributionSection.vue'
 import type { SongVersionStatus } from '@/features/versions/types'
 import { useBandStore } from '@/features/bands/stores/bandStore'
 import { useSongsStore } from '@/features/songs/stores/songsStore'
 import SectionCard from '@/shared/components/SectionCard.vue'
 import { getErrorMessage } from '@/shared/api/ApiError'
-import { t } from '@/shared/i18n'
+import { t, type MessageKey } from '@/shared/i18n'
 
 /**
  * #38 (ADR 0044) : les infos de sortie, sur la dernière version d'un morceau au statut Final. Les enregistrer fait
  * sortir le morceau : il quitte la liste des morceaux pour l'onglet Sorties. Avant d'envoyer, on demande si l'on garde
- * toutes les versions ou seulement celle qui sort.
+ * toutes les versions ou seulement celle qui sort. #39 : c'est le seul endroit où ces infos se saisissent ; une fois le
+ * morceau sorti, elles se corrigent ici aussi.
  */
 const props = defineProps<{
   songId: string
@@ -84,8 +85,14 @@ watch(canRelease, async (yes) => {
   }
 }, { immediate: true })
 
+/** Choix de la sortie : « new:Single », « new:EP », « new:Album », ou l'identifiant d'une sortie existante. */
+const NEW = 'new:'
+const NEW_LABELS: Record<ReleaseType, MessageKey> = {
+  Single: 'releases.songRelease.newSingle', EP: 'releases.songRelease.newEP', Album: 'releases.songRelease.newAlbum',
+}
 const form = reactive({
-  releaseId: '',                // '' = nouveau single au titre du morceau
+  releaseId: `${NEW}Single`,
+  newTitle: '',                 // vide = titre du morceau
   releaseDate: '',
   label: '',
   upc: '',
@@ -93,8 +100,11 @@ const form = reactive({
 })
 
 /** Rejoindre une sortie existante : ses infos de sortie remplissent le formulaire. */
+const newType = computed<ReleaseType | null>(() =>
+  form.releaseId.startsWith(NEW) ? (form.releaseId.slice(NEW.length) as ReleaseType) : null)
+
 async function onChooseRelease() {
-  if (!form.releaseId) return
+  if (newType.value) return
   try {
     const chosen = await releasesApi.get(form.releaseId)
     form.releaseDate = chosen.releaseDate ?? form.releaseDate
@@ -128,7 +138,9 @@ async function onConfirm() {
   try {
     result.value = await releasesApi.releaseSong(props.songId, {
       versionId: props.versionId,
-      releaseId: form.releaseId || null,
+      releaseId: newType.value ? null : form.releaseId,
+      newReleaseType: newType.value,
+      newReleaseTitle: newType.value ? form.newTitle.trim() || null : null,
       releaseDate: form.releaseDate || null,
       label: form.label.trim() || null,
       upc: form.upc.trim() || null,
@@ -162,7 +174,8 @@ const keptTexts = computed(() => (result.value?.keptVersions ?? []).map((k) => {
 
 <!-- Trois cas : morceau sorti ; dernière version pas encore Final (on dit comment faire) ; dernière version Final -->
 <template>
-  <SectionCard v-if="releaseId" :title="t('releases.songRelease.title')" data-testid="song-release">
+  <template v-if="releaseId">
+  <SectionCard :title="t('releases.songRelease.title')" data-testid="song-release">
     <p v-if="loadError" class="field-error" role="alert">{{ loadError }}</p>
     <template v-if="release">
       <p>
@@ -170,14 +183,6 @@ const keptTexts = computed(() => (result.value?.keptVersions ?? []).map((k) => {
         <RouterLink :to="{ name: 'release-detail', params: { releaseId: release.id } }">{{ release.title }}</RouterLink>
         <span class="muted"> · {{ releaseTypeLabels[release.type] }} · {{ formatReleaseDate(release.releaseDate) }}</span>
       </p>
-      <p v-if="release.label || release.upc" class="muted">
-        <small>
-          <template v-if="release.label">{{ t('releases.distribution.label') }} : {{ release.label }}</template>
-          <template v-if="release.label && release.upc"> · </template>
-          <template v-if="release.upc">{{ t('releases.distribution.upc') }} : {{ release.upc }}</template>
-        </small>
-      </p>
-      <StreamingLinkList :links="release.streamingLinks" />
     </template>
     <p v-if="removedText" class="muted" role="status">{{ removedText }}</p>
     <p v-for="text in keptTexts" :key="text" class="muted">{{ text }}</p>
@@ -185,6 +190,10 @@ const keptTexts = computed(() => (result.value?.keptVersions ?? []).map((k) => {
       {{ t('releases.songRelease.unrelease') }}
     </button>
   </SectionCard>
+  <!-- #39 : les infos de sortie se corrigent ici, plus dans l'onglet Sorties -->
+  <ReleaseDistributionSection v-if="releaseId && release" :release="release" :can-write="canWrite"
+                              @saved="(saved) => (release = saved)" />
+  </template>
 
   <SectionCard v-else-if="isLatest && canWrite && versionStatus !== 'Final'" :title="t('releases.songRelease.title')">
     <p class="muted">{{ t('releases.songRelease.needsFinal') }}</p>
@@ -197,7 +206,9 @@ const keptTexts = computed(() => (result.value?.keptVersions ?? []).map((k) => {
         <div class="field">
           <label for="sr-release">{{ t('releases.songRelease.release') }}</label>
           <select id="sr-release" v-model="form.releaseId" @change="onChooseRelease">
-            <option value="">{{ t('releases.songRelease.newSingle', { title: songTitle }) }}</option>
+            <option v-for="type in RELEASE_TYPES" :key="type" :value="`${NEW}${type}`">
+              {{ t(NEW_LABELS[type], { title: songTitle }) }}
+            </option>
             <option v-for="r in releases" :key="r.id" :value="r.id">{{ r.title }} ({{ releaseTypeLabels[r.type] }})</option>
           </select>
         </div>
@@ -205,6 +216,10 @@ const keptTexts = computed(() => (result.value?.keptVersions ?? []).map((k) => {
           <label for="sr-date">{{ t('releases.form.date') }}</label>
           <input id="sr-date" v-model="form.releaseDate" type="date" />
         </div>
+      </div>
+      <div v-if="newType && newType !== 'Single'" class="field">
+        <label for="sr-title">{{ t('releases.songRelease.newTitle') }}</label>
+        <input id="sr-title" v-model="form.newTitle" :maxlength="RELEASE_TITLE_MAX" :placeholder="songTitle" autocomplete="off" />
       </div>
       <div class="row">
         <div class="field">

@@ -1,21 +1,17 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { RouterLink } from 'vue-router'
 import { releasesApi } from '../api/releasesApi'
-import { releaseTypeLabels, type ReleaseInput, type ReleaseSummary } from '../types'
+import { releaseTypeLabels, type ReleaseSummary } from '../types'
 import { formatReleaseDate } from '../format'
-import ReleaseForm from '../components/ReleaseForm.vue'
 import { useBandStore } from '@/features/bands/stores/bandStore'
 import LoadingState from '@/shared/components/LoadingState.vue'
 import ErrorState from '@/shared/components/ErrorState.vue'
 import EmptyState from '@/shared/components/EmptyState.vue'
-import SectionCard from '@/shared/components/SectionCard.vue'
 import { getErrorMessage } from '@/shared/api/ApiError'
-import { useAsyncAction } from '@/shared/composables/useAsyncAction'
 import { t } from '@/shared/i18n'
 
 const bands = useBandStore()
-const router = useRouter()
 
 const releases = ref<ReleaseSummary[]>([])
 const isLoading = ref(true)
@@ -34,12 +30,6 @@ async function load() {
 }
 watch(() => bands.activeId, (id) => { if (id) void load() }, { immediate: true })
 
-const creation = useAsyncAction(releasesApi.create)
-
-async function onCreate(input: ReleaseInput) {
-  const created = await creation.run(input)
-  if (created) await router.push({ name: 'release-detail', params: { releaseId: created.id } })
-}
 </script>
 
 <template>
@@ -48,10 +38,8 @@ async function onCreate(input: ReleaseInput) {
       <h1>{{ t('releases.list.title') }}</h1>
     </header>
 
-    <SectionCard v-if="bands.can('write')" :title="t('releases.list.newTitle')">
-      <ReleaseForm :submit-label="t('releases.list.create')" :submitting="creation.isLoading.value"
-                   :error="creation.error.value ? getErrorMessage(creation.error.value) : null" @submit="onCreate" />
-    </SectionCard>
+    <!-- #39 : une sortie naît de la section « Sortie » de la dernière version finale d'un morceau -->
+    <p class="muted"><small>{{ t('releases.list.howTo') }}</small></p>
 
     <LoadingState v-if="isLoading" />
     <ErrorState v-else-if="error" :message="getErrorMessage(error)" @retry="load" />

@@ -86,6 +86,18 @@ public sealed class SongReleaseHandlersTests
     }
 
     [Fact]
+    public async Task Le_morceau_peut_ouvrir_un_EP_a_un_autre_titre()
+    {
+        var (song, _, _, v3) = Nocturne();
+
+        await Handler().HandleAsync(Command(song, v3) with { NewReleaseType = ReleaseType.EP, NewReleaseTitle = "Nuits blanches" },
+            CancellationToken.None);
+
+        var release = Assert.Single(_releases.Releases);
+        Assert.Equal(("Nuits blanches", ReleaseType.EP), (release.Title, release.Type));
+    }
+
+    [Fact]
     public async Task Le_morceau_peut_rejoindre_une_sortie_existante_et_y_prend_la_version_qui_sort()
     {
         var (song, v1, _, v3) = Nocturne();
