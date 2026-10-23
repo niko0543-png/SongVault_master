@@ -18,6 +18,7 @@ const fake = vi.hoisted(() => {
     score: { tracks: { name: string; staves: FakeStaff[] }[]; masterBars: unknown[]; applyFlatSyncPoints: (p: unknown[]) => void } | null = null
     // #31 : métronome et décompte
     metronomeVolume = 0
+    masterVolume = 1
     countInVolume = 0
     playbackSpeed = 1
     isLooping = false
@@ -225,6 +226,19 @@ describe('GuitarProViewer façon Guitar Pro (#31)', () => {
     expect(api().changeTrackVolume).toHaveBeenLastCalledWith([bass], 0.5)
     await wrapper.findAll('[data-testid="tab-overview"] .lane')[1]!.findAll('.cell')[1]!.trigger('click')
     expect(api().tickPosition).toBe(3840)                           // la lecture partira de la mesure 2
+  })
+
+  it('règle le volume général de toutes les pistes, le garde sur l’appareil et le reprend à l’ouverture', async () => {
+    const wrapper = await mountViewer(['Guitare', 'Basse'])
+
+    await byLabel(wrapper, 'Volume général').setValue('0.5')
+    expect(api().masterVolume).toBe(0.5)
+    expect(api().changeTrackVolume).not.toHaveBeenCalled()             // le mix des pistes ne bouge pas
+    wrapper.unmount()
+
+    const again = await mountViewer(['Guitare', 'Basse'])
+    expect(api().masterVolume).toBe(0.5)                             // redonné quand les sons sont prêts
+    expect(byLabel(again, 'Volume général').attributes('aria-valuetext')).toBe('50 %')
   })
 
   it('active le métronome et le décompte', async () => {
@@ -639,6 +653,10 @@ describe('GuitarProViewer calé sur une maquette (#29)', () => {
     expect(wrapper.get('[data-testid="tab-play"]').attributes('disabled')).toBeDefined()
     await wrapper.get('[data-testid="tab-audio"]').trigger('loadedmetadata')
     expect(wrapper.get('[data-testid="tab-play"]').attributes('disabled')).toBeUndefined()
+
+    // Le volume général règle aussi la maquette suivie
+    await byLabel(wrapper, 'Volume général').setValue('0.25')
+    expect((wrapper.get('[data-testid="tab-audio"]').element as HTMLAudioElement).volume).toBe(0.25)
 
     await wrapper.get('[data-testid="tab-source"]').setValue('synth')
     await flushPromises()

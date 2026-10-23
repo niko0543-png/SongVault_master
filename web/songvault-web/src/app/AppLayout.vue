@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import AudioPlayer from '@/features/player/components/AudioPlayer.vue'
@@ -23,6 +23,17 @@ const route = useRoute()
 // #14 : sur un téléphone, la navigation est repliée derrière le bouton « Menu »
 const isMenuOpen = ref(false)
 watch(() => route.fullPath, () => { isMenuOpen.value = false })   // une page choisie referme le menu
+
+// Onglet en cours : la page d'un morceau, d'une version ou d'une tablature reste sous « Morceaux », etc.
+const SECTIONS: Record<string, string[]> = {
+  songs: ['songs', 'song-create', 'song-edit', 'song-detail', 'version-compare', 'version-detail', 'tablature'],
+  releases: ['releases', 'release-detail'],
+  setlists: ['setlists', 'setlist-detail'],
+}
+const section = computed(() => {
+  const name = String(route.name ?? '')
+  return Object.keys(SECTIONS).find((key) => SECTIONS[key]!.includes(name)) ?? name
+})
 
 // Changement de groupe : la liste en cache et la lecture en cours appartiennent à l'ancien groupe
 watch(() => bands.activeId, (next, prev) => {
@@ -58,13 +69,15 @@ async function onLogout() {
     </button>
     <nav v-if="isAuthenticated" id="app-nav" class="session" :class="{ open: isMenuOpen }" :aria-label="t('layout.nav.label')">
       <BandSwitcher v-if="bands.isLoaded" />
-      <RouterLink v-if="bands.activeId" :to="{ name: 'releases', params: { bandId: bands.activeId } }">{{ t('layout.nav.releases') }}</RouterLink>
-      <RouterLink v-if="bands.activeId" :to="{ name: 'setlists', params: { bandId: bands.activeId } }">{{ t('layout.nav.setlists') }}</RouterLink>
-      <RouterLink v-if="bands.activeId" :to="{ name: 'activity', params: { bandId: bands.activeId } }">{{ t('layout.nav.activity') }}</RouterLink>
-      <RouterLink v-if="bands.activeId" :to="{ name: 'band-members', params: { bandId: bands.activeId } }">{{ t('layout.nav.members') }}</RouterLink>
-      <RouterLink v-if="bands.activeId && bands.can('write')" :to="{ name: 'trash', params: { bandId: bands.activeId } }">{{ t('layout.nav.trash') }}</RouterLink>
-      <RouterLink v-if="bands.activeId && bands.can('admin')" :to="{ name: 'billing', params: { bandId: bands.activeId } }">{{ t('layout.nav.billing') }}</RouterLink>
-      <RouterLink v-if="bands.activeId && bands.can('admin')" :to="{ name: 'audit', params: { bandId: bands.activeId } }">{{ t('layout.nav.audit') }}</RouterLink>
+      <!-- Onglet « Morceaux » : la liste des morceaux du groupe, jusqu'ici atteinte seulement par le logo -->
+      <RouterLink v-if="bands.activeId" :class="{ active: section === 'songs' }" :to="{ name: 'songs', params: { bandId: bands.activeId } }">{{ t('layout.nav.songs') }}</RouterLink>
+      <RouterLink v-if="bands.activeId" :class="{ active: section === 'releases' }" :to="{ name: 'releases', params: { bandId: bands.activeId } }">{{ t('layout.nav.releases') }}</RouterLink>
+      <RouterLink v-if="bands.activeId" :class="{ active: section === 'setlists' }" :to="{ name: 'setlists', params: { bandId: bands.activeId } }">{{ t('layout.nav.setlists') }}</RouterLink>
+      <RouterLink v-if="bands.activeId" :class="{ active: section === 'activity' }" :to="{ name: 'activity', params: { bandId: bands.activeId } }">{{ t('layout.nav.activity') }}</RouterLink>
+      <RouterLink v-if="bands.activeId" :class="{ active: section === 'band-members' }" :to="{ name: 'band-members', params: { bandId: bands.activeId } }">{{ t('layout.nav.members') }}</RouterLink>
+      <RouterLink v-if="bands.activeId && bands.can('write')" :class="{ active: section === 'trash' }" :to="{ name: 'trash', params: { bandId: bands.activeId } }">{{ t('layout.nav.trash') }}</RouterLink>
+      <RouterLink v-if="bands.activeId && bands.can('admin')" :class="{ active: section === 'billing' }" :to="{ name: 'billing', params: { bandId: bands.activeId } }">{{ t('layout.nav.billing') }}</RouterLink>
+      <RouterLink v-if="bands.activeId && bands.can('admin')" :class="{ active: section === 'audit' }" :to="{ name: 'audit', params: { bandId: bands.activeId } }">{{ t('layout.nav.audit') }}</RouterLink>
       <RouterLink :to="{ name: 'account' }" class="muted account-link" :title="t('layout.nav.account')">{{ user?.email }}</RouterLink>
       <button type="button" class="secondary" @click="onLogout">{{ t('layout.nav.logout') }}</button>
     </nav>
@@ -98,6 +111,8 @@ async function onLogout() {
 .brand { font-weight: 700; text-decoration: none; font-size: 1.2rem; }
 .session { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; min-width: 0; }
 .account-link { overflow-wrap: anywhere; }
+/* L'onglet de la page affichée */
+.session > a.active { font-weight: 600; text-decoration: underline; text-underline-offset: .3em; }
 .menu-toggle { display: none; }
 .app-main { max-width: 900px; margin: 0 auto; padding: 1.5rem 1.5rem 2rem; }
 /* #5 : la marge basse laisse la place au lecteur audio, fixé en bas de l'écran (#14 : et à la barre d'accueil de l'iPhone) */

@@ -7,6 +7,7 @@ import type { Track } from '../track'
 class FakeAudio extends EventTarget implements AudioLike {
   src = ''
   currentTime = 0
+  volume = 1
   duration = 240
   play = vi.fn<() => Promise<void>>(async () => { this.dispatchEvent(new Event('play')) })
   pause = vi.fn<() => void>(() => { this.dispatchEvent(new Event('pause')) })
@@ -20,6 +21,7 @@ describe('playerStore', () => {
   let player: ReturnType<typeof usePlayerStore>
 
   beforeEach(() => {
+    localStorage.clear()                                  // le volume est gardé d'un test à l'autre
     setActivePinia(createPinia())
     audio = new FakeAudio()
     player = usePlayerStore()
@@ -99,5 +101,27 @@ describe('playerStore', () => {
     player.detach()
     audio.dispatchEvent(new Event('play'))
     expect(player.isPlaying).toBe(false)
+  })
+
+  it('règle le volume, coupe et rétablit le son, et s’en souvient sur l’appareil', () => {
+    player.setVolume(0.4)
+    expect(audio.volume).toBe(0.4)
+
+    player.toggleMute()
+    expect(audio.volume).toBe(0)
+    expect(player.volume).toBe(0.4)                       // le niveau choisi est gardé pour le retour du son
+    player.setVolume(0.6)                                 // monter le volume rétablit le son
+    expect([player.muted, audio.volume]).toEqual([false, 0.6])
+
+    player.setVolume(3)
+    expect(player.volume).toBe(1)
+
+    player.setVolume(0.3)
+    player.toggleMute()
+    setActivePinia(createPinia())
+    const next = usePlayerStore()
+    const element = new FakeAudio()
+    next.attach(element)
+    expect([next.volume, next.muted, element.volume]).toEqual([0.3, true, 0])
   })
 })

@@ -71,6 +71,8 @@ const zoom = ref(view.zoom)
 const staffView = ref<StaffView>('file')
 const panelOpen = ref(view.panelOpen)
 const panelHeight = ref<number | null>(view.panelHeight)
+/** Volume général (piste « Général » du panneau), de 0 à 1 : le synthétiseur d'alphaTab, ou la maquette suivie. */
+const masterVolume = ref(view.masterVolume)
 /** Les portées enregistrées sont posées sur la partition avant son premier rendu : rien à redessiner. */
 let staffViewRestored = false
 const metronome = ref(false)
@@ -351,6 +353,11 @@ watch(staffView, (value, previous) => {
 watch(panelOpen, (open) => saveViewPrefs({ panelOpen: open }))
 watch(panelHeight, (height) => saveViewPrefs({ panelHeight: height }))
 watch(settingsOpen, (open) => saveViewPrefs({ settingsOpen: open }))
+watch(media, () => applyMaster())                          // la maquette suivie démarre au volume général
+watch(masterVolume, (value) => {
+  applyMaster()
+  saveViewPrefs({ masterVolume: value })
+})
 // #33 : tempo et mix, gardés pour ce fichier
 watch(() => ({ speed: speed.value, mute: [...mixer.mute], solo: [...mixer.solo], volume: [...mixer.volume] }), (prefs) => {
   if (fileId.value && tracks.value.length > 0 && prefs.mute.length === tracks.value.length) saveFilePrefs(fileId.value, prefs)
@@ -414,11 +421,21 @@ function toggleSolo(index: number) {
 /** #33 : redonne à alphaTab le mix gardé (seulement ce qui diffère du fichier). */
 function applyMixer() {
   if (!api) return
+  applyMaster()
   tracks.value.forEach((track, i) => {
     if (mixer.mute[i]) api!.changeTrackMute([track], true)
     if (mixer.solo[i]) api!.changeTrackSolo([track], true)
     if (mixer.volume[i] !== undefined && mixer.volume[i] !== 1) api!.changeTrackVolume([track], mixer.volume[i]!)
   })
+}
+
+/**
+ * Volume général : alphaTab l'applique à son synthétiseur ; la maquette suivie (#29) le reçoit directement,
+ * l'élément <audio> n'acceptant que 0 à 1.
+ */
+function applyMaster() {
+  if (api) api.masterVolume = masterVolume.value
+  if (media.value) media.value.volume = masterVolume.value
 }
 
 /** #31 : volume d'une piste, de 0 à 2 fois celui du fichier (alphaTab : 1 = tel quel). */
@@ -760,6 +777,7 @@ defineExpose({ goToBar, position })
     <!-- #31 : les pistes, collées en bas de l'écran pendant que la partition défile -->
     <TabTrackPanel v-if="status === 'ready' && tracks.length > 0" v-model:open="panelOpen" v-model:height="panelHeight" :tracks="tracks" :shown="shown"
                    :mute="mixer.mute" :solo="mixer.solo" :volume="mixer.volume" :current-bar="currentBar" :bar-count="barCount" :time="timeText"
+                   v-model:master="masterVolume"
                    :disabled="followsAudio" @toggle-shown="toggleShown" @toggle-mute="toggleMute" @toggle-solo="toggleSolo"
                    @volume="setVolume" @go-to-bar="goToBar" />
   </section>

@@ -7,11 +7,39 @@ import { t } from '@/shared/i18n'
 export interface AudioLike {
   src: string
   currentTime: number
+  volume: number
   readonly duration: number
   play(): Promise<void>
   pause(): void
   addEventListener(type: string, listener: () => void): void
   removeEventListener(type: string, listener: () => void): void
+}
+
+/**
+ * Volume du lecteur audio, de 0 à 1, et coupure du son : gardés sur cet appareil (localStorage), comme les
+ * réglages du lecteur Guitar Pro. Un stockage bloqué ou une valeur abîmée donne le volume plein, sans erreur.
+ */
+const VOLUME_KEY = 'songvault.player.volume'
+
+function loadVolume(): { volume: number; muted: boolean } {
+  try {
+    const stored: unknown = JSON.parse(localStorage.getItem(VOLUME_KEY) ?? 'null')
+    const value = stored !== null && typeof stored === 'object' ? stored as Record<string, unknown> : {}
+    return {
+      volume: typeof value.volume === 'number' && value.volume >= 0 && value.volume <= 1 ? value.volume : 1,
+      muted: value.muted === true,
+    }
+  } catch {
+    return { volume: 1, muted: false }
+  }
+}
+
+function saveVolume(volume: number, muted: boolean) {
+  try {
+    localStorage.setItem(VOLUME_KEY, JSON.stringify({ volume, muted }))
+  } catch {
+    // stockage plein ou bloqué : le volume vaut pour la séance seulement
+  }
 }
 
 export const usePlayerStore = defineStore('player', () => {
@@ -20,6 +48,9 @@ export const usePlayerStore = defineStore('player', () => {
   const currentTime = ref(0)
   const duration = ref(0)
   const error = ref<string | null>(null)
+  const storedVolume = loadVolume()
+  const volume = ref(storedVolume.volume)
+  const muted = ref(storedVolume.muted)
 
   let audio: AudioLike | null = null          // privé et NON réactif
   let pendingStart: number | null = null      // position à appliquer quand la piste sera chargée
@@ -47,6 +78,7 @@ export const usePlayerStore = defineStore('player', () => {
   function attach(element: AudioLike) {
     detach()
     audio = element
+    applyVolume()
     for (const [type, handler] of Object.entries(handlers)) element.addEventListener(type, handler)
   }
 
@@ -123,14 +155,36 @@ export const usePlayerStore = defineStore('player', () => {
     if (wasPlaying) await resume()
   }
 
-  /** Arrête la lecture et masque le lecteur (déconnexion). */
-function stop() {
-  audio?.pause()
-  track.value = null
-  currentTime.value = 0
-  duration.value = 0
-  error.value = null
-}
+  function applyVolume() {
+    if (audio) audio.volume = muted.value ? 0 : volume.value
+  }
 
-    return { track, isPlaying, currentTime, duration, error, attach, detach, play, playAt, pause, toggle, seek, skip, switchTo, stop }
+  /** Règle le volume (0 à 1) ; monter le volume rétablit le son coupé. */
+  function setVolume(value: number) {
+    volume.value = Math.min(Math.max(value, 0), 1)
+    if (volume.value > 0) muted.value = false
+    applyVolume()
+    saveVolume(volume.value, muted.value)
+  }
+
+  /** Coupe ou rétablit le son, en gardant le volume choisi. */
+  function toggleMute() {
+    muted.value = !muted.value
+    applyVolume()
+    saveVolume(volume.value, muted.value)
+  }
+
+  /** Arrête la lecture et masque le lecteur (déconnexion). */
+  function stop() {
+    audio?.pause()
+    track.value = null
+    currentTime.value = 0
+    duration.value = 0
+    error.value = null
+  }
+
+  return {
+    track, isPlaying, currentTime, duration, error, volume, muted,
+    attach, detach, play, playAt, pause, toggle, seek, skip, switchTo, stop, setVolume, toggleMute,
+  }
 })

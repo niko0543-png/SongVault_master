@@ -85,7 +85,8 @@ docker compose down -v       # supprime aussi la base et les fichiers
   Jusqu'à 2 Go, **envoyés directement au stockage** (Azure Blob) par une URL signée, avec la
   progression ; extension, taille et **signature binaire** vérifiées à la confirmation.
 - **Lecteur audio global** qui reste actif d'une page à l'autre, avec déplacement dans le
-  morceau (requêtes HTTP `Range`) et raccourci clavier lecture/pause.
+  morceau (requêtes HTTP `Range`), raccourci clavier lecture/pause, et volume et muet gardés sur
+  l'appareil ([ADR 0045](docs/adr/0045-onglet-morceaux-et-volumes.md)).
 - **Comparaison A/B** de deux versions d'un même morceau, avec une URL partageable, et leurs
   différences : lignes ajoutées et supprimées des paroles et des notes, champs et fichiers modifiés.
 - **Commentaires horodatés** sur les fichiers audio (« à 1:42, la basse décale ») : un clic
@@ -160,7 +161,8 @@ docker compose down -v       # supprime aussi la base et les fichiers
   ([ADR 0033](docs/adr/0033-interface-multilingue.md)).
 - **Lecteur Guitar Pro** : la partition et la tablature d'un fichier Guitar Pro (GP3 à GP8)
   s'affichent et se jouent dans la page, avec tempo ralenti, boucle, transposition, muet et solo
-  par piste, sans jamais toucher au fichier ([ADR 0034](docs/adr/0034-lecteur-guitar-pro.md)).  
+  par piste, volume général de toutes les pistes, sans jamais toucher au fichier
+  ([ADR 0034](docs/adr/0034-lecteur-guitar-pro.md), [ADR 0045](docs/adr/0045-onglet-morceaux-et-volumes.md)).  
 - **Comparaison Guitar Pro** : dans l'écran A/B, un résumé des modifications s'affiche à côté de
   chaque fichier Guitar Pro ; « Afficher les modifs » ouvre le lecteur avec la nouvelle partition (ajouts
   en vert, modifications en orange) ou l'ancienne (ce qui a été retiré en rouge), et la liste mesure

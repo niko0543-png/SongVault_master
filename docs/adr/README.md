@@ -48,4 +48,5 @@ l'ancien, qui passe au statut « remplacé par ADR NNNN ».
 | [0040](0040-finitions-du-lecteur-guitar-pro.md) | Finitions du lecteur Guitar Pro : temps, icônes, double-clic, accès direct | accepté |
 | [0041](0041-barre-facon-guitar-pro.md) | Barre du lecteur façon Guitar Pro et panneau des pistes redimensionnable | accepté |
 | [0042](0042-modifications-guitar-pro-a-cote-du-fichier.md) | Modifications Guitar Pro résumées à côté du fichier, détail dans le lecteur | accepté |
+| [0045](0045-onglet-morceaux-et-volumes.md) | Onglet « Morceaux » et réglages de volume (lecteur audio, piste « Général » du lecteur Guitar Pro) | accepté |
 | [0043](0043-comparaison-guitar-pro-vert-et-rouge.md) | Comparaison Guitar Pro : ajouté en vert, modifié en orange, retiré en rouge, pistes en bas | accepté |
