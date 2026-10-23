@@ -1,6 +1,6 @@
 import { request } from '@/shared/api/httpClient'
 import { bandPath } from '@/shared/api/bandPath'
-import type { SongVersion, SongVersionInput, SongVersionStatus, SongVersionSummary } from '../types'
+import type { CreateSongVersionInput, SongVersion, SongVersionInput, SongVersionStatus, SongVersionSummary } from '../types'
 
 const base = (songId: string) => bandPath(`/songs/${songId}/versions`)
 
@@ -12,7 +12,7 @@ function get(songId: string, versionId: string) {
   return request<SongVersion>(`${base(songId)}/${versionId}`)
 }
 
-function create(songId: string, input: SongVersionInput) {
+function create(songId: string, input: CreateSongVersionInput) {
   return request<SongVersion>(base(songId), { method: 'POST', body: input })
 }
 

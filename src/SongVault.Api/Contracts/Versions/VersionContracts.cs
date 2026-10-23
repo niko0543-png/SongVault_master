@@ -12,7 +12,12 @@ public sealed record CreateSongVersionRequest(
     [MaxLength(SongVersion.NotesMaxLength)] string? Notes,
     [MaxLength(SongVersion.LyricsMaxLength)] string? Lyrics,
     [Range(SongVersion.MinBpm, SongVersion.MaxBpm)] int? Bpm,     // NOUVEAU
-    [MaxLength(MusicalKey.MaxLength)] string? Key);               // NOUVEAU
+    [MaxLength(MusicalKey.MaxLength)] string? Key,                // NOUVEAU
+    Guid? CopyFromVersionId = null,                               // ADR 0046 : fichiers repris d'une autre version
+    [MaxLength(CreateSongVersionRequest.MaxCopiedFiles)] IReadOnlyList<Guid>? CopyFileIds = null)
+{
+    public const int MaxCopiedFiles = 100;
+}
 
 public sealed record UpdateSongVersionRequest(
     [Required, MaxLength(SongVersion.TitleMaxLength)] string Title,

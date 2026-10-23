@@ -86,6 +86,38 @@ public sealed class SongVersion : ISoftDeletable
         return file;
     }
 
+    /// <summary>
+    /// Reprend des fichiers d'une autre version du même morceau (ADR 0046) : clé = fichier d'origine en place,
+    /// valeur = clé de stockage de sa copie. Les pistes du mélangeur et les calages de tablature suivent
+    /// quand tous leurs fichiers sont repris. Les copies sont rendues dans l'ordre de la version d'origine.
+    /// </summary>
+    public IReadOnlyList<SongFile> CarryOverFiles(SongVersion source, IReadOnlyDictionary<Guid, string> storageKeys,
+        DateTimeOffset now)
+    {
+        // 1. TOUT valider…
+        if (source.SongId != SongId || source.Id == Id)
+            throw new DomainException("Les fichiers repris viennent d'une autre version de ce morceau.");
+        var picked = source._files.Where(f => !f.IsDeleted && storageKeys.ContainsKey(f.Id)).ToList();
+        if (picked.Count != storageKeys.Count)
+            throw new DomainException("Un fichier repris doit être un fichier en place de la version d'origine.");
+
+        // 2. … PUIS affecter
+        var copies = picked.ToDictionary(f => f.Id,
+            f => AddFile(f.OriginalFileName, storageKeys[f.Id], f.ContentType, f.SizeBytes, f.FileType, now));
+
+        var stems = picked.Where(f => f.IsStem).OrderBy(f => f.StemPosition).ToList();
+        if (!_files.Any(f => !f.IsDeleted && f.IsStem))           // un mélangeur déjà réglé ici n'est pas remplacé
+        {
+            for (var i = 0; i < stems.Count; i++)
+                copies[stems[i].Id].SetStem(stems[i].StemName!, i);
+        }
+        foreach (var tablature in picked.Where(f => f.SyncAudioFileId is { } audio && copies.ContainsKey(audio)))
+            copies[tablature.Id].SetSync(copies[tablature.SyncAudioFileId!.Value].Id, [.. tablature.SyncPoints!]);
+
+        UpdatedAt = now;
+        return [.. picked.Select(f => copies[f.Id])];
+    }
+
     /// <summary>Met un fichier de cette version à la corbeille (#20) ; null s'il n'y est pas, ou plus.</summary>
     public SongFile? TrashFile(Guid fileId, string userId, DateTimeOffset now)
     {
