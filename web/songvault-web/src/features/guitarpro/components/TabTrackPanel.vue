@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import type { model } from '@coderline/alphatab'
+import { PANEL_HEIGHT } from '../prefs'
 import { t } from '@/shared/i18n'
 
 /**
@@ -8,6 +9,7 @@ import { t } from '@/shared/i18n'
  * Par piste : affichée ou non, muet, solo, volume ; à droite, la vue d'ensemble des mesures (case pleine = notes
  * jouées, à la couleur de la piste dans le fichier). Un clic sur une case place la partition sur la mesure.
  * Le composant ne parle pas à alphaTab : il émet, et GuitarProViewer agit.
+ * #35 : la poignée du haut change la hauteur des pistes (glisser, ou ↑ ↓ au clavier), gardée par GuitarProViewer.
  */
 const props = defineProps<{
   tracks: model.Track[]
@@ -35,6 +37,8 @@ const CELL = 16
 
 /** #33 : replié ou non ; GuitarProViewer le garde sur l'appareil. */
 const open = defineModel<boolean>('open', { default: true })
+/** #35 : hauteur des pistes en px ; null = celle par défaut (40 % de l'écran au plus). */
+const height = defineModel<number | null>('height', { default: null })
 const overview = ref<HTMLElement | null>(null)
 const anySolo = computed(() => props.solo.some(Boolean))
 /** #34 : une seule piste : ni case (elle reste affichée) ni muet/solo, mais le volume et la vue d'ensemble. */
@@ -48,6 +52,37 @@ const colorOf = (track: model.Track) => track.color?.rgba ?? '#8a8a8a'
 const numbered = (b: number) => b === 0 || (b + 1) % 4 === 0
 const silent = (i: number) => props.mute[i] || (anySolo.value && !props.solo[i])
 
+// #35 : redimensionner, comme le séparateur de Guitar Pro entre la partition et les pistes
+const body = ref<HTMLElement | null>(null)
+const KEY_STEP = 24
+const maxHeight = () => Math.min(PANEL_HEIGHT.max, Math.round(window.innerHeight * 0.75))
+const clampHeight = (value: number) => Math.round(Math.max(PANEL_HEIGHT.min, Math.min(maxHeight(), value)))
+const bodyStyle = computed(() => (height.value === null ? undefined : { height: `${height.value}px`, maxHeight: 'none' }))
+let drag: { y: number; height: number } | null = null
+
+function startResize(event: PointerEvent) {
+  if (!body.value) return
+  drag = { y: event.clientY, height: body.value.getBoundingClientRect().height }
+  ;(event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId)
+  event.preventDefault()                                      // pas de sélection de texte pendant le glissé
+}
+
+function resize(event: PointerEvent) {
+  if (drag) height.value = clampHeight(drag.height + drag.y - event.clientY)   // vers le haut = plus grand
+}
+
+function endResize() {
+  drag = null
+}
+
+function resizeByKey(event: KeyboardEvent) {
+  const current = height.value ?? body.value?.getBoundingClientRect().height ?? PANEL_HEIGHT.min
+  const next = { ArrowUp: current + KEY_STEP, ArrowDown: current - KEY_STEP, Home: maxHeight(), End: PANEL_HEIGHT.min }[event.key]
+  if (next === undefined) return
+  event.preventDefault()
+  height.value = clampHeight(next)
+}
+
 // La mesure jouée reste visible dans la vue d'ensemble
 watch(() => props.currentBar, (bar) => {
   const box = overview.value
@@ -59,6 +94,11 @@ watch(() => props.currentBar, (bar) => {
 
 <template>
   <section class="track-panel" :aria-label="t('guitarpro.viewer.tracks')" data-testid="tab-tracks">
+    <!-- #35 : poignée de redimensionnement (séparateur réglable : glisser, ou flèches haut et bas) -->
+    <div v-if="open" class="grip" role="separator" tabindex="0" aria-orientation="horizontal" data-testid="tab-tracks-resize"
+         :aria-label="t('guitarpro.viewer.resizeTracks')" :aria-valuemin="PANEL_HEIGHT.min" :aria-valuemax="PANEL_HEIGHT.max"
+         :aria-valuenow="height ?? undefined" @pointerdown="startResize" @pointermove="resize" @pointerup="endResize"
+         @pointercancel="endResize" @keydown="resizeByKey" @dblclick="height = null" />
     <div class="head">
       <button type="button" class="toggle" :aria-expanded="open" data-testid="tab-tracks-toggle" @click="open = !open">
         {{ t('guitarpro.viewer.tracks') }} <span aria-hidden="true">{{ open ? '▾' : '▴' }}</span>
@@ -66,7 +106,7 @@ watch(() => props.currentBar, (bar) => {
       <output>{{ t('guitarpro.viewer.bar', { bar: currentBar, total: barCount }) }}<template v-if="time"> · {{ time }}</template></output>
     </div>
 
-    <div v-if="open" class="body">
+    <div v-if="open" ref="body" class="body" :style="bodyStyle" data-testid="tab-tracks-body">
       <ul class="list">
         <li v-for="(track, i) in tracks" :key="i" class="row" :class="{ silent: silent(i) }">
           <span class="swatch" :style="{ background: colorOf(track) }" aria-hidden="true" />
@@ -108,6 +148,10 @@ watch(() => props.currentBar, (bar) => {
 /* Collé en bas de l'écran (au-dessus du lecteur audio s'il est ouvert) tant que la tablature est à l'écran */
 .track-panel { position: sticky; bottom: var(--audio-player-height, 0px); z-index: 5;
                background: #2b2b30; color: #e8e8ec; border-radius: 4px; box-shadow: 0 -2px 8px rgb(0 0 0 / 25%); }
+.grip { height: 8px; margin-bottom: -4px; cursor: ns-resize; touch-action: none; border-radius: 4px 4px 0 0; position: relative; }
+.grip::after { content: ''; position: absolute; left: 50%; top: 3px; width: 36px; height: 3px; margin-left: -18px;
+               border-radius: 2px; background: #6a6a74; }
+.grip:hover::after, .grip:focus-visible::after { background: #c8c8d0; }
 .head { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: .25rem .5rem; }
 .toggle { background: none; border: 0; color: inherit; font-weight: 600; padding: .25rem .5rem; }
 .head output { font-size: .85rem; color: #b8b8c0; font-variant-numeric: tabular-nums; }

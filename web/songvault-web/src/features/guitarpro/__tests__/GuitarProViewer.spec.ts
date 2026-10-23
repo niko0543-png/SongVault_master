@@ -145,8 +145,8 @@ describe('GuitarProViewer (#28)', () => {
   it('ralentit, boucle et transpose sans toucher au fichier', async () => {
     const wrapper = await mountViewer()
 
-    await wrapper.get('[data-testid="tab-tempo"]').setValue('0.75')
-    await wrapper.get('[data-testid="tab-loop"]').setValue(true)
+    for (let i = 0; i < 5; i++) await wrapper.get('[data-testid="tab-slower"]').trigger('click')
+    await wrapper.get('[data-testid="tab-loop"]').trigger('click')
     expect(api().playbackSpeed).toBe(0.75)
     expect(api().isLooping).toBe(true)
 
@@ -154,11 +154,12 @@ describe('GuitarProViewer (#28)', () => {
     await byLabel(wrapper, 'Un demi-ton plus haut').trigger('click')
     expect(api().changeTrackTranspositionPitch).toHaveBeenLastCalledWith(api().score!.tracks, 2)
     expect(api().settings.notation.transpositionPitches).toEqual([2])
-    expect(wrapper.get('[data-testid="tab-transpose"]').text()).toBe('+2 demi-tons')
+    expect(wrapper.get('[data-testid="tab-transpose"]').text()).toBe('+2')
+    expect(wrapper.get('[data-testid="tab-transpose"]').attributes('aria-label')).toBe('+2 demi-tons')
 
     await byLabel(wrapper, 'Un demi-ton plus bas').trigger('click')
     await byLabel(wrapper, 'Un demi-ton plus bas').trigger('click')
-    expect(wrapper.get('[data-testid="tab-transpose"]').text()).toBe('Tonalité du fichier')
+    expect(wrapper.get('[data-testid="tab-transpose"]').attributes('aria-label')).toBe('Tonalité du fichier')
   })
 
   it('choisit les pistes affichées, et coupe ou isole une piste à l’écoute', async () => {
@@ -227,10 +228,11 @@ describe('GuitarProViewer façon Guitar Pro (#31)', () => {
   it('active le métronome et le décompte', async () => {
     const wrapper = await mountViewer()
 
-    await wrapper.get('[data-testid="tab-metronome"]').setValue(true)
-    await wrapper.get('[data-testid="tab-count-in"]').setValue(true)
+    await wrapper.get('[data-testid="tab-metronome"]').trigger('click')
+    await wrapper.get('[data-testid="tab-count-in"]').trigger('click')
+    expect(wrapper.get('[data-testid="tab-metronome"]').attributes('aria-pressed')).toBe('true')
     expect([api().metronomeVolume, api().countInVolume]).toEqual([1, 1])
-    await wrapper.get('[data-testid="tab-metronome"]').setValue(false)
+    await wrapper.get('[data-testid="tab-metronome"]').trigger('click')
     expect(api().metronomeVolume).toBe(0)
   })
 })
@@ -269,12 +271,13 @@ describe('GuitarProViewer sur la page du lecteur (#32)', () => {
     press('ArrowRight')
     await nextTick()
     expect(api().tickPosition).toBe(3840)
-    expect(wrapper.get('[data-testid="tab-bar"]').text()).toBe('Mesure 2 sur 3')
+    expect(wrapper.get('[data-testid="tab-bar"]').attributes('aria-label')).toBe('Mesure 2 sur 3')
+    expect(wrapper.get('[data-testid="tab-bar"]').text()).toBe('2/3')
     press('ArrowLeft')
     expect(api().tickPosition).toBe(0)
     expect(api().highlightPlaybackRange).not.toHaveBeenCalled()      // se déplacer ne sélectionne pas
 
-    press(' ', wrapper.get('[data-testid="tab-tempo"]').element)    // un champ a le focus : la touche est à lui
+    press(' ', wrapper.get('[data-testid="tab-tempo-value"]').element)   // un bouton a le focus : la touche est à lui
     expect(api().playPause).toHaveBeenCalledTimes(1)
     window.removeEventListener('keydown', bottomPlayer)
     wrapper.unmount()
@@ -287,17 +290,20 @@ describe('GuitarProViewer sur la page du lecteur (#32)', () => {
     wrapper.unmount()
   })
 
-  it('règle le tempo de 25 à 150 %, et revient à 100 % d’un clic', async () => {
+  it('règle la vitesse par pas de 5 %, de 25 à 150 %, et revient à 100 % d’un clic sur la valeur', async () => {
     const wrapper = await mountViewer(['Guitare'], true)
-    const tempo = wrapper.get('[data-testid="tab-tempo"]')
-    expect([tempo.attributes('min'), tempo.attributes('max')]).toEqual(['0.25', '1.5'])
-    expect(wrapper.find('[data-testid="tab-tempo-reset"]').exists()).toBe(false)
+    const value = wrapper.get('[data-testid="tab-tempo-value"]')
 
-    await tempo.setValue('0.6')
+    for (let i = 0; i < 8; i++) await wrapper.get('[data-testid="tab-slower"]').trigger('click')
     expect(api().playbackSpeed).toBe(0.6)
-    expect(wrapper.get('[data-testid="tab-tempo-value"]').text()).toBe('60 %')
-    await wrapper.get('[data-testid="tab-tempo-reset"]').trigger('click')
+    expect(value.text()).toBe('60 %')
+    for (let i = 0; i < 20; i++) await wrapper.get('[data-testid="tab-slower"]').trigger('click')
+    expect(value.text()).toBe('25 %')
+    expect(wrapper.get('[data-testid="tab-slower"]').attributes('disabled')).toBeDefined()
+    await value.trigger('click')
     expect(api().playbackSpeed).toBe(1)
+    for (let i = 0; i < 20; i++) await wrapper.get('[data-testid="tab-faster"]').trigger('click')
+    expect(value.text()).toBe('150 %')
     wrapper.unmount()
   })
 })
@@ -357,7 +363,7 @@ describe('GuitarProViewer, confort de travail (#33)', () => {
     const first = await mountFile('f')
     await first.get('[data-testid="tab-zoom"]').setValue('1.25')
     await first.get('[data-testid="tab-staves"]').setValue('tab')
-    await first.get('[data-testid="tab-tempo"]').setValue('0.6')
+    for (let i = 0; i < 8; i++) await first.get('[data-testid="tab-slower"]').trigger('click')
     await byLabel(first, 'Couper Basse').trigger('click')
     await byLabel(first, 'Volume de Guitare').setValue('1.5')
     await first.get('[data-testid="tab-tracks-toggle"]').trigger('click')
@@ -419,10 +425,10 @@ describe('GuitarProViewer, confort de travail (#33)', () => {
 describe('GuitarProViewer, finitions (#34)', () => {
   it('affiche le temps écoulé et la durée, et des boutons à icône nommés', async () => {
     const wrapper = await mountViewer()
-    expect(wrapper.find('[data-testid="tab-time"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="tab-time"]').text()).toBe('00:00 / 00:00')
     api().playerPositionChanged.fire({ currentTime: 42_500, endTime: 151_000 })
     await nextTick()
-    expect(wrapper.get('[data-testid="tab-time"]').text()).toBe('0:42 / 2:31')
+    expect(wrapper.get('[data-testid="tab-time"]').text()).toBe('00:42 / 02:31')
     expect(wrapper.get('[data-testid="tab-stop"]').attributes('aria-label')).toBe('Revenir au début')
     expect(wrapper.find('[data-testid="tab-stop"] svg').exists()).toBe(true)
     expect(wrapper.find('[data-testid="tab-play"] svg').exists()).toBe(true)
@@ -438,6 +444,61 @@ describe('GuitarProViewer, finitions (#34)', () => {
     await wrapper.get('[data-testid="tab-score"]').trigger('dblclick')
     expect(api().play).toHaveBeenCalledTimes(1)
     wrapper.unmount()
+  })
+})
+
+describe('GuitarProViewer, barre façon Guitar Pro (#35)', () => {
+  it('l’écran montre la piste affichée, la mesure, le chiffrage et le tempo du fichier à la mesure jouée', async () => {
+    const wrapper = await mountViewer(['Guitare', 'Basse'])
+    const score = api().score as unknown as { tempo: number; tracks: { color?: { rgba: string } }[]; masterBars: unknown[] }
+    score.tempo = 120
+    score.tracks[1]!.color = { rgba: 'rgb(0, 0, 255)' }
+    score.masterBars = [
+      { index: 0, start: 0, timeSignatureNumerator: 4, timeSignatureDenominator: 4, tempoAutomations: [] },
+      { index: 1, start: 3840, timeSignatureNumerator: 4, timeSignatureDenominator: 4, tempoAutomations: [{ value: 170 }] },
+      { index: 2, start: 7680, timeSignatureNumerator: 7, timeSignatureDenominator: 8, tempoAutomations: [] },
+    ]
+    api().scoreLoaded.fire({ ...api().score })                          // partition relue : l'écran se recalcule
+    await nextTick()
+    expect(wrapper.get('[data-testid="tab-track-name"]').text()).toBe('1. Guitare')
+    expect(wrapper.get('[data-testid="tab-bpm"]').text()).toBe('♩ = 120')
+    expect(wrapper.get('[data-testid="tab-signature"]').text()).toBe('4/4')
+
+    api().playedBeatChanged.fire({ voice: { bar: { index: 2 } } })
+    await nextTick()
+    expect(wrapper.get('[data-testid="tab-bpm"]').text()).toBe('♩ = 170')      // le changement de tempo de la mesure 2 tient
+    expect(wrapper.get('[data-testid="tab-signature"]').text()).toBe('7/8')
+
+    await byLabel(wrapper, 'Afficher Guitare').trigger('change')               // seule la basse reste affichée
+    await byLabel(wrapper, 'Afficher Basse').trigger('change')
+    await byLabel(wrapper, 'Afficher Guitare').trigger('change')
+    expect(wrapper.get('[data-testid="tab-track-name"]').text()).toBe('2. Basse')
+    expect(wrapper.get('.stripe').attributes('style')).toContain('rgb(0, 0, 255)')
+    wrapper.unmount()
+  })
+
+  it('va à la mesure précédente, suivante ou à la dernière sans sélectionner', async () => {
+    const wrapper = await mountViewer()
+    api().score!.masterBars = [0, 3840, 7680].map((start, index) => ({ index, start }))
+    await wrapper.get('[data-testid="tab-next"]').trigger('click')
+    expect(api().tickPosition).toBe(3840)
+    await wrapper.get('[data-testid="tab-last"]').trigger('click')
+    expect(api().tickPosition).toBe(7680)
+    await wrapper.get('[data-testid="tab-prev"]').trigger('click')
+    expect(api().tickPosition).toBe(3840)
+    expect(api().highlightPlaybackRange).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it('sur la page du lecteur, les réglages restent repliés derrière ⋮ et l’appareil s’en souvient', async () => {
+    const first = await mountViewer(['Guitare'], true)
+    expect(first.get('[data-testid="tab-settings"]').classes()).not.toContain('open')
+    await first.get('[data-testid="tab-settings-toggle"]').trigger('click')
+    first.unmount()
+    const again = await mountViewer(['Guitare'], true)
+    expect(again.get('[data-testid="tab-settings-toggle"]').attributes('aria-expanded')).toBe('true')
+    expect(again.get('[data-testid="tab-settings"]').classes()).toContain('open')
+    again.unmount()
   })
 })
 
@@ -566,7 +627,8 @@ describe('GuitarProViewer calé sur une maquette (#29)', () => {
     api().playedBeatChanged.fire({ voice: { bar: { index: 1 } } })
     await nextTick()
 
-    expect(wrapper.get('[data-testid="tab-bar"]').text()).toBe('Mesure 2 sur 3')
+    expect(wrapper.get('[data-testid="tab-bar"]').attributes('aria-label')).toBe('Mesure 2 sur 3')
+    expect(wrapper.get('[data-testid="tab-bar"]').text()).toBe('2/3')
   })
 
   it('enregistre un calage au tapé, dans l’ordre de lecture (reprises comprises), puis suit la maquette', async () => {

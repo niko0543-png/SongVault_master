@@ -117,7 +117,7 @@ test('#32 : sur la page du lecteur, seule la partition défile ; commandes et pi
 
   // Les flèches vont à la dernière mesure : la partition défile dans son cadre, pas la page
   for (let i = 0; i < 15; i++) await page.keyboard.press('ArrowRight')
-  await expect(page.getByTestId('tab-bar')).toHaveText('Mesure 16 sur 16')
+  await expect(page.getByTestId('tab-bar')).toHaveAttribute('aria-label', 'Mesure 16 sur 16')
   await expect.poll(() => desk.evaluate((d) => d.scrollTop)).toBeGreaterThan(0)
   expect(await page.evaluate(() => window.scrollY)).toBe(0)
   await expect(play).toBeInViewport()
@@ -131,7 +131,7 @@ test('#32 : sur la page du lecteur, seule la partition défile ; commandes et pi
   await page.keyboard.press('Space')
   await expect(play).toHaveAccessibleName('Lire la tablature')
   await page.keyboard.press('l')
-  await expect(page.getByTestId('tab-loop')).toBeChecked()
+  await expect(page.getByTestId('tab-loop')).toHaveAttribute('aria-pressed', 'true')
   expect(violations).toEqual([])
   await page.close()
 })
@@ -140,6 +140,7 @@ test('#33 : boucle par numéros de mesures, et réglages repliés sur téléphon
   const page = await browser.newPage({ viewport: { width: 1280, height: 700 } })
   const violations = await open(page, 'demo-tracks.gp', '&fill=1')
   await expect(page.getByTestId('tab-play')).toBeEnabled({ timeout: 30_000 })
+  await page.getByTestId('tab-settings-toggle').click()                       // #35 : les réglages sont derrière ⋮
   await page.getByTestId('tab-loop-from').fill('3')
   await page.getByTestId('tab-loop-from').press('Tab')
   await page.getByTestId('tab-loop-to').fill('4')
@@ -168,9 +169,37 @@ test('#34 : un double-clic sur une note de la mesure 3 lance la lecture depuis e
   // Mesure 3, première ligne (à 90 à la noire, elle commence à 5,3 s : partie du début, la lecture n'y serait pas si vite)
   await page.getByTestId('tab-score').dblclick({ position: { x: 910, y: 180 } })
   await expect(play).toHaveAccessibleName('Mettre en pause')
-  await expect(page.getByTestId('tab-bar')).toHaveText('Mesure 3 sur 16', { timeout: 2_000 })
-  await expect(page.getByTestId('tab-time')).toHaveText(/^0:0[5-7] \/ 0:42$/, { timeout: 2_000 })
+  await expect(page.getByTestId('tab-bar')).toHaveAttribute('aria-label', 'Mesure 3 sur 16', { timeout: 2_000 })
+  await expect(page.getByTestId('tab-time')).toHaveText(/^00:0[5-7] \/ 00:42$/, { timeout: 2_000 })
   await play.click()
+  expect(violations).toEqual([])
+  await page.close()
+})
+
+test('#35 : la barre façon Guitar Pro, et le panneau des pistes qui se redimensionne à la souris', async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } })
+  const violations = await open(page, 'demo-tracks.gp', '&fill=1')
+  await expect(page.getByTestId('tab-play')).toBeEnabled({ timeout: 30_000 })
+  await expect(page.getByTestId('tab-track-name')).toHaveText('1. Guitare')
+  await expect(page.getByTestId('tab-bpm')).toHaveText('♩ = 90')
+  await expect(page.getByTestId('tab-signature')).toHaveText('4/4')
+  await page.getByTestId('tab-slower').click()
+  await expect(page.getByTestId('tab-tempo-value')).toHaveText('95 %')
+
+  // La poignée monte de 150 px : les pistes grandissent d'autant, la partition rétrécit, rien ne sort de l'écran
+  const body = page.getByTestId('tab-tracks-body')
+  const desk = page.getByTestId('tab-desk')
+  const before = (await body.boundingBox())!.height
+  const deskBefore = (await desk.boundingBox())!.height
+  const grip = (await page.getByTestId('tab-tracks-resize').boundingBox())!
+  await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2 - 150, { steps: 5 })
+  await page.mouse.up()
+  await expect.poll(async () => Math.round((await body.boundingBox())!.height - before)).toBe(150)
+  expect(Math.round(deskBefore - (await desk.boundingBox())!.height)).toBe(150)
+  const panel = (await page.getByTestId('tab-tracks').boundingBox())!
+  expect(panel.y + panel.height).toBeLessThanOrEqual(801)
   expect(violations).toEqual([])
   await page.close()
 })

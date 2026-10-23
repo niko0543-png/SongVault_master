@@ -8,7 +8,6 @@ import { useConfirm } from '@/shared/composables/useConfirm'
 import TabSyncRecorder from './TabSyncRecorder.vue'
 import TabTrackPanel from './TabTrackPanel.vue'
 import TransportIcon from './TransportIcon.vue'
-import { formatTime } from '@/shared/utils/format'
 import { syncApi } from '../sync/syncApi'
 import { playOrder, pointsFromTaps } from '../sync/syncPoints'
 import { connectExternalMedia } from '../sync/externalMedia'
@@ -34,6 +33,8 @@ import { t } from '@/shared/i18n'
  * et, sur téléphone, les réglages repliés derrière un bouton (ADR 0039).
  * #34 : temps écoulé, icônes de lecture, panneau des pistes dès une piste, « Son » dans la barre principale,
  * double-clic sur une note pour jouer depuis elle (ADR 0040).
+ * #35 : barre du haut façon Guitar Pro (transport, écran de la piste, boucle, vitesse, transposition) et panneau
+ * des pistes redimensionnable (ADR 0041).
  */
 const props = defineProps<{
   src?: string; score?: model.Score | null; track?: number; label: string; sync?: SyncContext; fill?: boolean
@@ -65,6 +66,7 @@ const view = loadViewPrefs()
 const zoom = ref(view.zoom)
 const staffView = ref<StaffView>('file')
 const panelOpen = ref(view.panelOpen)
+const panelHeight = ref<number | null>(view.panelHeight)
 /** Les portées enregistrées sont posées sur la partition avant son premier rendu : rien à redessiner. */
 let staffViewRestored = false
 const metronome = ref(false)
@@ -100,8 +102,40 @@ const soundPercent = ref<number | null>(null)
 // #34 : position de lecture, en millisecondes, et durée du morceau au tempo choisi
 const currentMs = ref(0)
 const endMs = ref(0)
-const timeText = computed(() => (endMs.value > 0 ? `${formatTime(currentMs.value / 1000)} / ${formatTime(endMs.value / 1000)}` : ''))
-const settingsOpen = ref(false)
+const timeText = computed(() => (endMs.value > 0 ? `${clock(currentMs.value)} / ${clock(endMs.value)}` : ''))
+const settingsOpen = ref(view.settingsOpen)
+
+// #35 : l'écran de la barre façon Guitar Pro : piste affichée, chiffrage et tempo de la mesure jouée
+const lcdTrack = computed(() => {
+  const index = shown.value[0] ?? 0
+  const track = tracks.value[index]
+  return track ? { label: `${index + 1}. ${track.name}`, color: track.color?.rgba ?? '#8a8a8a' } : null
+})
+/** La partition lue, pour que l'écran se recalcule à chaque lecture (api.score n'est pas réactif). */
+const loadedScore = shallowRef<model.Score | null>(null)
+const currentMaster = computed(() => loadedScore.value?.masterBars[currentBar.value - 1] ?? null)
+const signature = computed(() => {
+  const master = currentMaster.value
+  return master?.timeSignatureNumerator ? `${master.timeSignatureNumerator}/${master.timeSignatureDenominator}` : ''
+})
+/** Le tempo du fichier à la mesure jouée (le dernier changement de tempo rencontré), sans la vitesse choisie. */
+const bpm = computed(() => {
+  const score = loadedScore.value
+  if (!score?.tempo) return null
+  let tempo = score.tempo
+  for (const master of score.masterBars.slice(0, currentBar.value)) {
+    const change = master.tempoAutomations?.[master.tempoAutomations.length - 1]
+    if (change) tempo = change.value
+  }
+  return Math.round(tempo)
+})
+const transposeValue = computed(() => (transpose.value > 0 ? `+${transpose.value}` : String(transpose.value)))
+
+/** « 01:05 », comme l'écran de Guitar Pro. */
+function clock(ms: number) {
+  const total = Math.max(0, Math.floor(ms / 1000))
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
+}
 /** Le tempo et le mix se gardent par fichier ; la comparaison (#30) n'a pas de fichier à elle. */
 const fileId = computed(() => (props.score ? null : props.sync?.fileId ?? null))
 
@@ -119,6 +153,7 @@ onMounted(async () => {
     },
   })
   api.scoreLoaded.on((score) => {
+    loadedScore.value = score
     tracks.value = score.tracks
     const stored = fileId.value ? loadFilePrefs(fileId.value, score.tracks.length, { min: SPEED_MIN, max: SPEED_MAX }) : {}
     mixer.mute = stored.mute ?? score.tracks.map(() => false)
@@ -301,6 +336,8 @@ watch(staffView, (value, previous) => {
   api.render()
 })
 watch(panelOpen, (open) => saveViewPrefs({ panelOpen: open }))
+watch(panelHeight, (height) => saveViewPrefs({ panelHeight: height }))
+watch(settingsOpen, (open) => saveViewPrefs({ settingsOpen: open }))
 // #33 : tempo et mix, gardés pour ce fichier
 watch(() => ({ speed: speed.value, mute: [...mixer.mute], solo: [...mixer.solo], volume: [...mixer.volume] }), (prefs) => {
   if (fileId.value && tracks.value.length > 0 && prefs.mute.length === tracks.value.length) saveFilePrefs(fileId.value, prefs)
@@ -327,6 +364,12 @@ function stop() {
 /** #34 : un clic place le curseur sur la note (alphaTab) ; un double-clic lance la lecture depuis elle. */
 function playFromHere() {
   if (canPlay.value && !isPlaying.value && !recording.value) api?.play()
+}
+
+/** #35 : la vitesse se règle par pas de 5 %, comme dans Guitar Pro ; un clic sur la valeur revient à 100 %. */
+function changeSpeed(delta: number) {
+  const next = Math.round((speed.value + delta * SPEED_STEP) * 100) / 100
+  speed.value = Math.max(SPEED_MIN, Math.min(SPEED_MAX, next))
 }
 
 function step(delta: number) {
@@ -478,58 +521,104 @@ defineExpose({ goToBar })
     <template v-if="status === 'ready'">
       <!-- #32 : en plein cadre, les commandes restent au-dessus de la partition, qui défile seule -->
       <div class="controls">
-        <div class="toolbar">
-          <button type="button" class="play" data-testid="tab-play" :disabled="!canPlay" :aria-keyshortcuts="fill ? 'Space' : undefined"
-                  :aria-label="isPlaying ? t('guitarpro.viewer.pause') : t('guitarpro.viewer.play')" @click="playPause">
-            <TransportIcon :name="isPlaying ? 'pause' : 'play'" />
+        <!-- #35 : la barre de Guitar Pro : transport, écran de la piste, boucle, vitesse, transposition -->
+        <div class="gp-bar" data-testid="tab-gp-bar">
+          <div class="transport" role="group" :aria-label="t('guitarpro.viewer.transport')">
+            <button type="button" class="gp-btn" data-testid="tab-stop" :disabled="!canPlay" :aria-label="t('guitarpro.viewer.stop')"
+                    :title="t('guitarpro.viewer.stop')" :aria-keyshortcuts="fill ? 'Escape' : undefined" @click="stop">
+              <TransportIcon name="first" />
+            </button>
+            <button type="button" class="gp-btn" data-testid="tab-prev" :aria-label="t('guitarpro.viewer.prevBar')"
+                    :title="t('guitarpro.viewer.prevBar')" :aria-keyshortcuts="fill ? 'ArrowLeft' : undefined"
+                    @click="goToBar(currentBar - 2, false)">
+              <TransportIcon name="prev" />
+            </button>
+            <button type="button" class="gp-btn play" data-testid="tab-play" :disabled="!canPlay" :aria-keyshortcuts="fill ? 'Space' : undefined"
+                    :aria-label="isPlaying ? t('guitarpro.viewer.pause') : t('guitarpro.viewer.play')" @click="playPause">
+              <TransportIcon :name="isPlaying ? 'pause' : 'play'" />
+            </button>
+            <button type="button" class="gp-btn" data-testid="tab-next" :aria-label="t('guitarpro.viewer.nextBar')"
+                    :title="t('guitarpro.viewer.nextBar')" :aria-keyshortcuts="fill ? 'ArrowRight' : undefined"
+                    @click="goToBar(currentBar, false)">
+              <TransportIcon name="next" />
+            </button>
+            <button type="button" class="gp-btn" data-testid="tab-last" :aria-label="t('guitarpro.viewer.lastBar')"
+                    :title="t('guitarpro.viewer.lastBar')" @click="goToBar(barCount - 1, false)">
+              <TransportIcon name="last" />
+            </button>
+          </div>
+
+          <!-- L'écran : piste affichée, métronome, décompte, réglages ; mesure, chiffrage, temps et tempo -->
+          <div class="lcd" data-testid="tab-lcd">
+            <span class="stripe" :style="{ background: lcdTrack?.color }" aria-hidden="true" />
+            <div class="lcd-row">
+              <span class="track-name" data-testid="tab-track-name">{{ lcdTrack?.label }}</span>
+              <button type="button" class="lcd-btn" data-testid="tab-count-in" :aria-pressed="countIn" :disabled="followsAudio"
+                      :aria-label="t('guitarpro.viewer.countIn')" :title="t('guitarpro.viewer.countIn')" @click="countIn = !countIn">
+                <TransportIcon name="countIn" />
+              </button>
+              <button type="button" class="lcd-btn" data-testid="tab-metronome" :aria-pressed="metronome" :disabled="followsAudio"
+                      :aria-label="t('guitarpro.viewer.metronome')" :title="t('guitarpro.viewer.metronome')" @click="metronome = !metronome">
+                <TransportIcon name="metronome" />
+              </button>
+              <button v-if="fill" type="button" class="lcd-btn" data-testid="tab-settings-toggle" aria-controls="tab-settings"
+                      :aria-expanded="settingsOpen" :aria-label="t('guitarpro.viewer.settings')" :title="t('guitarpro.viewer.settings')"
+                      @click="settingsOpen = !settingsOpen">
+                <TransportIcon name="menu" />
+              </button>
+            </div>
+            <div class="lcd-row figures">
+              <output data-testid="tab-bar" :aria-label="t('guitarpro.viewer.bar', { bar: currentBar, total: barCount })">{{ currentBar }}/{{ barCount }}</output>
+              <output v-if="signature" data-testid="tab-signature" :aria-label="t('guitarpro.viewer.signature', { signature })">{{ signature }}</output>
+              <output data-testid="tab-time">{{ clock(currentMs) }} / {{ clock(endMs) }}</output>
+              <output v-if="bpm" data-testid="tab-bpm" :aria-label="t('guitarpro.viewer.bpm', { bpm })">♩ = {{ bpm }}</output>
+            </div>
+          </div>
+
+          <button type="button" class="gp-pill" data-testid="tab-loop" :aria-pressed="loop" :aria-label="t('guitarpro.viewer.loop')"
+                  :title="t('guitarpro.viewer.loop')" :aria-keyshortcuts="fill ? 'L' : undefined" @click="loop = !loop">
+            <TransportIcon name="loop" />
           </button>
-          <button type="button" class="secondary icon" data-testid="tab-stop" :disabled="!canPlay" :aria-label="t('guitarpro.viewer.stop')"
-                  :title="t('guitarpro.viewer.stop')" :aria-keyshortcuts="fill ? 'Escape' : undefined" @click="stop">
-            <TransportIcon name="stop" />
-          </button>
+
+          <div class="gp-pill" role="group" :aria-label="t('guitarpro.viewer.tempo')">
+            <span class="note" aria-hidden="true">♩</span>
+            <button type="button" class="pill-value" data-testid="tab-tempo-value" :title="t('guitarpro.viewer.tempoReset')"
+                    :aria-label="t('guitarpro.viewer.speed', { speed: speedText })" @click="speed = 1">{{ speedText }}</button>
+            <span class="stepper">
+              <button type="button" data-testid="tab-faster" :aria-label="t('guitarpro.viewer.faster')" :disabled="speed >= SPEED_MAX"
+                      @click="changeSpeed(1)">▴</button>
+              <button type="button" data-testid="tab-slower" :aria-label="t('guitarpro.viewer.slower')" :disabled="speed <= SPEED_MIN"
+                      @click="changeSpeed(-1)">▾</button>
+            </span>
+          </div>
+
+          <div class="gp-pill" role="group" :aria-label="t('guitarpro.viewer.transpose')">
+            <TransportIcon name="fork" />
+            <output data-testid="tab-transpose" :aria-label="transposeText" :title="transposeText">{{ transposeValue }}</output>
+            <span class="stepper">
+              <button type="button" :aria-label="t('guitarpro.viewer.transposeUp')"
+                      :disabled="followsAudio || transpose >= MAX_TRANSPOSE" @click="step(1)">+</button>
+              <button type="button" :aria-label="t('guitarpro.viewer.transposeDown')"
+                      :disabled="followsAudio || transpose <= -MAX_TRANSPOSE" @click="step(-1)">−</button>
+            </span>
+          </div>
+
           <!-- #33 : la banque de sons pèse quelques mégaoctets : on montre où en est son téléchargement -->
-          <span v-if="!canPlay" class="inline muted" role="status" data-testid="tab-sound-loading">
+          <span v-if="!canPlay" class="gp-status" role="status" data-testid="tab-sound-loading">
             {{ soundPercent === null ? t('guitarpro.viewer.soundLoading') : t('guitarpro.viewer.soundLoadingPercent', { percent: soundPercent }) }}
             <progress v-if="soundPercent !== null" max="100" :value="soundPercent" aria-hidden="true" />
           </span>
-          <label class="inline"><input v-model="loop" type="checkbox" data-testid="tab-loop" :aria-keyshortcuts="fill ? 'L' : undefined"> {{ t('guitarpro.viewer.loop') }}</label>
-          <output class="muted" data-testid="tab-bar">{{ t('guitarpro.viewer.bar', { bar: currentBar, total: barCount }) }}</output>
-          <output v-if="timeText" class="muted time" data-testid="tab-time">{{ timeText }}</output>
-          <!-- #29, #34 : le son suivi se choisit dans la barre principale ; le calage reste dans les réglages -->
-          <label v-if="sync && !score && savedAudio" class="inline">
+          <!-- #29, #34 : le son suivi se choisit dans la barre ; le calage reste dans les réglages -->
+          <label v-if="sync && !score && savedAudio" class="gp-source">
             {{ t('guitarpro.sync.source') }}
             <select v-model="source" data-testid="tab-source" :disabled="recording">
               <option value="synth">{{ t('guitarpro.sync.synth') }}</option>
               <option value="audio">{{ t('guitarpro.sync.followAudio', { name: savedAudio.name }) }}</option>
             </select>
           </label>
-          <!-- #33 : sur téléphone, le reste des réglages se replie derrière ce bouton (CSS) -->
-          <button v-if="fill" type="button" class="secondary settings-toggle" data-testid="tab-settings-toggle"
-                  aria-controls="tab-settings" :aria-expanded="settingsOpen" @click="settingsOpen = !settingsOpen">
-            {{ t('guitarpro.viewer.settings') }}
-          </button>
         </div>
 
         <div id="tab-settings" class="settings" :class="{ open: settingsOpen || recording }" data-testid="tab-settings">
-          <div class="toolbar">
-            <label class="inline">
-              {{ t('guitarpro.viewer.tempo') }}
-              <input v-model.number="speed" class="tempo" type="range" :min="SPEED_MIN" :max="SPEED_MAX" :step="SPEED_STEP"
-                     data-testid="tab-tempo" :aria-valuetext="speedText">
-              <output data-testid="tab-tempo-value">{{ speedText }}</output>
-            </label>
-            <button v-if="speed !== 1" type="button" class="secondary" data-testid="tab-tempo-reset" @click="speed = 1">
-              {{ t('guitarpro.viewer.tempoReset') }}
-            </button>
-            <span class="inline" role="group" :aria-label="t('guitarpro.viewer.transpose')">
-              <button type="button" class="secondary" :aria-label="t('guitarpro.viewer.transposeDown')"
-                      :disabled="followsAudio || transpose <= -MAX_TRANSPOSE" @click="step(-1)">−</button>
-              <output data-testid="tab-transpose">{{ transposeText }}</output>
-              <button type="button" class="secondary" :aria-label="t('guitarpro.viewer.transposeUp')"
-                      :disabled="followsAudio || transpose >= MAX_TRANSPOSE" @click="step(1)">+</button>
-            </span>
-          </div>
-
           <!-- #33 : les mesures de la boucle, sans avoir à glisser sur la partition -->
           <div class="toolbar" role="group" :aria-label="t('guitarpro.viewer.loopBars')" data-testid="tab-loop-range">
             <label class="inline">
@@ -566,8 +655,6 @@ defineExpose({ goToBar })
                 <option v-for="v in STAFF_VIEWS" :key="v" :value="v">{{ t(`guitarpro.viewer.staffView.${v}`) }}</option>
               </select>
             </label>
-            <label class="inline"><input v-model="metronome" type="checkbox" data-testid="tab-metronome" :disabled="followsAudio"> {{ t('guitarpro.viewer.metronome') }}</label>
-            <label class="inline"><input v-model="countIn" type="checkbox" data-testid="tab-count-in" :disabled="followsAudio"> {{ t('guitarpro.viewer.countIn') }}</label>
           </div>
 
           <!-- #29 : suivre une maquette de la version, et la caler (Member ou Owner) -->
@@ -604,7 +691,7 @@ defineExpose({ goToBar })
     </div>
 
     <!-- #31 : les pistes, collées en bas de l'écran pendant que la partition défile -->
-    <TabTrackPanel v-if="status === 'ready' && tracks.length > 0 && !score" v-model:open="panelOpen" :tracks="tracks" :shown="shown"
+    <TabTrackPanel v-if="status === 'ready' && tracks.length > 0 && !score" v-model:open="panelOpen" v-model:height="panelHeight" :tracks="tracks" :shown="shown"
                    :mute="mixer.mute" :solo="mixer.solo" :volume="mixer.volume" :current-bar="currentBar" :bar-count="barCount" :time="timeText"
                    :disabled="followsAudio" @toggle-shown="toggleShown" @toggle-mute="toggleMute" @toggle-solo="toggleSolo"
                    @volume="setVolume" @go-to-bar="goToBar" />
@@ -619,19 +706,44 @@ defineExpose({ goToBar })
 .inline select { width: auto; }
 /* #33 : une case à cocher garde sa taille (la règle globale met les champs à 100 %) : le libellé tient sur une ligne */
 .inline input[type='checkbox'] { width: auto; margin: 0; }
-.play, .icon { min-width: 44px; min-height: 44px; display: inline-grid; place-items: center; padding: 0; }
-.time { font-variant-numeric: tabular-nums; }
 .hint { margin: 0; }
 .hint summary { cursor: pointer; width: fit-content; }
 .settings { display: grid; gap: .5rem; min-width: 0; }
 .bar-number { width: 4.5rem; }
-.settings-toggle { margin-left: auto; }
-/* #33 : sur grand écran, les réglages restent affichés ; sur téléphone, ils se replient derrière « Réglages » */
-@media (min-width: 720px) { .settings-toggle { display: none; } }
-@media (max-width: 719px) { .fill .settings:not(.open) { display: none; } }
+/* #35 : sur la page du lecteur, les réglages se déplient par le bouton ⋮ de l'écran, comme le menu de Guitar Pro */
+.fill .settings:not(.open) { display: none; }
 .controls { display: grid; gap: .5rem; min-width: 0; }
-.tempo { width: 8rem; padding: 0; }
 .inline output { min-width: 3.2rem; font-variant-numeric: tabular-nums; }
+/* #35 : la barre de Guitar Pro 8, gris foncé, avec son écran noir ; les boutons n'ont pas le style global */
+.gp-bar { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; padding: .4rem .6rem; border-radius: 4px;
+          background: #3a3a3f; color: #e8e8ec; }
+.transport { display: flex; align-items: center; gap: .1rem; }
+.gp-btn { display: inline-grid; place-items: center; min-width: 36px; min-height: 36px; padding: 0; border: 0;
+          border-radius: 50%; background: none; color: #e8e8ec; }
+.gp-btn:hover:not(:disabled), .lcd-btn:hover:not(:disabled), .stepper button:hover:not(:disabled) { background: rgb(255 255 255 / 12%); }
+.gp-btn.play { min-width: 44px; min-height: 44px; border: 2px solid currentColor; }
+.gp-btn.play :deep(svg) { width: 20px; height: 20px; }
+.lcd { position: relative; flex: 0 1 22rem; display: grid; gap: .15rem; padding: .3rem .6rem .3rem .9rem;
+       border-radius: 4px; background: #111114; color: #f2f2f2; font-variant-numeric: tabular-nums; min-width: 0; }
+.stripe { position: absolute; inset: 0 auto 0 0; width: 5px; border-radius: 4px 0 0 4px; }
+.lcd-row { display: flex; align-items: center; gap: .75rem; min-width: 0; }
+.track-name { flex: 1; min-width: 0; font-weight: 700; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.lcd-btn { padding: 2px; min-height: 0; border: 0; border-radius: 3px; background: none; color: #9a9aa2; }
+.lcd-btn[aria-pressed='true'], .lcd-btn[aria-expanded='true'] { background: #2f6fd6; color: #fff; }
+.figures { font-size: .85rem; color: #d0d0d6; }
+.gp-pill { display: inline-flex; align-items: center; gap: .35rem; min-height: 36px; padding: .2rem .45rem;
+           border: 1px solid #5a5a62; border-radius: 6px; background: #4a4a52; color: #e8e8ec; }
+button.gp-pill { padding: .2rem .6rem; }
+button.gp-pill[aria-pressed='true'] { background: #2f6fd6; border-color: #2f6fd6; color: #fff; }
+.gp-pill .note { font-size: 1.1rem; }
+.pill-value { min-width: 3.2rem; padding: 0 .2rem; border: 0; background: none; color: inherit; font-variant-numeric: tabular-nums; }
+.gp-pill output { min-width: 1.6rem; text-align: center; font-variant-numeric: tabular-nums; }
+.stepper { display: grid; }
+.stepper button { min-height: 0; padding: 0 .3rem; border: 0; border-radius: 3px; background: none; color: inherit;
+                  font-size: .75rem; line-height: 1.1; }
+.gp-status { display: inline-flex; align-items: center; gap: .35rem; font-size: .85rem; color: #d0d0d6; }
+.gp-source { display: inline-flex; align-items: center; gap: .35rem; width: auto; font-size: .85rem; }
+.gp-source select { width: auto; padding: .2rem; }
 /* #32 : un seul bloc à la hauteur du parent ; seule la partition défile, commandes et pistes restent visibles */
 .tab-viewer.fill { display: flex; flex-direction: column; height: 100%; min-height: 0; }
 .fill .controls { flex: none; }

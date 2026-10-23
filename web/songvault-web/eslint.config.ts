@@ -34,7 +34,7 @@ export default defineConfigWithVueTs(
       'vue/no-bare-strings-in-template': ['error', {
         allowlist: [
           'SongVault', 'E-mail', 'BPM', 'ISWC', 'ISRC', 'CSV', 'ZIP', 'cnil.fr',
-          '·', '—', '–', '−', '+', '×', '/', '(', ')', ':', '.', ',', '…', '↑', '↓', '←', '→', '▶', '⏸', '✕', '♪', '⠿', '%', '#', '*', '|', '🎸',
+          '·', '—', '–', '−', '+', '×', '/', '(', ')', ':', '.', ',', '…', '↑', '↓', '←', '→', '▶', '⏸', '✕', '♪', '⠿', '%', '#', '*', '|', '🎸', '♩', '=', '▴', '▾',
           '/\\bv$/',                     // « v3 » : le numéro de version
           '/^[MS]$/',                     // boutons Muet et Solo du mélangeur
           '/^[\\dA-Z.-]+$/',              // exemples de codes : T-000.000.000-0, FR-XXX-26-00001

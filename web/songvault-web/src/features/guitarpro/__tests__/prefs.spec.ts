@@ -7,7 +7,7 @@ describe('Réglages du lecteur gardés sur l’appareil (#33)', () => {
   it('relit ce qui a été gardé, réglage par réglage', () => {
     saveViewPrefs({ zoom: 1.5 })
     saveViewPrefs({ panelOpen: false })
-    expect(loadViewPrefs()).toEqual({ zoom: 1.5, staffView: 'file', panelOpen: false })
+    expect(loadViewPrefs()).toEqual({ zoom: 1.5, staffView: 'file', panelOpen: false, panelHeight: null, settingsOpen: false })
 
     saveFilePrefs('f', { speed: 0.5, mute: [false, true], solo: [false, false], volume: [1, 0.3] })
     expect(loadFilePrefs('f', 2, { min: 0.25, max: 1.5 })).toEqual({ speed: 0.5, mute: [false, true], solo: [false, false], volume: [1, 0.3] })

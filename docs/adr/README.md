@@ -46,3 +46,4 @@ l'ancien, qui passe au statut « remplacé par ADR NNNN ».
 | [0038](0038-page-du-lecteur-guitar-pro.md) | Page du lecteur Guitar Pro : un seul bloc en plein écran, piloté au clavier | accepté |
 | [0039](0039-confort-du-lecteur-guitar-pro.md) | Confort du lecteur Guitar Pro : boucle par mesures, réglages gardés sur l'appareil | accepté |
 | [0040](0040-finitions-du-lecteur-guitar-pro.md) | Finitions du lecteur Guitar Pro : temps, icônes, double-clic, accès direct | accepté |
+| [0041](0041-barre-facon-guitar-pro.md) | Barre du lecteur façon Guitar Pro et panneau des pistes redimensionnable | accepté |

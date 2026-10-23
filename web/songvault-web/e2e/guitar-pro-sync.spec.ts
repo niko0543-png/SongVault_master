@@ -104,7 +104,7 @@ async function open(page: Page, file: 'saved' | 'fresh') {
 /** L'instant de la maquette (s) et la mesure affichée, lus ensemble. */
 const position = (page: Page) => page.evaluate(() => ({
   time: (document.querySelector('[data-testid="tab-audio"]') as HTMLAudioElement).currentTime,
-  bar: document.querySelector('[data-testid="tab-bar"]')?.textContent?.trim(),
+  bar: document.querySelector('[data-testid="tab-bar"]')?.getAttribute('aria-label'),
 }))
 
 test('une tablature calée suit sa maquette, y compris après un retour au début', async ({ page }) => {
