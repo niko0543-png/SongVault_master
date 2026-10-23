@@ -62,7 +62,7 @@ export interface SongVersionInput {
 }
 
 /**
- * Corps de POST (ADR 0046) : en plus des champs, des fichiers copiés depuis une autre version du morceau.
+ * Corps de POST (ADR 0047) : en plus des champs, des fichiers copiés depuis une autre version du morceau.
  * Les paroles, le BPM, la tonalité et les notes repris voyagent dans les champs eux-mêmes.
  */
 export interface CreateSongVersionInput extends SongVersionInput {

@@ -8,7 +8,7 @@ using SongVault.Domain.Files;
 
 namespace SongVault.Api.Tests.Versions;
 
-/// <summary>ADR 0046 : une nouvelle version reprend des fichiers d'une version précédente, contre SQL Server.</summary>
+/// <summary>ADR 0047 : une nouvelle version reprend des fichiers d'une version précédente, contre SQL Server.</summary>
 [Collection(ApiCollection.Name)]
 public sealed class CarryOverFilesEndpointsTests(SongVaultApiFactory factory)
 {

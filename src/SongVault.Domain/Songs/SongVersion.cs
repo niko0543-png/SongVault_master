@@ -87,7 +87,7 @@ public sealed class SongVersion : ISoftDeletable
     }
 
     /// <summary>
-    /// Reprend des fichiers d'une autre version du même morceau (ADR 0046) : clé = fichier d'origine en place,
+    /// Reprend des fichiers d'une autre version du même morceau (ADR 0047) : clé = fichier d'origine en place,
     /// valeur = clé de stockage de sa copie. Les pistes du mélangeur et les calages de tablature suivent
     /// quand tous leurs fichiers sont repris. Les copies sont rendues dans l'ordre de la version d'origine.
     /// </summary>

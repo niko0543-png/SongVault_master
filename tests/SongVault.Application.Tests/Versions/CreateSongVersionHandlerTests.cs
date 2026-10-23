@@ -63,7 +63,7 @@ public sealed class CreateSongVersionHandlerTests
         Assert.Equal(2, _uow.DiscardCount);
     }
 
-    // ---------- ADR 0046 : reprise de fichiers d'une version précédente ----------
+    // ---------- ADR 0047 : reprise de fichiers d'une version précédente ----------
 
     private (Song Song, SongVersion V1, SongFile Mix, SongFile Pdf) SongWithFiles()
     {

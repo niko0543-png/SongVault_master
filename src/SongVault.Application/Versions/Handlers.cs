@@ -24,7 +24,7 @@ public sealed class CreateSongVersionHandler(
         // Validée UNE fois, avant la boucle : une tonalité invalide ne mérite pas de nouvelle tentative
         var key = MusicalKey.ParseOptional(command.Key);
 
-        // ADR 0046 : les copies sont stockées UNE fois, avant la boucle ; la base les rattache ensuite
+        // ADR 0047 : les copies sont stockées UNE fois, avant la boucle ; la base les rattache ensuite
         var carried = await CopyFilesAsync(command, ct);
         SongVersionDto created;
         try
@@ -75,7 +75,7 @@ public sealed class CreateSongVersionHandler(
     }
 
     /// <summary>
-    /// Copie dans le stockage les fichiers à reprendre (ADR 0046), après avoir vérifié qu'ils sont en place,
+    /// Copie dans le stockage les fichiers à reprendre (ADR 0047), après avoir vérifié qu'ils sont en place,
     /// lisibles (#17) et qu'ils tiennent dans le stockage du groupe (#16). null : rien à reprendre.
     /// </summary>
     private async Task<CarriedFiles?> CopyFilesAsync(CreateSongVersionCommand command, CancellationToken ct)

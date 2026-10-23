@@ -60,7 +60,7 @@ async function markSeen(id: string) {
 // ---- Création d'une version ----
 const creation = useAsyncAction((input: SongVersionInput) => versionsApi.create(props.songId, input))
 const creationErrors = computed(() => mapProblemErrors(creation.error.value))
-/** ADR 0046 : un refus sans champ (fichier à reprendre indisponible, stockage plein…) s'affiche sous le formulaire. */
+/** ADR 0047 : un refus sans champ (fichier à reprendre indisponible, stockage plein…) s'affiche sous le formulaire. */
 const creationMessage = computed(() =>
   creation.error.value && Object.keys(creationErrors.value).length === 0 ? getErrorMessage(creation.error.value) : null)
 const formKey = ref(0)

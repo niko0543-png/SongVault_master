@@ -13,7 +13,7 @@ public sealed record CreateSongVersionRequest(
     [MaxLength(SongVersion.LyricsMaxLength)] string? Lyrics,
     [Range(SongVersion.MinBpm, SongVersion.MaxBpm)] int? Bpm,     // NOUVEAU
     [MaxLength(MusicalKey.MaxLength)] string? Key,                // NOUVEAU
-    Guid? CopyFromVersionId = null,                               // ADR 0046 : fichiers repris d'une autre version
+    Guid? CopyFromVersionId = null,                               // ADR 0047 : fichiers repris d'une autre version
     [MaxLength(CreateSongVersionRequest.MaxCopiedFiles)] IReadOnlyList<Guid>? CopyFileIds = null)
 {
     public const int MaxCopiedFiles = 100;

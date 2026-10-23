@@ -37,7 +37,7 @@ public sealed class SongVersionsController : ControllerBase
 
     /// <summary>
     /// Crée une nouvelle version ; son numéro est attribué automatiquement. CopyFromVersionId et CopyFileIds
-    /// y copient des fichiers d'une autre version du morceau (ADR 0046), comptés dans le stockage du groupe.
+    /// y copient des fichiers d'une autre version du morceau (ADR 0047), comptés dans le stockage du groupe.
     /// </summary>
     /// <param name="songId">Identifiant du morceau.</param>
     /// <response code="201">Version créée.</response>

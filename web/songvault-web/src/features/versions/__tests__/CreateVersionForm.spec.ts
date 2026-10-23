@@ -4,7 +4,7 @@ import { createTestingPinia } from '@pinia/testing'
 import CreateVersionForm from '../components/CreateVersionForm.vue'
 import type { CreateSongVersionInput, SongVersionSummary } from '../types'
 
-/** ADR 0046 : à la création, on reprend des éléments d'une version existante. */
+/** ADR 0047 : à la création, on reprend des éléments d'une version existante. */
 afterEach(() => vi.unstubAllGlobals())
 
 const summary = (id: string, number: number): SongVersionSummary =>
@@ -35,7 +35,7 @@ async function submit(wrapper: ReturnType<typeof mountForm>['wrapper']) {
   return wrapper.emitted('submit')![0]![0] as CreateSongVersionInput
 }
 
-describe('CreateVersionForm, reprise d’une version (ADR 0046)', () => {
+describe('CreateVersionForm, reprise d’une version (ADR 0047)', () => {
   it('sans version existante, pas de bloc de reprise ni d’appel', () => {
     const { wrapper, fetchMock } = mountForm([])
     expect(wrapper.find('[data-testid="carry-over"]').exists()).toBe(false)

@@ -11,7 +11,7 @@ import { getErrorMessage } from '@/shared/api/ApiError'
 import { formatFileSize } from '@/shared/utils/format'
 import { t } from '@/shared/i18n'
 
-/** ADR 0046 : songId et versions permettent de reprendre des éléments d'une version existante. */
+/** ADR 0047 : songId et versions permettent de reprendre des éléments d'une version existante. */
 const props = withDefaults(defineProps<{
   songId?: string
   versions?: SongVersionSummary[]
@@ -35,7 +35,7 @@ const titleError = computed(() => {
   return undefined
 })
 
-// ---- Reprise (ADR 0046) : par défaut la dernière version, tout sauf les notes ----
+// ---- Reprise (ADR 0047) : par défaut la dernière version, tout sauf les notes ----
 const sortedVersions = computed(() => [...props.versions].sort((a, b) => b.number - a.number))
 const sourceId = ref(sortedVersions.value[0]?.id ?? '')
 const source = ref<SongVersion | null>(null)

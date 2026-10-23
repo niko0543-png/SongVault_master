@@ -2,7 +2,7 @@
 
 namespace SongVault.Application.Versions;
 
-/// <param name="CopyFromVersionId">Version d'où reprendre des fichiers (ADR 0046) ; requise avec <paramref name="CopyFileIds"/>.</param>
+/// <param name="CopyFromVersionId">Version d'où reprendre des fichiers (ADR 0047) ; requise avec <paramref name="CopyFileIds"/>.</param>
 /// <param name="CopyFileIds">Fichiers en place de cette version à copier dans la nouvelle ; vide ou null : aucun.</param>
 public sealed record CreateSongVersionCommand(
     Guid SongId, string Title, SongVersionStatus Status, string? Notes, string? Lyrics,

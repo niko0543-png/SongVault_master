@@ -1,4 +1,4 @@
-# ADR 0046 — Reprendre des éléments d'une version précédente
+# ADR 0047 — Reprendre des éléments d'une version précédente
 
 - Statut : accepté
 - Date : 2026-10-23

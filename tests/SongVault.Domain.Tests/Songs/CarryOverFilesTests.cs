@@ -4,7 +4,7 @@ using SongVault.Domain.Songs;
 
 namespace SongVault.Domain.Tests.Songs;
 
-/// <summary>ADR 0046 : une nouvelle version reprend des fichiers d'une version précédente.</summary>
+/// <summary>ADR 0047 : une nouvelle version reprend des fichiers d'une version précédente.</summary>
 public sealed class CarryOverFilesTests
 {
     private static readonly DateTimeOffset Now = new(2026, 10, 23, 10, 0, 0, TimeSpan.Zero);
