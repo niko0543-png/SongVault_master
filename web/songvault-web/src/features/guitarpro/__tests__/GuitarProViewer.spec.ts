@@ -7,7 +7,7 @@ import { usePlayerStore } from '@/features/player/stores/playerStore'
 /** #28 : un faux alphaTab, pour vérifier ce que le lecteur lui demande sans dessiner ni jouer. */
 const fake = vi.hoisted(() => {
   type Handler = (arg?: unknown) => void
-  type FakeStaff = { isStringed: boolean; showStandardNotation: boolean; showTablature: boolean, bars: unknown[] }
+  type FakeStaff = { isStringed: boolean; showStandardNotation: boolean; showTablature: boolean; bars: unknown[] }
   const emitter = () => {
     const handlers: Handler[] = []
     return { on: (h: Handler) => { handlers.push(h) }, fire: (arg?: unknown) => handlers.forEach((h) => h(arg)) }
@@ -467,7 +467,7 @@ describe('GuitarProViewer dans la comparaison (#30)', () => {
 
     expect(fetchMock).not.toHaveBeenCalled()
     expect(api().renderScore).toHaveBeenCalledWith(score, [1])
-    expect(wrapper.find('[data-testid="tab-tracks"]').exists()).toBe(false)            // la piste se choisit dans la comparaison
+    expect(wrapper.find('[data-testid="tab-tracks"]').exists()).toBe(false)   // la piste se choisit dans la comparaison
     await wrapper.setProps({ track: 0 })
     expect(api().renderTracks).toHaveBeenLastCalledWith([score.tracks[0]])
   })
