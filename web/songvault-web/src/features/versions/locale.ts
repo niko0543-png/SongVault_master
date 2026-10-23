@@ -51,6 +51,7 @@ const fr = {
     empty: " Aucune version pour l'instant.",
     createBelow: ' Créez la première ci-dessous.',
     statusOf: 'Statut de la version {number}',
+    openTablature: 'Ouvrir la tablature de la version {number}',
   },
   compare: {
     backToSong: 'Retour au morceau',
@@ -76,6 +77,9 @@ const fr = {
     backToSong: 'Retour au morceau',
     notFound: "Cette version n'existe pas ou a été supprimée.",
     delete: 'Supprimer la version',
+    // #34 : accès direct au lecteur Guitar Pro
+    openTablature: 'Tablature',
+    openTablatureNamed: 'Tablature : {name}',
     dates: ' Créée le {createdAt} · modifiée le {updatedAt}',
     navLabel: 'Navigation entre versions',
     info: 'Informations',
@@ -156,6 +160,7 @@ const en: Widen<typeof fr> = {
     empty: ' No versions yet.',
     createBelow: ' Create the first one below.',
     statusOf: 'Status of version {number}',
+    openTablature: 'Open the tablature of version {number}',
   },
   compare: {
     backToSong: 'Back to the song',
@@ -181,6 +186,8 @@ const en: Widen<typeof fr> = {
     backToSong: 'Back to the song',
     notFound: 'This version does not exist or has been deleted.',
     delete: 'Delete the version',
+    openTablature: 'Tablature',
+    openTablatureNamed: 'Tablature: {name}',
     dates: ' Created on {createdAt} · changed on {updatedAt}',
     navLabel: 'Navigation between versions',
     info: 'Information',

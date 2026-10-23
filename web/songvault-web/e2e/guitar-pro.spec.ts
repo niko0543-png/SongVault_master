@@ -26,12 +26,12 @@ test.beforeAll(async () => {
 test.afterAll(async () => server?.close())
 
 /** Ouvre le banc d'essai et note toute règle CSP enfreinte. */
-async function open(page: Page, file: string) {
+async function open(page: Page, file: string, query = '') {
   const violations: string[] = []
   page.on('console', (message) => {
     if (message.type() === 'error' && /Content Security Policy/i.test(message.text())) violations.push(message.text())
   })
-  await page.goto(`${server.resolvedUrls!.local[0]}e2e/harness/guitar-pro.html?file=${file}`)
+  await page.goto(`${server.resolvedUrls!.local[0]}e2e/harness/guitar-pro.html?file=${file}${query}`)
   return violations
 }
 
@@ -64,7 +64,6 @@ test('à 360 px, la partition suit la largeur de l’écran', async ({ browser }
   await page.close()
 })
 
-
 test('#31 : la page blanche façon Guitar Pro, avec seulement la tablature et un zoom à 150 %', async ({ page }) => {
   const violations = await open(page, 'demo.gp5')
   await expect(page.getByTestId('tab-play')).toBeEnabled({ timeout: 30_000 })
@@ -79,16 +78,12 @@ test('#31 : la page blanche façon Guitar Pro, avec seulement la tablature et un
   expect(violations).toEqual([])
 })
 
-
 test('#31 : le panneau des pistes reste en bas de l’écran pendant que la partition défile, et coupe une piste en pleine lecture', async ({ browser }) => {
   const page = await browser.newPage({ viewport: { width: 1280, height: 700 } })
   const violations = await open(page, 'demo-tracks.gp')
   const play = page.getByTestId('tab-play')
   await expect(play).toBeEnabled({ timeout: 30_000 })
   const panel = page.getByTestId('tab-tracks')
-
-  await page.mouse.wheel(0, 400)                                            // la partition défile, le panneau reste collé en bas
-  await expect.poll(async () => Math.round((await panel.boundingBox())!.y + (await panel.boundingBox())!.height)).toBe(700)
   await expect(panel).toBeVisible()
 
   // La page défile jusqu'au milieu de la partition (sans molette : la même distance quel que soit le système)
@@ -107,6 +102,74 @@ test('#31 : le panneau des pistes reste en bas de l’écran pendant que la part
   await page.getByRole('button', { name: 'Couper Basse' }).click()
   await expect(page.getByRole('button', { name: 'Couper Basse' })).toHaveAttribute('aria-pressed', 'true')
   await expect(play).toHaveAccessibleName('Mettre en pause')               // la lecture continue
+  await play.click()
+  expect(violations).toEqual([])
+  await page.close()
+})
+
+test('#32 : sur la page du lecteur, seule la partition défile ; commandes et pistes restent à l’écran, et le clavier pilote', async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 700 } })
+  const violations = await open(page, 'demo-tracks.gp', '&fill=1')
+  const play = page.getByTestId('tab-play')
+  await expect(play).toBeEnabled({ timeout: 30_000 })
+  const desk = page.getByTestId('tab-desk')
+  const panel = page.getByTestId('tab-tracks')
+
+  // Les flèches vont à la dernière mesure : la partition défile dans son cadre, pas la page
+  for (let i = 0; i < 15; i++) await page.keyboard.press('ArrowRight')
+  await expect(page.getByTestId('tab-bar')).toHaveText('Mesure 16 sur 16')
+  await expect.poll(() => desk.evaluate((d) => d.scrollTop)).toBeGreaterThan(0)
+  expect(await page.evaluate(() => window.scrollY)).toBe(0)
+  await expect(play).toBeInViewport()
+  await expect(panel).toBeInViewport()
+  const box = (await panel.boundingBox())!
+  expect(box.y + box.height).toBeLessThanOrEqual(701)
+
+  // Espace lance et arrête la lecture, L boucle
+  await page.keyboard.press('Space')
+  await expect(play).toHaveAccessibleName('Mettre en pause')
+  await page.keyboard.press('Space')
+  await expect(play).toHaveAccessibleName('Lire la tablature')
+  await page.keyboard.press('l')
+  await expect(page.getByTestId('tab-loop')).toBeChecked()
+  expect(violations).toEqual([])
+  await page.close()
+})
+
+test('#33 : boucle par numéros de mesures, et réglages repliés sur téléphone', async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 700 } })
+  const violations = await open(page, 'demo-tracks.gp', '&fill=1')
+  await expect(page.getByTestId('tab-play')).toBeEnabled({ timeout: 30_000 })
+  await page.getByTestId('tab-loop-from').fill('3')
+  await page.getByTestId('tab-loop-from').press('Tab')
+  await page.getByTestId('tab-loop-to').fill('4')
+  await page.getByTestId('tab-loop-to').press('Tab')
+  await expect(page.locator('.at-selection div').first()).toBeVisible()      // alphaTab montre la sélection
+  await expect(page.getByTestId('tab-loop-clear')).toBeVisible()
+  expect(violations).toEqual([])
+  await page.close()
+
+  const phone = await browser.newPage({ viewport: { width: 360, height: 780 }, isMobile: true, hasTouch: true })
+  await open(phone, 'demo-tracks.gp', '&fill=1')
+  await expect(phone.getByTestId('tab-play')).toBeEnabled({ timeout: 30_000 })
+  await expect(phone.getByTestId('tab-settings')).toBeHidden()
+  await phone.getByTestId('tab-settings-toggle').click()
+  await expect(phone.getByTestId('tab-zoom')).toBeVisible()
+  const overflow = await phone.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+  expect(overflow).toBeLessThanOrEqual(0)
+  await phone.close()
+})
+
+test('#34 : un double-clic sur une note de la mesure 3 lance la lecture depuis elle, et le temps s’affiche', async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 700 } })
+  const violations = await open(page, 'demo-tracks.gp', '&fill=1')
+  const play = page.getByTestId('tab-play')
+  await expect(play).toBeEnabled({ timeout: 30_000 })
+  // Mesure 3, première ligne (à 90 à la noire, elle commence à 5,3 s : partie du début, la lecture n'y serait pas si vite)
+  await page.getByTestId('tab-score').dblclick({ position: { x: 910, y: 180 } })
+  await expect(play).toHaveAccessibleName('Mettre en pause')
+  await expect(page.getByTestId('tab-bar')).toHaveText('Mesure 3 sur 16', { timeout: 2_000 })
+  await expect(page.getByTestId('tab-time')).toHaveText(/^0:0[5-7] \/ 0:42$/, { timeout: 2_000 })
   await play.click()
   expect(violations).toEqual([])
   await page.close()

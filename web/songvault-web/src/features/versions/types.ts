@@ -31,6 +31,8 @@ export interface SongVersionSummary {
   title: string
   status: SongVersionStatus
   createdAt: string
+  /** #34 : la première tablature lisible de la version ; null sinon */
+  tablatureFileId?: string | null
 }
 
 /** Détail complet (GET /versions/{id}), reflet de SongVersionResponse. */

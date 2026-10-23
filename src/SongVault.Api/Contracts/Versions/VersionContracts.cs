@@ -36,7 +36,10 @@ public sealed record SongVersionResponse(
             [.. d.Files.Select(SongFileResponse.From)]);
 }
 
-public sealed record SongVersionSummaryResponse(Guid Id, int Number, string Title, SongVersionStatus Status, DateTimeOffset CreatedAt)
+/// <summary>#34 : TablatureFileId, la première tablature lisible de la version (null sans tablature).</summary>
+public sealed record SongVersionSummaryResponse(Guid Id, int Number, string Title, SongVersionStatus Status, DateTimeOffset CreatedAt,
+    Guid? TablatureFileId)
 {
-    public static SongVersionSummaryResponse From(SongVersionSummaryDto d) => new(d.Id, d.Number, d.Title, d.Status, d.CreatedAt);
+    public static SongVersionSummaryResponse From(SongVersionSummaryDto d) =>
+        new(d.Id, d.Number, d.Title, d.Status, d.CreatedAt, d.TablatureFileId);
 }

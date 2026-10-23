@@ -17,6 +17,8 @@ const props = defineProps<{
   volume: number[]
   currentBar: number
   barCount: number
+  /** #34 : « 0:42 / 2:31 », vide avant la lecture. */
+  time?: string
   /** La tablature suit une maquette (#29) : muet, solo et volume n'agissent pas sur elle. */
   disabled: boolean
 }>()
@@ -31,9 +33,12 @@ const emit = defineEmits<{
 /** Largeur d'une case de la vue d'ensemble, en px (la même que dans le CSS). */
 const CELL = 16
 
-const open = ref(true)
+/** #33 : replié ou non ; GuitarProViewer le garde sur l'appareil. */
+const open = defineModel<boolean>('open', { default: true })
 const overview = ref<HTMLElement | null>(null)
 const anySolo = computed(() => props.solo.some(Boolean))
+/** #34 : une seule piste : ni case (elle reste affichée) ni muet/solo, mais le volume et la vue d'ensemble. */
+const single = computed(() => props.tracks.length === 1)
 const bars = computed(() => Array.from({ length: props.barCount }, (_, i) => i))
 /** Pour chaque piste, les mesures où elle joue au moins une note. */
 const played = computed(() => props.tracks.map((track) =>
@@ -58,7 +63,7 @@ watch(() => props.currentBar, (bar) => {
       <button type="button" class="toggle" :aria-expanded="open" data-testid="tab-tracks-toggle" @click="open = !open">
         {{ t('guitarpro.viewer.tracks') }} <span aria-hidden="true">{{ open ? '▾' : '▴' }}</span>
       </button>
-      <output>{{ t('guitarpro.viewer.bar', { bar: currentBar, total: barCount }) }}</output>
+      <output>{{ t('guitarpro.viewer.bar', { bar: currentBar, total: barCount }) }}<template v-if="time"> · {{ time }}</template></output>
     </div>
 
     <div v-if="open" class="body">
@@ -66,14 +71,16 @@ watch(() => props.currentBar, (bar) => {
         <li v-for="(track, i) in tracks" :key="i" class="row" :class="{ silent: silent(i) }">
           <span class="swatch" :style="{ background: colorOf(track) }" aria-hidden="true" />
           <label class="name">
-            <input type="checkbox" :checked="shown.includes(i)" :aria-label="t('guitarpro.viewer.show', { name: track.name })"
+            <input v-if="!single" type="checkbox" :checked="shown.includes(i)" :aria-label="t('guitarpro.viewer.show', { name: track.name })"
                    @change="emit('toggleShown', i)">
             <span>{{ track.name }}</span>
           </label>
-          <button type="button" class="chip mute" :aria-pressed="mute[i]" :disabled="disabled"
-                  :aria-label="t('guitarpro.viewer.muteTrack', { name: track.name })" @click="emit('toggleMute', i)">M</button>
-          <button type="button" class="chip solo" :aria-pressed="solo[i]" :disabled="disabled"
-                  :aria-label="t('guitarpro.viewer.soloTrack', { name: track.name })" @click="emit('toggleSolo', i)">S</button>
+          <template v-if="!single">
+            <button type="button" class="chip mute" :aria-pressed="mute[i]" :disabled="disabled"
+                    :aria-label="t('guitarpro.viewer.muteTrack', { name: track.name })" @click="emit('toggleMute', i)">M</button>
+            <button type="button" class="chip solo" :aria-pressed="solo[i]" :disabled="disabled"
+                    :aria-label="t('guitarpro.viewer.soloTrack', { name: track.name })" @click="emit('toggleSolo', i)">S</button>
+          </template>
           <input class="volume" type="range" min="0" max="2" step="0.1" :value="volume[i]" :disabled="disabled"
                  :aria-label="t('guitarpro.viewer.volumeTrack', { name: track.name })"
                  @input="emit('volume', i, Number(($event.target as HTMLInputElement).value))">

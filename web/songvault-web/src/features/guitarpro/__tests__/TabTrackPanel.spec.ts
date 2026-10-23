@@ -49,4 +49,13 @@ describe('TabTrackPanel (#31)', () => {
     expect(wrapper.find('.body').exists()).toBe(false)
     expect(wrapper.get('[data-testid="tab-tracks-toggle"]').attributes('aria-expanded')).toBe('false')
   })
+
+  it('#34 : avec une seule piste, garde le volume et la vue d’ensemble, sans case ni muet/solo ; montre le temps', () => {
+    const wrapper = mountPanel({ tracks: [tracks[0]] as never, shown: [0], mute: [false], solo: [false], volume: [1], time: '0:42 / 2:31' })
+    expect(wrapper.find('input[type="checkbox"]').exists()).toBe(false)
+    expect(wrapper.findAll('.chip')).toHaveLength(0)
+    expect(wrapper.find('[aria-label="Volume de Guitare"]').exists()).toBe(true)
+    expect(wrapper.findAll('.lane')).toHaveLength(1)
+    expect(wrapper.get('output').text()).toBe('Mesure 2 sur 3 · 0:42 / 2:31')
+  })
 })

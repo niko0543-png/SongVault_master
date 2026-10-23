@@ -16,6 +16,7 @@ const fr = {
   },
   card: {
     updated: 'Modifié le {updatedAt}',
+    openTablature: 'Ouvrir la tablature de {title}',
   },
   form: {
     titleRequired: 'Le titre est obligatoire.',
@@ -73,6 +74,7 @@ const en: Widen<typeof fr> = {
   },
   card: {
     updated: 'Changed on {updatedAt}',
+    openTablature: 'Open the tablature of {title}',
   },
   form: {
     titleRequired: 'The title is required.',
