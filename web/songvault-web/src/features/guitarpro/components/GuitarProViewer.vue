@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive, ref, shallowRef, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, shallowRef, watch } from 'vue'
 import { AlphaTabApi, PlayerMode, synth, type model } from '@coderline/alphatab'
 import { usePlayerStore } from '@/features/player/stores/playerStore'
 import { filesApi } from '@/features/files/api/filesApi'
@@ -35,9 +35,13 @@ import { t } from '@/shared/i18n'
  * double-clic sur une note pour jouer depuis elle (ADR 0040).
  * #35 : barre du haut façon Guitar Pro (transport, écran de la piste, boucle, vitesse, transposition) et panneau
  * des pistes redimensionnable (ADR 0041).
+ * #37 : le panneau des pistes reste aussi dans la comparaison (ADR 0043). En passant d'une partition à l'autre,
+ * la comparaison redonne les pistes affichées (`startTracks`) et la mesure (`startBar`, 0 = la première) ; `position()`
+ * les lui dit avant le changement.
  */
 const props = defineProps<{
   src?: string; score?: model.Score | null; track?: number; label: string; sync?: SyncContext; fill?: boolean
+  startTracks?: number[]; startBar?: number
 }>()
 const player = usePlayerStore()
 const { confirm } = useConfirm()
@@ -179,9 +183,17 @@ onMounted(async () => {
   if (props.fill) window.addEventListener('keydown', onKeydown, { capture: true })
   api.playerPositionChanged.on((e) => { currentMs.value = e.currentTime; endMs.value = e.endTime })
   api.playedBeatChanged.on((beat) => { currentBar.value = beat.voice.bar.index + 1 })
+  // #37 : un clic sur une note y place le curseur sans que alphaTab signale la mesure jouée
+  api.beatMouseDown.on((beat) => { currentBar.value = beat.voice.bar.index + 1 })
   api.renderFinished.on(() => { status.value = 'ready' })
+  // #37 : les positions des mesures ne sont connues qu'après le rendu, pour faire défiler jusqu'à l'une d'elles
+  api.postRenderFinished.on(() => {
+    laidOut = true
+    placeAtStart()
+  })
   api.playerReady.on(() => {
     playerReady.value = true
+    placeAtStart()
     applyMixer()                                              // #33 : le mix gardé, et après chaque changement de son
   })
   api.playerStateChanged.on((e) => {
@@ -190,7 +202,8 @@ onMounted(async () => {
   })
   api.error.on(() => { status.value = 'error' })
   if (props.score) {                                        // #30 : partition déjà lue par la comparaison
-    shown.value = [props.track ?? 0]
+    const start = (props.startTracks ?? []).filter((i) => i >= 0 && i < props.score!.tracks.length)
+    shown.value = start.length > 0 ? start : [props.track ?? 0]
     api.renderScore(props.score, shown.value)
     return
   }
@@ -427,7 +440,12 @@ function goToBar(index: number, select = true) {
   if (select && beats.length > 0) api.highlightPlaybackRange(beats[0]!, beats[beats.length - 1]!)
   api.tickPosition = master.start
   currentBar.value = master.index + 1                       // à l'arrêt, alphaTab ne signale pas le déplacement
-  const bounds = api.boundsLookup?.findMasterBarByIndex(master.index)
+  scrollToBar(master.index)
+}
+
+/** Fait défiler la partition (ou la page) jusqu'à la mesure `index` (0 = la première). */
+function scrollToBar(index: number) {
+  const bounds = api?.boundsLookup?.findMasterBarByIndex(index)
   if (!bounds || !host.value) return
   const frame = props.fill ? desk.value : null
   if (frame) {
@@ -510,7 +528,56 @@ const SHORTCUTS: Record<string, () => void> = {
   l: () => { loop.value = !loop.value },
 }
 
-defineExpose({ goToBar })
+/**
+ * #37 : les pistes affichées et la mesure où l'on est (0 = la première), pour les reprendre dans l'autre partition :
+ * celle du curseur si on la voit, sinon la première mesure visible en haut du cadre (on a fait défiler sans cliquer).
+ */
+function position() {
+  return { tracks: [...shown.value], bar: visibleBar(currentBar.value - 1) }
+}
+
+/**
+ * #37 : la mesure où l'on était dans l'autre partition. Une seule fois, quand la partition est dessinée et ses
+ * mesures placées (le cadre peut alors défiler jusqu'à l'une d'elles), et le son prêt (avant, alphaTab remet le
+ * curseur au début en chargeant le morceau).
+ */
+let placed = false
+let laidOut = false
+function placeAtStart() {
+  if (placed || !props.score || !props.startBar || !laidOut || !playerReady.value) return
+  placed = true
+  const bar = props.startBar
+  void nextTick(() => {
+    // En déplaçant son curseur, alphaTab fait défiler le cadre vers l'endroit où il le croit encore : on repasse après lui.
+    // alphaTab rejoue la dernière position dès l'abonnement : on ne compte que la suivante.
+    let subscribing = true
+    const stop = api!.playerPositionChanged.on(() => {
+      if (subscribing) return
+      stop()
+      requestAnimationFrame(() => scrollToBar(bar))
+    })
+    subscribing = false
+    goToBar(bar)
+  })
+}
+
+function visibleBar(cursor: number): number {
+  const frame = props.fill ? desk.value : null
+  const lookup = api?.boundsLookup
+  const count = api?.score?.masterBars.length ?? 0
+  if (!frame || !host.value || !lookup || count === 0) return cursor
+  const top = frame.getBoundingClientRect().top - host.value.getBoundingClientRect().top   // haut du cadre, dans la partition
+  const bottom = top + frame.clientHeight
+  const seen = (index: number) => {
+    const bounds = lookup.findMasterBarByIndex(index)?.realBounds
+    return bounds ? bounds.y + bounds.h > top && bounds.y < bottom : false
+  }
+  if (seen(cursor)) return cursor
+  for (let index = 0; index < count; index++) if (seen(index)) return index
+  return cursor
+}
+
+defineExpose({ goToBar, position })
 </script>
 
 <template>
@@ -691,7 +758,7 @@ defineExpose({ goToBar })
     </div>
 
     <!-- #31 : les pistes, collées en bas de l'écran pendant que la partition défile -->
-    <TabTrackPanel v-if="status === 'ready' && tracks.length > 0 && !score" v-model:open="panelOpen" v-model:height="panelHeight" :tracks="tracks" :shown="shown"
+    <TabTrackPanel v-if="status === 'ready' && tracks.length > 0" v-model:open="panelOpen" v-model:height="panelHeight" :tracks="tracks" :shown="shown"
                    :mute="mixer.mute" :solo="mixer.solo" :volume="mixer.volume" :current-bar="currentBar" :bar-count="barCount" :time="timeText"
                    :disabled="followsAudio" @toggle-shown="toggleShown" @toggle-mute="toggleMute" @toggle-solo="toggleSolo"
                    @volume="setVolume" @go-to-bar="goToBar" />
