@@ -16,7 +16,7 @@ public sealed class OwnershipTests(SongVaultApiFactory factory)
     /// <summary>L'utilisateur A crée, dans son groupe personnel, un morceau, une version et un fichier.</summary>
     private async Task<ResourcesOfA> CreateResourcesAsync(HttpClient a)
     {
-        var bandId = (await a.GetFromJsonAsync<List<BandResponse>>("/api/bands", TestJson.Options))![0].Id;
+        var bandId = await a.FirstBandIdAsync();
         var songs = $"/api/bands/{bandId}/songs";
         var song = (await (await a.PostAsJsonAsync(songs, new { title = "Secret de A" }))
             .Content.ReadFromJsonAsync<SongResponse>())!;
@@ -89,7 +89,7 @@ public sealed class OwnershipTests(SongVaultApiFactory factory)
         var a = await factory.CreateNewUserClientAsync();
         var b = await factory.CreateNewUserClientAsync();
         var r = await CreateResourcesAsync(a);
-        var bandOfB = (await b.GetFromJsonAsync<List<BandResponse>>("/api/bands", TestJson.Options))![0].Id;
+        var bandOfB = await b.FirstBandIdAsync();
 
         // B est bien membre du groupe de l'URL, mais le morceau appartient au groupe de A
         var url = UrlFor(r, target).Replace($"/bands/{r.BandId}/", $"/bands/{bandOfB}/");

@@ -81,7 +81,7 @@ public sealed class InvitationsEndpointsTests(SongVaultApiFactory factory)
         var preview = (await anonymous.GetFromJsonAsync<InvitationPreviewResponse>(
             $"/api/invitations/{TokenOf(created.Link)}", TestJson.Options))!;
 
-        Assert.StartsWith("Groupe de user-", preview.BandName);
+        Assert.Equal("Groupe de test", preview.BandName);
         Assert.Equal(email, preview.Email);
         Assert.Equal(BandRole.Guest, preview.Role);
     }

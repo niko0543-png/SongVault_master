@@ -138,6 +138,35 @@ public sealed partial class AccountTests(SongVaultApiFactory factory)
     }
 
     [Fact]
+    public async Task Un_lien_de_reinitialisation_deja_utilise_est_signale_des_son_ouverture()
+    {
+        var email = NewEmail();
+        await factory.CreateNewUserClientAsync(email);
+        var client = Anonymous();
+        await ForgotAsync(client, email);
+        var resetCode = await ResetCodeAsync(factory.Emails, email);
+
+        // Ouverture du lien : vérifié sans être consommé, deux fois de suite
+        Assert.Equal(HttpStatusCode.NoContent, (await client.PostAsJsonAsync("/api/auth/checkResetCode", new { email, resetCode })).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await client.PostAsJsonAsync("/api/auth/checkResetCode", new { email, resetCode })).StatusCode);
+
+        await client.PostAsJsonAsync("/api/auth/resetPassword", new { email, resetCode, newPassword = NewPassword });
+
+        // Lien rouvert après usage, adresse inconnue, code altéré : même refus, avec la clé qu'Identity utilise
+        foreach (var body in new object[]
+                 {
+                     new { email, resetCode },
+                     new { email = NewEmail(), resetCode },
+                     new { email, resetCode = "pas-un-code" },
+                 })
+        {
+            var check = await client.PostAsJsonAsync("/api/auth/checkResetCode", body);
+            Assert.Equal(HttpStatusCode.BadRequest, check.StatusCode);
+            Assert.Contains("InvalidToken", await check.Content.ReadAsStringAsync());
+        }
+    }
+
+    [Fact]
     public async Task Un_code_de_reinitialisation_expire_est_refuse()
     {
         // Hôte dérivé dont les codes de réinitialisation expirent dès leur création

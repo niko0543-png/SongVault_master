@@ -13,7 +13,7 @@ namespace SongVault.Api.Controllers;
 [ProducesResponseType(StatusCodes.Status401Unauthorized)]
 public sealed class BandsController : ControllerBase
 {
-    /// <summary>Mes groupes, triés par nom. Crée le groupe personnel au premier appel.</summary>
+    /// <summary>Mes groupes, triés par nom. Liste vide pour un nouvel inscrit : il crée son premier groupe par POST.</summary>
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<BandResponse>>(StatusCodes.Status200OK)]
     public async Task<IReadOnlyList<BandResponse>> Mine([FromServices] ListMyBandsHandler handler, CancellationToken ct)

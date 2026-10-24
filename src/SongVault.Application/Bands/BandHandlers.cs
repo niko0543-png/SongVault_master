@@ -7,21 +7,14 @@ using SongVault.Domain.Audit;
 
 namespace SongVault.Application.Bands;
 
-public sealed class ListMyBandsHandler(
-    IBandRepository bands, IUnitOfWork unitOfWork, ICurrentUser currentUser, TimeProvider clock)
+public sealed class ListMyBandsHandler(IBandRepository bands, ICurrentUser currentUser)
 {
-    /// <summary>Groupes de l'utilisateur ; crée son groupe personnel s'il n'en a aucun (nouvel inscrit).</summary>
-    public async Task<IReadOnlyList<BandSummaryDto>> HandleAsync(CancellationToken ct)
-    {
-        var list = await bands.ListForUserAsync(currentUser.UserId, ct);
-        if (list.Count > 0) return list;
-
-        var localPart = currentUser.Email?.Split('@')[0];
-        var name = string.IsNullOrWhiteSpace(localPart) ? "Mon groupe" : $"Groupe de {localPart}";
-        bands.Add(Band.Create(name, currentUser.UserId, clock.GetUtcNow()));
-        await unitOfWork.SaveChangesAsync(ct);
-        return await bands.ListForUserAsync(currentUser.UserId, ct);
-    }
+    /// <summary>
+    /// Groupes de l'utilisateur, éventuellement aucun : un nouvel inscrit choisit lui-même le nom
+    /// de son premier groupe (page d'accueil du front) au lieu d'un « Groupe de … » créé d'office.
+    /// </summary>
+    public Task<IReadOnlyList<BandSummaryDto>> HandleAsync(CancellationToken ct)
+        => bands.ListForUserAsync(currentUser.UserId, ct);
 }
 
 public sealed class CreateBandHandler(

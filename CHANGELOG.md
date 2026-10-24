@@ -87,6 +87,8 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) — versions :
 ### Supprimé
 - `Song.OwnerId`, remplacé par `Song.BandId`. Les morceaux sans propriétaire valide sont supprimés par la migration `BackfillBands`.
 ### Corrigé
+- Première connexion : une page « Bienvenue » invite à créer et nommer son premier groupe, au lieu d'un « Groupe de … » créé d'office ; elle revient aussi après avoir quitté son dernier groupe. `GET /api/bands` ne crée plus de groupe.
+- Lien de réinitialisation déjà utilisé ou expiré : signalé dès son ouverture (`POST /api/auth/checkResetCode`), sans avoir à saisir de nouveau mot de passe.
 - Liste des morceaux bloquée sur « Chargement… » après un changement de groupe depuis cette liste : elle se recharge maintenant pour le nouveau groupe.
 - Une tablature calée sur sa maquette ne se met plus en pause dès le départ quand les sons du lecteur arrivent tard.
 - Un délai dépassé chez le fournisseur d'e-mails n'arrête plus l'API.

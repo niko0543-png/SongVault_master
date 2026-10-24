@@ -2,6 +2,13 @@ import type { Widen } from '@/shared/i18n/types'
 
 /** #26 : textes de src/features/bands (ADR 0033). Le français fait référence ; l'anglais a les mêmes clés. */
 const fr = {
+  welcome: {
+    title: 'Bienvenue sur SongVault',
+    intro: 'Pour commencer, créez votre premier groupe : vos morceaux, sorties et setlists y seront rangés, et vous pourrez y inviter vos musiciens.',
+    placeholder: 'Ex. : Les Nocturnes',
+    create: 'Créer mon groupe',
+    invited: "Vous avez été invité dans un groupe ? Ouvrez le lien reçu par e-mail pour le rejoindre : inutile d'en créer un.",
+  },
   switcher: {
     band: 'Groupe',
     newBand: 'Nouveau groupe',
@@ -38,6 +45,13 @@ const fr = {
 }
 
 const en: Widen<typeof fr> = {
+  welcome: {
+    title: 'Welcome to SongVault',
+    intro: 'To get started, create your first band: your songs, releases and setlists live there, and you can invite your musicians to it.',
+    placeholder: 'E.g. The Nocturnes',
+    create: 'Create my band',
+    invited: 'Have you been invited to a band? Open the link from the e-mail to join it: no need to create one.',
+  },
   switcher: {
     band: 'Band',
     newBand: 'New band',

@@ -22,10 +22,7 @@ public static class AuthTestExtensions
         return client;
     }
 
-    /// <summary>Route des morceaux du groupe personnel de l'utilisateur du client (créé au premier GET /api/bands).</summary>
+    /// <summary>Route des morceaux du premier groupe de l'utilisateur du client (créé s'il n'en a aucun).</summary>
     public static async Task<string> SongsUrlAsync(this HttpClient client)
-    {
-        var bands = await client.GetFromJsonAsync<List<BandResponse>>("/api/bands", TestJson.Options);
-        return $"/api/bands/{bands![0].Id}/songs";
-    }
+        => $"/api/bands/{await client.FirstBandIdAsync()}/songs";
 }
