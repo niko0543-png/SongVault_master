@@ -1,5 +1,6 @@
 import { synth } from '@coderline/alphatab'
 import { SAMPLE_RATE, toPcm16, wavBlob } from './wav'
+import { SOUND_FONT_GAIN } from '../soundFont'
 
 /**
  * #49 : une piste audio rendue depuis le Guitar Pro (ADR 0049). alphaTab synthétise le morceau entier hors du temps
@@ -20,7 +21,7 @@ export function exportOptions(source: StemSource, trackCount: number, soundFont:
   options.soundFonts = [soundFont]
   options.sampleRate = SAMPLE_RATE
   options.useSyncPoints = false                                  // le tempo du fichier, pas celui d'une maquette
-  options.masterVolume = 1
+  options.masterVolume = SOUND_FONT_GAIN                        // même niveau que le lecteur, quelle que soit la banque
   options.metronomeVolume = source.kind === 'click' ? 1 : 0
   for (let i = 0; i < trackCount; i++) options.trackVolume.set(i, source.kind === 'track' && source.index === i ? 1 : 0)
   return options

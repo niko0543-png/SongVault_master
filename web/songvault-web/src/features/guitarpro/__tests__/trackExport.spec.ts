@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { synth } from '@coderline/alphatab'
 import { CHANNELS, SAMPLE_RATE, toPcm16, wavBlob, wavBytes, wavHeader } from '../export/wav'
+import { SOUND_FONT_GAIN } from '../soundFont'
 import { exportOptions, renderStem, stemFileName, type ExportAudio } from '../export/renderStem'
 
 /** #49 : WAV des pistes créées depuis le Guitar Pro, et rendu piste par piste (ADR 0049). */
@@ -39,6 +40,7 @@ describe('renderStem', () => {
     expect(track.metronomeVolume).toBe(0)
     expect(track.soundFonts).toEqual([bank])
     expect(track.useSyncPoints).toBe(false)
+    expect(track.masterVolume).toBe(SOUND_FONT_GAIN)
     const click = exportOptions({ kind: 'click' }, 2, bank)
     expect([...click.trackVolume]).toEqual([[0, 0], [1, 0]])
     expect(click.metronomeVolume).toBe(1)
