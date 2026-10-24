@@ -54,3 +54,4 @@ l'ancien, qui passe au statut « remplacé par ADR NNNN ».
 | [0046](0046-reprise-d-une-version-precedente.md) | Reprendre des éléments d'une version précédente : textes dans les champs, fichiers copiés | accepté |
 | [0047](0046-setlist-morceaux-a-cocher-et-commentaires.md) | Setlists : morceaux existants à cocher et commentaires entre les morceaux | accepté |
 | [0048](0048-suppression-d-un-groupe.md) | Suppression d'un groupe par son Owner : immédiate, nom recopié, abonnement résilié d'abord | accepté |
+| [0049](0049-banque-de-sons-generaluser-gs.md) | Banque de sons GeneralUser GS pour le lecteur Guitar Pro : 32 Mo, versionnée, cache d'un an | accepté |

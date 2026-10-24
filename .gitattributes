@@ -15,6 +15,7 @@
 *.gp4 binary
 *.gp5 binary
 *.gpx binary
+*.sf2 binary
 
 ###############################################################################
 # Set default behavior for command prompt diff.

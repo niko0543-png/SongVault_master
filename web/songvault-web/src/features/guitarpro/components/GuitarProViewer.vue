@@ -153,7 +153,8 @@ onMounted(async () => {
     core: { fontDirectory: '/font/' },                       // copiés à la racine du site par le plugin Vite
     display: { layoutMode: layoutFor(wideScreen?.matches ?? true), resources: GUITAR_PRO_RESOURCES, scale: zoom.value },
     player: {
-      playerMode: PlayerMode.EnabledSynthesizer, soundFont: '/soundfont/sonivox.sf2',
+      // ADR 0049 : GeneralUser GS (32 Mo) plutôt que Sonivox, pour des guitares, une basse et une batterie réalistes
+      playerMode: PlayerMode.EnabledSynthesizer, soundFont: '/sounds/generaluser-gs-2.0.3.sf2',
       // #32 : alphaTab retient l'élément qui défile à sa création : en plein cadre, c'est la partition, pas la page
       ...(props.fill ? { scrollElement: desk.value! } : {}),
     },
@@ -432,9 +433,12 @@ function applyMixer() {
 /**
  * Volume général : alphaTab l'applique à son synthétiseur ; la maquette suivie (#29) le reçoit directement,
  * l'élément <audio> n'acceptant que 0 à 1.
+ * ADR 0049 : GeneralUser GS sort environ 6 dB moins fort que Sonivox, le synthétiseur est remonté de 4 dB (× 1,6)
+ * sans saturer les pistes chargées.
  */
+const SOUND_FONT_GAIN = 1.6
 function applyMaster() {
-  if (api) api.masterVolume = masterVolume.value
+  if (api) api.masterVolume = masterVolume.value * (api.settings.player.playerMode === PlayerMode.EnabledSynthesizer ? SOUND_FONT_GAIN : 1)
   if (media.value) media.value.volume = masterVolume.value
 }
 

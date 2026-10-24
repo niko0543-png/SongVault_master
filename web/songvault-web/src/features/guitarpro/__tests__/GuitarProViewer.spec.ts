@@ -112,7 +112,7 @@ describe('GuitarProViewer (#28)', () => {
 
     expect(fetchMock).toHaveBeenCalledWith('/api/bands/b/songs/s/versions/v/files/f/content')
     expect([...api().load.mock.calls[0]![0]]).toEqual([0x18, 0x46, 0x49])
-    expect(api().options).toMatchObject({ core: { fontDirectory: '/font/' }, player: { soundFont: '/soundfont/sonivox.sf2' } })
+    expect(api().options).toMatchObject({ core: { fontDirectory: '/font/' }, player: { soundFont: '/sounds/generaluser-gs-2.0.3.sf2' } })
     expect(wrapper.get('[data-testid="tab-play"]').attributes('disabled')).toBeUndefined()
     wrapper.unmount()
     expect(api().destroy).toHaveBeenCalled()
@@ -232,12 +232,12 @@ describe('GuitarProViewer façon Guitar Pro (#31)', () => {
     const wrapper = await mountViewer(['Guitare', 'Basse'])
 
     await byLabel(wrapper, 'Volume général').setValue('0.5')
-    expect(api().masterVolume).toBe(0.5)
+    expect(api().masterVolume).toBeCloseTo(0.8)                      // × 1,6 : GeneralUser GS sort moins fort (ADR 0049)
     expect(api().changeTrackVolume).not.toHaveBeenCalled()             // le mix des pistes ne bouge pas
     wrapper.unmount()
 
     const again = await mountViewer(['Guitare', 'Basse'])
-    expect(api().masterVolume).toBe(0.5)                             // redonné quand les sons sont prêts
+    expect(api().masterVolume).toBeCloseTo(0.8)                      // redonné quand les sons sont prêts
     expect(byLabel(again, 'Volume général').attributes('aria-valuetext')).toBe('50 %')
   })
 
