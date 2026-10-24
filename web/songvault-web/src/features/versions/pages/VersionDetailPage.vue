@@ -391,6 +391,10 @@ const commentedFile = computed(() =>
                   @play="onPlay" @delete="onDeleteFile" @seek="onSeek" @retry="onRetryPreview"
                   @retry-scan="onRetryScan" />
         <FileUploader v-if="canWrite" :song-id="songId" :version-id="version.id" @uploaded="onUploaded" />
+        <!-- ADR 0049 : enregistrer au micro, destination déjà choisie : cette version -->
+        <p v-if="canWrite" class="record-link">
+          <RouterLink :to="{ name: 'record', query: { songId, versionId: version.id } }">{{ t('versions.detail.record') }}</RouterLink>
+        </p>
       </SectionCard>
       <StemsSection v-if="audioFiles.length > 0" :song-id="songId" :version-id="version.id" :files="version.files"
                     :readonly="!canWrite" />
@@ -410,6 +414,7 @@ const commentedFile = computed(() =>
 </template>
 
 <style scoped>
+.record-link { margin: .75rem 0 0; }
 .version-nav { display: flex; justify-content: space-between; margin: 1rem 0; }
 .row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 .lyrics { font-family: inherit; line-height: 1.5; }

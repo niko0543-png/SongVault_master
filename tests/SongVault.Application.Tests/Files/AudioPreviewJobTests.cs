@@ -60,6 +60,30 @@ public sealed class AudioPreviewJobTests
     }
 
     [Fact]
+    public async Task Un_m4a_est_copie_sur_le_disque_le_temps_de_la_conversion()
+    {
+        var fileId = Uploaded("repetition.m4a");
+
+        await Sut().RunAsync(Job(fileId), CancellationToken.None);
+
+        // ADR 0049 : ffmpeg doit pouvoir aller lire l'index rangé à la fin ; la copie disparaît ensuite
+        Assert.NotNull(_processor.SourcePath);
+        Assert.False(File.Exists(_processor.SourcePath));
+        Assert.Equal(AudioPreviewStatus.Ready, Assert.Single(_previews.Previews).Status);
+    }
+
+    [Fact]
+    public async Task Un_webm_est_lu_au_fil_du_stockage()
+    {
+        var fileId = Uploaded("repetition.webm");
+
+        await Sut().RunAsync(Job(fileId), CancellationToken.None);
+
+        Assert.Null(_processor.SourcePath);
+        Assert.Equal(AudioPreviewStatus.Ready, Assert.Single(_previews.Previews).Status);
+    }
+
+    [Fact]
     public async Task Avant_le_dernier_essai_un_echec_laisse_l_apercu_en_preparation()
     {
         var fileId = Uploaded("studio.flac");

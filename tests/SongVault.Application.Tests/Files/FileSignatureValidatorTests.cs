@@ -15,6 +15,9 @@ public sealed class FileSignatureValidatorTests
     { ".mp3",  [0xFF, 0xFB, 0x90, 0x64] },                         // trame MPEG sans balises
     { ".wav",  Bytes("RIFF\u0024\u0008\u0000\u0000WAVEfmt ") },
     { ".flac", Bytes("fLaC\u0000\u0000\u0000\u0022") },
+    { ".webm", [0x1A, 0x45, 0xDF, 0xA3, 0x9F, 0x42, 0x86] },        // enregistrement de Chrome (ADR 0049)
+    { ".m4a",  Bytes("\u0000\u0000\u0000\u001CftypM4A ") },          // Safari, mémo vocal
+    { ".ogg",  Bytes("OggS\u0000\u0002") },                          // Firefox
     { ".pdf",  Bytes("%PDF-1.7\n") },
     { ".gp",   [0x50, 0x4B, 0x03, 0x04, 0x14] },                   // PK ETX EOT DC4, comme votre fichier
     { ".gpx",  Bytes("BCFZ\u0000\u0001") },
@@ -45,6 +48,9 @@ public sealed class FileSignatureValidatorTests
     { ".gp",   Bytes("\u0018FICHIER GUITAR PRO v5.00") },           // l'inverse
     { ".gp4",  Bytes("FICHIER GUITAR PRO v4.06") },                // sans l'octet de longueur
     { ".gpx",  Bytes("PK\u0003\u0004") },
+    { ".webm", Bytes("OggS\u0000\u0002") },                          // ADR 0049 : un Ogg renommé en .webm
+    { ".m4a",  Bytes("ftypM4A ") },                                 // « ftyp » au début, pas après la taille
+    { ".ogg",  [0x1A, 0x45, 0xDF, 0xA3] },                          // un WebM renommé en .ogg
 };
 
     [Theory, MemberData(nameof(Valides))]

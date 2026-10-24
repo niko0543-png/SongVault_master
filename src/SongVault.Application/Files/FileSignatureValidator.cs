@@ -11,6 +11,10 @@ public static class FileSignatureValidator
         ".mp3" => IsMp3(header),
         ".wav" => header.Length >= 12 && header.StartsWith("RIFF"u8) && header.Slice(8, 4).SequenceEqual("WAVE"u8),
         ".flac" => header.StartsWith("fLaC"u8),
+        // ADR 0049 : en-tête EBML (WebM), boîte « ftyp » d'un MP4 en 5e position, page « OggS »
+        ".webm" => header.StartsWith((ReadOnlySpan<byte>)[0x1A, 0x45, 0xDF, 0xA3]),
+        ".m4a" => header.Length >= 8 && header.Slice(4, 4).SequenceEqual("ftyp"u8),
+        ".ogg" => header.StartsWith("OggS"u8),
         ".pdf" => header.StartsWith("%PDF-"u8),
         ".gp" => header.StartsWith((ReadOnlySpan<byte>)[0x50, 0x4B, 0x03, 0x04]),
         ".gpx" => header.StartsWith("BCFZ"u8) || header.StartsWith("BCFS"u8),

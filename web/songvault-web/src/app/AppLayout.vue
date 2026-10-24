@@ -73,6 +73,7 @@ async function onLogout() {
       <RouterLink v-if="bands.activeId" :class="{ active: section === 'songs' }" :to="{ name: 'songs', params: { bandId: bands.activeId } }">{{ t('layout.nav.songs') }}</RouterLink>
       <RouterLink v-if="bands.activeId" :class="{ active: section === 'releases' }" :to="{ name: 'releases', params: { bandId: bands.activeId } }">{{ t('layout.nav.releases') }}</RouterLink>
       <RouterLink v-if="bands.activeId" :class="{ active: section === 'setlists' }" :to="{ name: 'setlists', params: { bandId: bands.activeId } }">{{ t('layout.nav.setlists') }}</RouterLink>
+      <RouterLink v-if="bands.activeId && bands.can('write')" :class="{ active: section === 'record' }" :to="{ name: 'record', params: { bandId: bands.activeId } }">{{ t('layout.nav.record') }}</RouterLink>
       <RouterLink v-if="bands.activeId" :class="{ active: section === 'activity' }" :to="{ name: 'activity', params: { bandId: bands.activeId } }">{{ t('layout.nav.activity') }}</RouterLink>
       <RouterLink v-if="bands.activeId" :class="{ active: section === 'band-members' }" :to="{ name: 'band-members', params: { bandId: bands.activeId } }">{{ t('layout.nav.members') }}</RouterLink>
       <RouterLink v-if="bands.activeId && bands.can('write')" :class="{ active: section === 'trash' }" :to="{ name: 'trash', params: { bandId: bands.activeId } }">{{ t('layout.nav.trash') }}</RouterLink>

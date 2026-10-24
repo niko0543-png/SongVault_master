@@ -42,10 +42,13 @@ public sealed class AudioPreviewJob(
 
         var needsMp3 = !sourceKey.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase);
         var mp3Path = needsMp3 ? Path.Combine(Path.GetTempPath(), $"songvault-{Guid.NewGuid():N}.mp3") : null;
+        // ADR 0049 : un .m4a range souvent son index à la fin ; copié sur le disque, ffmpeg peut aller l'y chercher
+        var copyPath = sourceKey.EndsWith(".m4a", StringComparison.OrdinalIgnoreCase)
+            ? Path.Combine(Path.GetTempPath(), $"songvault-{Guid.NewGuid():N}.m4a") : null;
         try
         {
             AudioAnalysis analysis;
-            await using (var source = await storage.OpenReadAsync(sourceKey, ct))
+            await using (var source = await OpenSourceAsync(sourceKey, copyPath, ct))
                 analysis = await processor.ProcessAsync(source, mp3Path, ct);
 
             string? previewKey = null;
@@ -81,6 +84,17 @@ public sealed class AudioPreviewJob(
         finally
         {
             if (mp3Path is not null) File.Delete(mp3Path);                   // ne fait rien s'il n'existe pas
+            if (copyPath is not null) File.Delete(copyPath);
         }
+    }
+
+    private async Task<Stream> OpenSourceAsync(string sourceKey, string? copyPath, CancellationToken ct)
+    {
+        var stored = await storage.OpenReadAsync(sourceKey, ct);
+        if (copyPath is null) return stored;
+        await using (stored)
+        await using (var copy = File.Create(copyPath))
+            await stored.CopyToAsync(copy, ct);
+        return File.OpenRead(copyPath);
     }
 }

@@ -23,10 +23,13 @@ internal sealed class FakeAudioProcessor : IAudioProcessor
 {
     public Exception? Failure { get; set; }
     public int Calls { get; private set; }
+    /// <summary>ADR 0049 : chemin de la source quand elle arrive sur le disque (FileStream), sinon null.</summary>
+    public string? SourcePath { get; private set; }
 
     public async Task<AudioAnalysis> ProcessAsync(Stream source, string? mp3OutputPath, CancellationToken ct)
     {
         Calls++;
+        SourcePath = (source as FileStream)?.Name;
         await source.CopyToAsync(Stream.Null, ct);
         if (Failure is not null) throw Failure;
         if (mp3OutputPath is not null) await File.WriteAllBytesAsync(mp3OutputPath, "MP3"u8.ToArray(), ct);

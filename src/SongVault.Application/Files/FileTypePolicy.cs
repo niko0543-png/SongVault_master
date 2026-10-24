@@ -18,6 +18,11 @@ public static class FileTypePolicy
         new(".mp3",  SongFileType.Audio,     "audio/mpeg"),
         new(".wav",  SongFileType.Audio,     "audio/wav"),
         new(".flac", SongFileType.Audio,     "audio/flac"),
+        // Enregistrements faits dans le navigateur (ADR 0049) : WebM (Chrome, Firefox), MP4 audio (Safari),
+        // Ogg (Firefox) ; .m4a sert aussi aux mémos vocaux des téléphones
+        new(".webm", SongFileType.Audio,     "audio/webm"),
+        new(".m4a",  SongFileType.Audio,     "audio/mp4"),
+        new(".ogg",  SongFileType.Audio,     "audio/ogg"),
         // Guitar Pro (#28) : .gp3 à .gp5 (GP3 à GP5), .gpx (GP6), .gp (GP7 et 8)
         new(".gp",   SongFileType.Tablature, "application/octet-stream"),
         new(".gp3",  SongFileType.Tablature, "application/octet-stream"),

@@ -59,6 +59,26 @@ public sealed class AudioPreviewTests(SongVaultApiFactory factory)
         Assert.Equal(SHA256.HashData(wav), SHA256.HashData(original));
     }
 
+    [Theory]
+    [InlineData(".webm")]
+    [InlineData(".ogg")]
+    [InlineData(".m4a")]                                                      // index en fin de fichier
+    public async Task Un_enregistrement_du_navigateur_recoit_son_apercu(string extension)
+    {
+        var client = await factory.CreateNewUserClientAsync();
+        var (versionUrl, file) = await UploadAsync(client, TestFiles.Encoded(60, extension), $"repetition{extension}");
+        Assert.Equal(SongFileType.Audio, file.FileType);
+
+        await SongVaultApiFactory.RunDueJobsAsync(factory.Services);
+
+        Assert.Equal(AudioPreviewStatus.Ready, await PreviewStatusAsync(client, versionUrl, file.Id));
+        var waveform = await client.GetFromJsonAsync<WaveformResponse>(
+            $"{versionUrl}/files/{file.Id}/waveform", TestJson.Options);
+        Assert.InRange(waveform!.DurationMs, 59_900, 60_100);
+        var listen = await client.GetAsync($"{versionUrl}/files/{file.Id}/listen");
+        Assert.Equal("audio/mpeg", listen.Content.Headers.ContentType?.MediaType);
+    }
+
     [Fact]
     public async Task Un_MP3_garde_son_original_a_l_ecoute()
     {
