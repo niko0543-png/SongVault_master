@@ -16,9 +16,19 @@ public static class BandTestExtensions
     public static async Task<string> UserIdAsync(this HttpClient client)
         => (await client.GetFromJsonAsync<CurrentUserResponse>("/api/auth/me", TestJson.Options))!.Id;
 
-    /// <summary>Premier groupe du client : son groupe personnel, créé au premier appel s'il n'est membre de rien.</summary>
+    /// <summary>
+    /// Premier groupe du client. Un nouvel inscrit n'en a aucun (il le crée depuis la page d'accueil) :
+    /// le test le crée alors, comme le ferait l'utilisateur.
+    /// </summary>
     public static async Task<Guid> FirstBandIdAsync(this HttpClient client)
-        => (await client.GetFromJsonAsync<List<BandResponse>>("/api/bands", TestJson.Options))![0].Id;
+    {
+        var bands = (await client.GetFromJsonAsync<List<BandResponse>>("/api/bands", TestJson.Options))!;
+        if (bands.Count > 0) return bands[0].Id;
+
+        var created = await client.PostAsJsonAsync("/api/bands", new { name = "Groupe de test" });
+        created.EnsureSuccessStatusCode();
+        return (await created.Content.ReadFromJsonAsync<BandResponse>(TestJson.Options))!.Id;
+    }
 
     /// <summary>
     /// Ajoute directement en base l'utilisateur du client au groupe, avec ce rôle.

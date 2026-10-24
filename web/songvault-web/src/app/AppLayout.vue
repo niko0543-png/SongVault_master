@@ -68,7 +68,7 @@ async function onLogout() {
       {{ isMenuOpen ? t('layout.menu.close') : t('layout.menu.open') }}
     </button>
     <nav v-if="isAuthenticated" id="app-nav" class="session" :class="{ open: isMenuOpen }" :aria-label="t('layout.nav.label')">
-      <BandSwitcher v-if="bands.isLoaded" />
+      <BandSwitcher v-if="bands.isLoaded && bands.bands.length" />
       <!-- Onglet « Morceaux » : la liste des morceaux du groupe, jusqu'ici atteinte seulement par le logo -->
       <RouterLink v-if="bands.activeId" :class="{ active: section === 'songs' }" :to="{ name: 'songs', params: { bandId: bands.activeId } }">{{ t('layout.nav.songs') }}</RouterLink>
       <RouterLink v-if="bands.activeId" :class="{ active: section === 'releases' }" :to="{ name: 'releases', params: { bandId: bands.activeId } }">{{ t('layout.nav.releases') }}</RouterLink>

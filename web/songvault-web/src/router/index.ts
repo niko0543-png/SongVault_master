@@ -116,6 +116,13 @@ const router = createRouter({
       component: () => import('@/features/auth/pages/AccountPage.vue'),
       meta: { title: 'router.titles.account' },
     },
+    {
+      // Aucun groupe (première connexion, ou dernier groupe quitté) : créer le premier
+      path: '/bienvenue',
+      name: 'welcome',
+      component: () => import('@/features/bands/pages/WelcomePage.vue'),
+      meta: { title: 'router.titles.welcome' },
+    },
 
     // ---- Connexion exigée (par défaut), dans un groupe ----
     {
@@ -252,12 +259,15 @@ router.beforeEach(async (to) => {
   await bands.ensureLoaded()
   const bandId = typeof to.params.bandId === 'string' ? to.params.bandId : null
 
+  const preferred = bands.preferredId()
   if (!bandId) {
+    // Page d'accueil sans groupe : seulement tant qu'on n'en a aucun
+    if (to.name === 'welcome') return preferred ? { name: 'songs', params: { bandId: preferred } } : true
     if (to.name !== 'home') return true                 // page hors groupe : Mon compte (#4)
-    // « / » : ouvre le dernier groupe utilisé (ou le premier)
-    const preferred = bands.preferredId()
-    return preferred ? { name: 'songs', params: { bandId: preferred } } : true
+    // « / » : ouvre le dernier groupe utilisé (ou le premier) ; aucun groupe, l'accueil invite à en créer un
+    return preferred ? { name: 'songs', params: { bandId: preferred } } : { name: 'welcome' }
   }
+  if (!preferred) return { name: 'welcome' }            // lien vers un groupe alors qu'on n'en a plus aucun
   // Groupe inconnu ou dont on n'est pas membre : même page que pour une adresse inexistante
   if (!bands.has(bandId)) return { name: 'not-found', params: { pathMatch: to.path.slice(1).split('/') } }
  bands.setActive(bandId)

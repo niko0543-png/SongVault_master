@@ -16,6 +16,9 @@ export const authApi = {
   resendConfirmation: (email: string) =>
     request<void>('/auth/resendConfirmationEmail', { method: 'POST', body: { email } }),
   forgotPassword: (email: string) => request<void>('/auth/forgotPassword', { method: 'POST', body: { email } }),
+  /** Vérifie le lien à son ouverture, sans le consommer : 400 InvalidToken s'il a expiré ou déjà servi. */
+  checkResetCode: (email: string, resetCode: string) =>
+    request<void>('/auth/checkResetCode', { method: 'POST', body: { email, resetCode } }),
   resetPassword: (email: string, resetCode: string, newPassword: string) =>
     request<void>('/auth/resetPassword', { method: 'POST', body: { email, resetCode, newPassword } }),
   /** #19 : par /api/me (POST /auth/manage/info est fermé) ; cette session reste ouverte. */

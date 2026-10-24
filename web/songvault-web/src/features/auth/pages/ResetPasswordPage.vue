@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { authApi } from '../api/authApi'
 import { registrationErrors } from '../messages'
@@ -22,6 +22,16 @@ const messages = computed(() => (error.value ? registrationErrors(error.value) :
 // Code expiré (2 h), déjà utilisé ou modifié
 const invalidToken = computed(() => error.value instanceof ApiError && 'InvalidToken' in error.value.validationErrors)
 
+// Le lien est vérifié dès son ouverture : déjà utilisé ou expiré, le formulaire ne s'affiche pas
+const check = useAsyncAction(authApi.checkResetCode)
+const linkChecked = ref(false)
+const linkInvalid = computed(() => check.error.value instanceof ApiError && 'InvalidToken' in check.error.value.validationErrors)
+onMounted(async () => {
+  if (!email || !code) return
+  await check.run(email, code)
+  linkChecked.value = true          // autre erreur (réseau…) : le formulaire s'affiche, l'envoi tranchera
+})
+
 async function onSubmit() {
   submitted.value = true
   if (!form.password || form.password !== form.confirm) return
@@ -38,6 +48,11 @@ async function onSubmit() {
     <div v-if="!email || !code" class="card" role="alert">
       <p>{{ t('auth.resetPassword.incomplete') }}</p>
       <RouterLink :to="{ name: 'forgot-password' }">{{ t('auth.resetPassword.askNew') }}</RouterLink>
+    </div>
+    <p v-else-if="!linkChecked" class="muted" role="status">{{ t('auth.resetPassword.checking') }}</p>
+    <div v-else-if="linkInvalid" class="card" role="alert">
+      <p>{{ t('auth.resetPassword.linkInvalid') }}</p>
+      <RouterLink :to="{ name: 'forgot-password', query: { email } }">{{ t('auth.resetPassword.askNew') }}</RouterLink>
     </div>
     <form v-else class="card" novalidate @submit.prevent="onSubmit">
       <p class="muted">{{ t('auth.resetPassword.account', { email }) }}</p>

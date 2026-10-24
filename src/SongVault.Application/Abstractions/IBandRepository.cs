@@ -9,7 +9,7 @@ public interface IBandRepository
     /// <summary>
     /// Ajoute un groupe neuf au contexte, avec l'adhésion Owner créée par Band.Create.
     /// N'écrit rien en base : l'appelant fait IUnitOfWork.SaveChangesAsync.
-    /// Utilisé par CreateBandHandler et ListMyBandsHandler (groupe personnel).
+    /// Utilisé par CreateBandHandler.
     /// </summary>
     void Add(Band band);
 

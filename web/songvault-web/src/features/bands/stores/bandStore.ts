@@ -58,7 +58,7 @@ export const useBandStore = defineStore('band', () => {
     bands.value = bands.value.map((b) => (b.id === id ? { ...b, role } : b))
   }
 
-  /** Après « Quitter le groupe ». Sans plus aucun groupe, la liste sera relue : l'API recrée le groupe personnel. */
+  /** Après « Quitter le groupe ». Sans plus aucun groupe, la liste sera relue et « / » mènera à la page Bienvenue. */
   function remove(id: string) {
     bands.value = bands.value.filter((b) => b.id !== id)
     if (activeId.value === id) activeId.value = null
