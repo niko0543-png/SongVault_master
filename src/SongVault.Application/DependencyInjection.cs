@@ -48,6 +48,7 @@ public static class DependencyInjection
         services.AddScoped<ListMyBandsHandler>();
         services.AddScoped<CreateBandHandler>();
         services.AddScoped<RenameBandHandler>();
+        services.AddScoped<DeleteBandHandler>();
         services.AddScoped<CreateInvitationHandler>();
         services.AddScoped<ListInvitationsHandler>();
         services.AddScoped<RevokeInvitationHandler>();

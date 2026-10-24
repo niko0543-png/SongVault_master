@@ -54,4 +54,26 @@ public sealed class BandsController : ControllerBase
         await handler.HandleAsync(request.Name, ct);
         return NoContent();
     }
+
+    /// <summary>
+    /// Supprime définitivement le groupe et tout son contenu : morceaux (corbeille comprise), fichiers, sorties,
+    /// setlists, invitations, liens de partage, journal. Réservé aux Owner ; le nom du groupe est recopié pour confirmer.
+    /// </summary>
+    /// <response code="204">Groupe supprimé ; ses membres n'y ont plus accès.</response>
+    /// <response code="403">Vous n'êtes pas Owner du groupe.</response>
+    /// <response code="409">Le groupe a un abonnement en cours : à résilier d'abord depuis la page Facturation.</response>
+    /// <response code="422">Le nom recopié ne correspond pas à celui du groupe.</response>
+    [HttpDelete("{bandId:guid}"), BandScoped, MinimumBandRole(BandRole.Owner)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Delete(
+        Guid bandId, DeleteBandRequest request, [FromServices] DeleteBandHandler handler, CancellationToken ct)
+    {
+        await handler.HandleAsync(request.ConfirmName, ct);
+        return NoContent();
+    }
 }

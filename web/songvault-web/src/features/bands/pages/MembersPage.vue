@@ -13,6 +13,7 @@ import { formatDate } from '@/shared/utils/format'
 import { useConfirm } from '@/shared/composables/useConfirm'
 import { useToast } from '@/shared/composables/useToast'
 import InvitationsPanel from '@/features/invitations/components/InvitationsPanel.vue'
+import DeleteBandPanel from '../components/DeleteBandPanel.vue'
 import { t } from '@/shared/i18n'
 
 const bands = useBandStore()
@@ -132,6 +133,7 @@ async function onLeave() {
       </li>
     </ul>
     <InvitationsPanel v-if="isAdmin" />
+    <DeleteBandPanel v-if="isAdmin && !isLoading && !error" :member-count="members.length" />
   </section>
 </template>
 

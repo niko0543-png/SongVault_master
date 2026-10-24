@@ -71,6 +71,8 @@ public sealed class TestPaymentGateway : IPaymentGateway
 {
     public ConcurrentDictionary<string, SubscriptionState> States { get; } = new();
     public ConcurrentQueue<CheckoutRequest> Checkouts { get; } = new();
+    /// <summary>Abonnements arrêtés par CancelSubscriptionAsync, dans l'ordre.</summary>
+    public ConcurrentQueue<string> Cancelled { get; } = new();
 
     public bool IsEnabled => true;
 
@@ -86,5 +88,9 @@ public sealed class TestPaymentGateway : IPaymentGateway
     public Task<SubscriptionState?> GetSubscriptionAsync(string subscriptionId, CancellationToken ct)
         => Task.FromResult(States.TryGetValue(subscriptionId, out var state) ? state : null);
 
-    public Task CancelSubscriptionAsync(string subscriptionId, CancellationToken ct) => Task.CompletedTask;
+    public Task CancelSubscriptionAsync(string subscriptionId, CancellationToken ct)
+    {
+        Cancelled.Enqueue(subscriptionId);
+        return Task.CompletedTask;
+    }
 }

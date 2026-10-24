@@ -13,3 +13,6 @@ public sealed record BandResponse(Guid Id, string Name, BandRole Role)
 public sealed record CreateBandRequest([Required, MaxLength(Band.NameMaxLength)] string Name);
 
 public sealed record RenameBandRequest([Required, MaxLength(Band.NameMaxLength)] string Name);
+
+/// <summary>Le nom du groupe, recopié par l'Owner pour confirmer la suppression.</summary>
+public sealed record DeleteBandRequest([Required, MaxLength(Band.NameMaxLength)] string ConfirmName);
