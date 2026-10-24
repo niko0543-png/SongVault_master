@@ -681,6 +681,53 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                     b.ToTable("AudioPreviews", (string)null);
                 });
 
+            modelBuilder.Entity("SongVault.Domain.Files.AudioSplit", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("BandId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("Parts")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTimeOffset>("RequestedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("RequestedById")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<Guid>("SourceFileId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("SourceFileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SourceFileId", "RequestedAt");
+
+                    b.ToTable("AudioSplits", (string)null);
+                });
+
             modelBuilder.Entity("SongVault.Domain.Files.FileScan", b =>
                 {
                     b.Property<Guid>("SongFileId")
@@ -1630,6 +1677,15 @@ namespace SongVault.Infrastructure.Persistence.Migrations
                     b.HasOne("SongVault.Domain.Files.SongFile", null)
                         .WithOne()
                         .HasForeignKey("SongVault.Domain.Files.AudioPreview", "SongFileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SongVault.Domain.Files.AudioSplit", b =>
+                {
+                    b.HasOne("SongVault.Domain.Files.SongFile", null)
+                        .WithMany()
+                        .HasForeignKey("SourceFileId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

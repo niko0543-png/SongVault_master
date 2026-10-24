@@ -61,6 +61,11 @@ const icons: Record<SongFileType, string> = { Audio: '🎵', Tablature: '🎸', 
             {{ t('files.list.showTablature') }}
           </RouterLink>
           <a :href="filesApi.contentUrl(songId, versionId, file.id, true)" download>{{ t('files.list.download') }}</a>
+          <!-- ADR 0050 : une répétition entière se découpe en morceaux, une fois sa durée connue (aperçu prêt) -->
+          <RouterLink v-if="!readonly && file.fileType === 'Audio' && file.preview === 'Ready'" class="tab-link" data-testid="split-file"
+                      :to="{ name: 'split-recording', params: { songId, versionId, fileId: file.id } }">
+            {{ t('files.split.open') }}
+          </RouterLink>
         </template>
         <button v-if="!readonly" type="button" class="secondary" :disabled="busyId === file.id" @click="$emit('delete', file)">{{ t('common.actions.delete') }}</button>
       </div>

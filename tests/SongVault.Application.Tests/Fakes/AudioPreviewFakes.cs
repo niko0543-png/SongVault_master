@@ -32,4 +32,18 @@ internal sealed class FakeAudioProcessor : IAudioProcessor
         if (mp3OutputPath is not null) await File.WriteAllBytesAsync(mp3OutputPath, "MP3"u8.ToArray(), ct);
         return new AudioAnalysis(new byte[AudioPreview.PeakCount], 183_000);
     }
+
+    /// <summary>Découpage (ADR 0050) : chaque passage reçoit « début-durée » ; EmptyCut : le passage laissé vide.</summary>
+    public List<(IReadOnlyList<AudioCut> Cuts, AudioCutFormat Format)> Splits { get; } = [];
+    public int? EmptyCut { get; set; }
+
+    public async Task SplitAsync(Stream source, IReadOnlyList<AudioCut> cuts, AudioCutFormat format, CancellationToken ct)
+    {
+        Calls++;
+        await source.CopyToAsync(Stream.Null, ct);
+        Splits.Add((cuts, format));
+        if (Failure is not null) throw Failure;
+        for (var i = 0; i < cuts.Count; i++)
+            await File.WriteAllTextAsync(cuts[i].OutputPath, i == EmptyCut ? "" : $"{cuts[i].StartMs}-{cuts[i].DurationMs}", ct);
+    }
 }

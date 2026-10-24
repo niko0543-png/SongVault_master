@@ -1,4 +1,4 @@
-# Changelog
+﻿# Changelog
 
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) — versions : [SemVer](https://semver.org/lang/fr/).
 
@@ -65,6 +65,7 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) — versions :
 - Nouvelle version : reprise d'éléments d'une version existante (la dernière par défaut) : paroles et accords, BPM, tonalité, notes, et les fichiers choisis, copiés avec leurs pistes de mélangeur et le calage de leurs tablatures ; les copies comptent dans le stockage du groupe et repassent par l'antivirus (`copyFromVersionId` et `copyFileIds` dans `POST …/versions`) (ADR 0046).
 - Setlists : liste des morceaux du groupe à cocher (sortis compris), filtrée pendant la frappe, et ajout de la sélection d'un coup ; commentaire entre deux morceaux (« présenter le groupe », « changer de guitare »), affiché à l'écran et sur la feuille imprimée (`commentBefore` sur chaque ligne, migration `AddSetlistComments`) (ADR 0046).
 - Suppression d'un groupe par son propriétaire, depuis la page Membres : le nom du groupe est recopié pour confirmer, puis le groupe et tout son contenu (morceaux et corbeille, fichiers, sorties, setlists, invitations, liens de partage, journal) sont effacés tout de suite ; refusée tant qu'un abonnement court, un abonnement déjà résilié s'arrête avec le groupe ; sans plus aucun groupe, retour à la page Bienvenue (`DELETE /api/bands/{id}`) (ADR 0048).
+- Découpage d'un enregistrement (une répétition entière) en morceaux : coupures placées à l'écoute sur la forme d'onde, passages à garder ou non, chacun devenant une nouvelle version d'un morceau existant ou un nouveau morceau ; fait par ffmpeg en arrière-plan, l'original reste tel quel (ADR 0050, migration `AddAudioSplits`).
 ### Modifié
 - Navigation : onglet « Morceaux » avant « Sorties », et l'onglet de la page affichée souligné. Lecteur audio : bouton muet et volume, gardés sur l'appareil. Lecteur Guitar Pro : piste « Général » en bas du panneau des pistes, pour le volume de toutes les pistes (ou de la maquette suivie) (ADR 0045).
 - Section « Paroles » d'une version : lecture par défaut, saisie par « Modifier le texte ». Dans l'archive d'une sortie, `paroles.txt` est sans accords et `accords.txt` garde la source ChordPro.

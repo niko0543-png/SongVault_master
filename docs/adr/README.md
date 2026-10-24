@@ -1,4 +1,4 @@
-# Décisions d'architecture (ADR)
+﻿# Décisions d'architecture (ADR)
 
 Chaque fichier documente **une** décision : contexte, décision, alternatives écartées,
 conséquences. Un ADR n'est jamais réécrit : si une décision change, un nouvel ADR remplace
@@ -54,3 +54,4 @@ l'ancien, qui passe au statut « remplacé par ADR NNNN ».
 | [0046](0046-reprise-d-une-version-precedente.md) | Reprendre des éléments d'une version précédente : textes dans les champs, fichiers copiés | accepté |
 | [0047](0046-setlist-morceaux-a-cocher-et-commentaires.md) | Setlists : morceaux existants à cocher et commentaires entre les morceaux | accepté |
 | [0048](0048-suppression-d-un-groupe.md) | Suppression d'un groupe par son Owner : immédiate, nom recopié, abonnement résilié d'abord | accepté |
+| [0050](0050-decoupage-d-un-enregistrement.md) | Découpage d'un enregistrement en morceaux : coupures sur la forme d'onde, ffmpeg en tâche de fond, une version par passage | accepté |

@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using SongVault.Application.Files.Splits;
+using Microsoft.Extensions.DependencyInjection;
 using SongVault.Application.Notifications;
 using SongVault.Application.Abstractions;
 using SongVault.Application.Accounts;
@@ -70,6 +71,10 @@ public static class DependencyInjection
         services.AddScoped<ListenSongFileHandler>();
         services.AddScoped<GetWaveformHandler>();
         services.AddScoped<RetryAudioPreviewHandler>();
+        // Découpage d'un enregistrement en morceaux (ADR 0050)
+        services.AddScoped<RequestAudioSplitHandler>();
+        services.AddScoped<GetLatestAudioSplitHandler>();
+        services.AddScoped<IBackgroundJobHandler, AudioSplitJob>();
         // #17 : analyse antivirus (ADR 0024)
         services.AddScoped<FileScanQueue>();
         services.AddScoped<IBackgroundJobHandler, FileScanJob>();

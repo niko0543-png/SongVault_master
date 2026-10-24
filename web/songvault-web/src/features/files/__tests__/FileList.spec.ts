@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, RouterLinkStub } from '@vue/test-utils'
 import FileList from '../components/FileList.vue'
 import type { SongFile } from '../types'
 
@@ -13,7 +13,7 @@ const audio = (id: string, preview: SongFile['preview']): SongFile => ({
 function mountList(files: SongFile[], readonly = false) {
   return mount(FileList, {
     props: { songId: 's1', versionId: 'v1', files, readonly, playing: { fileId: 'ready', progress: 0.5 } },
-    global: { stubs: { FileWaveform: true } },
+    global: { stubs: { FileWaveform: true, RouterLink: RouterLinkStub } },
   })
 }
 
@@ -78,5 +78,17 @@ describe('FileList, analyse antivirus (#17)', () => {
 
     expect(wrapper.emitted('retryScan')).toEqual([[failed]])
     expect(mountList([failed], true).find('button.link').exists()).toBe(false)
+  })
+})
+describe('FileList, découpage (ADR 0050)', () => {
+  it("propose de découper un fichier audio à l'aperçu prêt, sauf en lecture seule", () => {
+    const wrapper = mountList([audio('pending', 'Pending'), audio('ready', 'Ready')])
+
+    const links = wrapper.findAll('[data-testid="split-file"]')
+    expect(links).toHaveLength(1)
+    expect(wrapper.getComponent(RouterLinkStub).props('to')).toEqual({
+      name: 'split-recording', params: { songId: 's1', versionId: 'v1', fileId: 'ready' },
+    })
+    expect(mountList([audio('ready', 'Ready')], true).find('[data-testid="split-file"]').exists()).toBe(false)
   })
 })

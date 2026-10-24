@@ -50,3 +50,24 @@ export interface FileUploadTicket {
   headers: Record<string, string>
   expiresAt: string
 }
+/** Découpage d'un enregistrement (ADR 0050). */
+export type AudioSplitStatus = 'Pending' | 'Done' | 'Failed'
+
+export interface AudioSplitPart {
+  startMs: number
+  endMs: number
+  title: string
+  songId: string | null
+  /** Une fois fait : le morceau et la version qui ont reçu le passage. */
+  createdSongId: string | null
+  createdVersionId: string | null
+}
+
+export interface AudioSplit {
+  id: string
+  status: AudioSplitStatus
+  error: string | null
+  requestedAt: string
+  completedAt: string | null
+  parts: AudioSplitPart[]
+}
