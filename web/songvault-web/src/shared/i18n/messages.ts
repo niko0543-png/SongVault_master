@@ -16,6 +16,7 @@ import { notificationsMessages } from '@/features/notifications/locale'
 import { playerMessages } from '@/features/player/locale'
 import { releasesMessages } from '@/features/releases/locale'
 import { rightsMessages } from '@/features/rights/locale'
+import { recordingMessages } from '@/features/recording/locale'
 import { routerMessages } from '@/router/locale'
 import { setlistsMessages } from '@/features/setlists/locale'
 import { sharedMessages } from '@/shared/locale'
@@ -45,6 +46,7 @@ guitarpro: guitarproMessages.fr,
   legal: legalMessages.fr,
   notifications: notificationsMessages.fr,
   player: playerMessages.fr,
+  recording: recordingMessages.fr,
   releases: releasesMessages.fr,
   rights: rightsMessages.fr,
   router: routerMessages.fr,
@@ -75,6 +77,7 @@ export const en: Widen<typeof fr> = {
   legal: legalMessages.en,
   notifications: notificationsMessages.en,
   player: playerMessages.en,
+  recording: recordingMessages.en,
   releases: releasesMessages.en,
   rights: rightsMessages.en,
   router: routerMessages.en,

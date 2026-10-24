@@ -1,4 +1,5 @@
-﻿using System.Net.Http.Headers;
+﻿using System.Diagnostics;
+using System.Net.Http.Headers;
 using System.Security.Cryptography;
 
 namespace SongVault.Api.Tests;
@@ -28,6 +29,33 @@ internal static class TestFiles
             w.Write((short)(Math.Sin(2 * Math.PI * 440 * i / rate) * 12000));
         w.Flush();
         return ms.ToArray();
+    }
+
+    /// <summary>
+    /// ADR 0049 : Wav(seconds) réencodé par ffmpeg dans le format d'un enregistrement du navigateur (.webm, .ogg, .m4a).
+    /// Le .m4a garde l'index (moov) à la fin, comme bien des mémos vocaux : illisible depuis une entrée standard.
+    /// </summary>
+    public static byte[] Encoded(double seconds, string extension)
+    {
+        var input = Path.Combine(Path.GetTempPath(), $"songvault-test-{Guid.NewGuid():N}.wav");
+        var output = Path.ChangeExtension(input, extension);
+        try
+        {
+            File.WriteAllBytes(input, Wav(seconds));
+            var codec = extension == ".m4a" ? "aac" : "libopus";
+            using var ffmpeg = Process.Start(new ProcessStartInfo("ffmpeg",
+                ["-hide_banner", "-loglevel", "error", "-y", "-i", input, "-c:a", codec, output])
+                { RedirectStandardError = true })!;
+            var errors = ffmpeg.StandardError.ReadToEnd();
+            ffmpeg.WaitForExit();
+            if (ffmpeg.ExitCode != 0) throw new InvalidOperationException($"ffmpeg : {errors}");
+            return File.ReadAllBytes(output);
+        }
+        finally
+        {
+            File.Delete(input);
+            File.Delete(output);
+        }
     }
 
     /// <summary>Octets aléatoires précédés de "fLaC" : accepté à l'envoi, illisible pour ffmpeg (#15).</summary>

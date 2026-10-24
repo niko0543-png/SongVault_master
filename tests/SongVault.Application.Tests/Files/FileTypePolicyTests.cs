@@ -12,6 +12,9 @@ public sealed class FileTypePolicyTests
     [InlineData("riff.gp3", SongFileType.Tablature)]       // #28
     [InlineData("riff.gp4", SongFileType.Tablature)]
     [InlineData("paroles.pdf", SongFileType.Document)]
+    [InlineData("repetition.webm", SongFileType.Audio)]   // ADR 0049 : enregistrements du navigateur
+    [InlineData("repetition.m4a", SongFileType.Audio)]
+    [InlineData("repetition.ogg", SongFileType.Audio)]
     public void Extensions_autorisees(string fileName, SongFileType expected)
         => Assert.Equal(expected, FileTypePolicy.Resolve(fileName)?.FileType);
 
@@ -108,6 +111,9 @@ public sealed class FileTypePolicyTests
     [InlineData("audio.mp3", "audio/mpeg")]
     [InlineData("audio.wav", "audio/wav")]
     [InlineData("audio.flac", "audio/flac")]
+    [InlineData("audio.webm", "audio/webm")]
+    [InlineData("audio.m4a", "audio/mp4")]
+    [InlineData("audio.ogg", "audio/ogg")]
     [InlineData("tab.gp", "application/octet-stream")]
     [InlineData("tab.gp5", "application/octet-stream")]
     [InlineData("tab.gpx", "application/octet-stream")]
@@ -133,9 +139,12 @@ public sealed class FileTypePolicyTests
         Assert.Contains(".gpx", allowed);
         Assert.Contains(".pdf", allowed);
         Assert.Contains(".txt", allowed);
+        Assert.Contains(".webm", allowed);
+        Assert.Contains(".m4a", allowed);
+        Assert.Contains(".ogg", allowed);
 
-        // Vérifie que la collection a exactement 10 éléments (#28 : .gp3 et .gp4)
-        Assert.Equal(10, allowed.Count);
+        // Vérifie que la collection a exactement 13 éléments (#28 : .gp3 et .gp4 ; ADR 0049 : .webm, .m4a, .ogg)
+        Assert.Equal(13, allowed.Count);
     }
 
     [Theory]

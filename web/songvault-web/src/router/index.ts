@@ -200,6 +200,13 @@ const router = createRouter({
       meta: { title: 'router.titles.setlist' },
     },
     {
+      // ADR 0049 : enregistrer une répétition au micro ; ?songId=&versionId= choisit d'avance la destination
+      path: '/b/:bandId/record',
+      name: 'record',
+      component: () => import('@/features/recording/pages/RecordPage.vue'),
+      meta: { title: 'router.titles.record', write: true },
+    },
+    {
       path: '/b/:bandId/activity',
       name: 'activity',
       component: () => import('@/features/activity/pages/ActivityFeedPage.vue'),

@@ -13,6 +13,8 @@ namespace SongVault.Infrastructure.Audio;
 /// Un seul passage de ffmpeg par fichier (ADR 0021) : l'original arrive sur l'entrée standard, au fil de sa lecture
 /// dans le stockage (rien de copié sur le disque, même pour un WAV de 2 Go) ; ffmpeg écrit le MP3 d'écoute dans un
 /// fichier temporaire, et un son mono à 8 kHz sur sa sortie standard, d'où l'on tire la forme d'onde et la durée.
+/// Un fichier déjà sur le disque (FileStream) est lu par son chemin (ADR 0049) : ffmpeg peut alors y aller chercher
+/// l'index d'un .m4a, souvent rangé à la fin, ce qu'une entrée standard ne permet pas.
 /// </summary>
 internal sealed class FfmpegAudioProcessor(IOptions<AudioPreviewOptions> options) : IAudioProcessor
 {
@@ -24,7 +26,8 @@ internal sealed class FfmpegAudioProcessor(IOptions<AudioPreviewOptions> options
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
         timeout.CancelAfter(settings.Timeout);
 
-        using var process = new Process { StartInfo = StartInfo(settings, mp3OutputPath) };
+        var sourcePath = (source as FileStream)?.Name;
+        using var process = new Process { StartInfo = StartInfo(settings, sourcePath, mp3OutputPath) };
         try
         {
             process.Start();
@@ -38,7 +41,8 @@ internal sealed class FfmpegAudioProcessor(IOptions<AudioPreviewOptions> options
         var waveform = new WaveformBuilder();
         try
         {
-            var feed = FeedAsync(source, process.StandardInput.BaseStream, timeout.Token);
+            var feed = sourcePath is null ? FeedAsync(source, process.StandardInput.BaseStream, timeout.Token)
+                : CloseAsync(process.StandardInput.BaseStream);
             var read = ReadPcmAsync(process.StandardOutput.BaseStream, waveform, timeout.Token);
             var errors = ReadLastErrorAsync(process.StandardError, timeout.Token);
             await Task.WhenAll(feed, read, errors);
@@ -55,7 +59,7 @@ internal sealed class FfmpegAudioProcessor(IOptions<AudioPreviewOptions> options
         return new AudioAnalysis(waveform.Build(), waveform.DurationMs);
     }
 
-    private static ProcessStartInfo StartInfo(AudioPreviewOptions settings, string? mp3OutputPath)
+    private static ProcessStartInfo StartInfo(AudioPreviewOptions settings, string? sourcePath, string? mp3OutputPath)
     {
         var start = new ProcessStartInfo(settings.FfmpegPath)
         {
@@ -65,7 +69,7 @@ internal sealed class FfmpegAudioProcessor(IOptions<AudioPreviewOptions> options
             UseShellExecute = false,
             CreateNoWindow = true,
         };
-        string[] input = ["-hide_banner", "-nostats", "-loglevel", "error", "-y", "-i", "pipe:0"];
+        string[] input = ["-hide_banner", "-nostats", "-loglevel", "error", "-y", "-i", sourcePath ?? "pipe:0"];
         // MP3 d'écoute : stéréo au plus (un WAV 5.1 aussi), 44,1 kHz, débit constant
         string[] mp3 = mp3OutputPath is null ? [] :
         [
@@ -97,6 +101,11 @@ internal sealed class FfmpegAudioProcessor(IOptions<AudioPreviewOptions> options
         {
             try { await stdin.DisposeAsync(); } catch (IOException) { /* idem */ }
         }
+    }
+
+    private static async Task CloseAsync(Stream stdin)
+    {
+        try { await stdin.DisposeAsync(); } catch (IOException) { /* ffmpeg déjà arrêté */ }
     }
 
     private static async Task ReadPcmAsync(Stream stdout, WaveformBuilder waveform, CancellationToken ct)
