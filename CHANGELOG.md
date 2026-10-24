@@ -85,6 +85,7 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) — versions :
 - `scripts/deploy-azure.ps1` garde les réglages e-mail de l'API en place quand `-EmailProvider` et `-EmailFrom` sont omis, clé Brevo comprise ; il refuse Brevo avec une adresse `@songvault.local` et avertit quand aucun e-mail ne part (ADR 0022).
 - La suppression du compte est refusée (409) tant qu'un groupe dont on est seul membre a un abonnement en cours ; la purge résilie chez Stripe ce qui resterait.
 - `scripts/deploy-azure.ps1` : options `-BillingProvider`, `-StripePriceBand`, `-StripePriceStudio`, secrets `STRIPE_SECRET_KEY` et `STRIPE_WEBHOOK_SECRET` ; réglages de paiement gardés d'un déploiement à l'autre.
+- Lecteur Guitar Pro : la banque de sons GeneralUser GS remplace Sonivox, pour des guitares, une basse et une batterie plus réalistes (32 Mo, téléchargés une fois) (ADR 0049).
 ### Supprimé
 - `Song.OwnerId`, remplacé par `Song.BandId`. Les morceaux sans propriétaire valide sont supprimés par la migration `BackfillBands`.
 ### Corrigé
