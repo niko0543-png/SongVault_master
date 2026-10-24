@@ -37,4 +37,14 @@ internal sealed class BandRepository(SongVaultDbContext db) : IBandRepository
             .OrderBy(x => x.Email)                                 // même règle : trier sur le type anonyme
             .Select(x => new BandMemberDto(x.UserId, x.Email ?? "", x.Role, x.JoinedAt))
             .ToListAsync(ct);
+
+    public async Task<IReadOnlyList<string>> PurgeAsync(Guid bandId, CancellationToken ct)
+    {
+        await using var transaction = await db.Database.BeginTransactionAsync(ct);
+        if (!await db.Bands.AnyAsync(b => b.Id == bandId, ct)) return [];
+
+        var keys = await BandContentPurge.DeleteAsync(db, [bandId], ct);
+        await transaction.CommitAsync(ct);
+        return keys;
+    }
 }

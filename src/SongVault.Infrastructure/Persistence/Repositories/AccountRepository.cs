@@ -133,42 +133,19 @@ internal sealed class AccountRepository(SongVaultDbContext db, UserManager<Ident
             .Select(m => m.BandId)
             .ToListAsync(ct);
 
-        // #20 : corbeille comprise, sinon ses fichiers resteraient dans le stockage et ses morceaux bloqueraient le groupe
-        var songs = db.Songs.IgnoreQueryFilters([SongVaultDbContext.BandFilter, SongVaultDbContext.SoftDeleteFilter])
-            .Where(s => soloBandIds.Contains(s.BandId));
-        var files = songs.SelectMany(s => s.Versions).SelectMany(v => v.Files);
-        var keys = await files.Select(f => f.StorageKey).ToListAsync(ct);
-        // #15 : leurs MP3 d'aperçu (les lignes partent en cascade avec les fichiers)
-        keys.AddRange(await db.AudioPreviews
-            .Where(p => p.PreviewStorageKey != null && files.Any(f => f.Id == p.SongFileId))
-            .Select(p => p.PreviewStorageKey!)
-            .ToListAsync(ct));
-        // Sorties de ces groupes (#10) : leurs pochettes, puis les sorties avant les morceaux que citent leurs pistes
-        var releases = db.Releases.IgnoreQueryFilters([SongVaultDbContext.BandFilter])
-            .Where(r => soloBandIds.Contains(r.BandId));
-        keys.AddRange(await releases
-            .Where(r => r.CoverStorageKey != null)
-            .Select(r => r.CoverStorageKey!)
-            .ToListAsync(ct));
+        // Archives qu'il a demandées dans les groupes partagés (#24), et ses exports RGPD
+        var ownReleaseExports = db.ReleaseExports.Where(e => e.RequestedById == userId);
+        var keys = (await ownReleaseExports.Select(e => e.Id).ToListAsync(ct)).Select(ReleaseExport.StorageKeyFor).ToList();
         keys.AddRange(await db.DataExports
             .Where(e => e.UserId == userId && e.StorageKey != null)
             .Select(e => e.StorageKey!)
             .ToListAsync(ct));
+        await ownReleaseExports.ExecuteDeleteAsync(ct);
 
-        // #24 : archives des sorties de ces groupes, et celles qu'il a demandées dans les groupes partagés
-        var releaseExports = db.ReleaseExports
-            .Where(e => e.RequestedById == userId || releases.Any(r => r.Id == e.ReleaseId));
+        // Ses groupes solo et tout leur contenu (ADR 0048 : même purge que la suppression d'un groupe)
+        keys.AddRange(await BandContentPurge.DeleteAsync(db, soloBandIds, ct));
 
-        keys.AddRange((await releaseExports.Select(e => e.Id).ToListAsync(ct)).Select(ReleaseExport.StorageKeyFor));
         var email = (user.Email ?? "").ToLowerInvariant();     // Invitations.Email est en minuscules
-        await releaseExports.ExecuteDeleteAsync(ct);
-        await releases.ExecuteDeleteAsync(ct);                 // pistes en cascade
-        // Setlists (#21) : avant les morceaux que citent leurs lignes (lignes en cascade)
-        await db.Setlists.IgnoreQueryFilters([SongVaultDbContext.BandFilter])
-            .Where(s => soloBandIds.Contains(s.BandId))
-            .ExecuteDeleteAsync(ct);
-        await songs.ExecuteDeleteAsync(ct);
-        await db.Bands.Where(b => soloBandIds.Contains(b.Id)).ExecuteDeleteAsync(ct);
         await db.Invitations.Where(i => i.Email == email).ExecuteDeleteAsync(ct);
         // Commentaires dans les groupes partagés : gardés pour le fil de discussion, sans auteur (ADR 0014).
         // Ceux des groupes effacés juste au-dessus sont partis avec leurs fichiers.

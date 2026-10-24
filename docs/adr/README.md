@@ -53,3 +53,4 @@ l'ancien, qui passe au statut « remplacé par ADR NNNN ».
 | [0043](0043-comparaison-guitar-pro-vert-et-rouge.md) | Comparaison Guitar Pro : ajouté en vert, modifié en orange, retiré en rouge, pistes en bas | accepté |
 | [0046](0046-reprise-d-une-version-precedente.md) | Reprendre des éléments d'une version précédente : textes dans les champs, fichiers copiés | accepté |
 | [0047](0046-setlist-morceaux-a-cocher-et-commentaires.md) | Setlists : morceaux existants à cocher et commentaires entre les morceaux | accepté |
+| [0048](0048-suppression-d-un-groupe.md) | Suppression d'un groupe par son Owner : immédiate, nom recopié, abonnement résilié d'abord | accepté |

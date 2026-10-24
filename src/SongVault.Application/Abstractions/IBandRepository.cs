@@ -42,4 +42,10 @@ public interface IBandRepository
     /// Utilisé par GET /api/bands/{bandId}/members (ListMembersHandler).
     /// </summary>
     Task<IReadOnlyList<BandMemberDto>> ListMembersAsync(Guid bandId, CancellationToken ct);
+
+    /// <summary>
+    /// Efface le groupe et tout son contenu, en une transaction (ADR 0048) ; renvoie les clés des fichiers à effacer
+    /// ensuite du stockage. Liste vide si le groupe n'existe plus. Utilisé par DeleteBandHandler.
+    /// </summary>
+    Task<IReadOnlyList<string>> PurgeAsync(Guid bandId, CancellationToken ct);
 }
