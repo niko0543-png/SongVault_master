@@ -1,7 +1,7 @@
 import { request } from '@/shared/api/httpClient'
 import { bandPath } from '@/shared/api/bandPath'
 import { putFile } from './putFile'
-import type { AudioPreviewStatus, AudioWaveform, FilePolicy, FileScanStatus, FileUploadTicket, SongFile } from '../types'
+import type { AudioPreviewStatus, AudioSplit, AudioWaveform, FilePolicy, FileScanStatus, FileUploadTicket, SongFile } from '../types'
 
 const base = (songId: string, versionId: string) => bandPath(`/songs/${songId}/versions/${versionId}/files`)
 
@@ -49,4 +49,14 @@ function remove(songId: string, versionId: string, fileId: string) {
   return request<void>(`${base(songId, versionId)}/${fileId}`, { method: 'DELETE' })
 }
 
-export const filesApi = { contentUrl, listenUrl, waveform, retryPreview, retryScan, policy, upload, remove }
+/** ADR 0050 : découpe un enregistrement en passages, chacun devenant une version ; fait en arrière-plan. */
+function split(songId: string, versionId: string, fileId: string, body: { parts: { startMs: number; endMs: number; title: string; songId?: string }[] }) {
+  return request<AudioSplit>(`${base(songId, versionId)}/${fileId}/splits`, { method: 'POST', body })
+}
+
+/** Le dernier découpage du fichier, ou null s'il n'a jamais été découpé (204). */
+async function latestSplit(songId: string, versionId: string, fileId: string) {
+  return (await request<AudioSplit | undefined>(`${base(songId, versionId)}/${fileId}/splits/latest`)) ?? null
+}
+
+export const filesApi = { contentUrl, listenUrl, waveform, retryPreview, retryScan, policy, upload, remove, split, latestSplit }

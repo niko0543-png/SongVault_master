@@ -54,6 +54,7 @@ public static class DependencyInjection
         services.AddScoped<ISetlistRepository, SetlistRepository>();
         services.AddScoped<IShareLinkRepository, ShareLinkRepository>();
         services.AddScoped<IAudioPreviewRepository, AudioPreviewRepository>();
+        services.AddScoped<IAudioSplitRepository, AudioSplitRepository>();
         services.AddScoped<IFileScanRepository, FileScanRepository>();
         services.AddScoped<IBillingRepository, BillingRepository>();
         services.AddScoped<IAuditRepository, AuditRepository>();

@@ -6,6 +6,7 @@ using Microsoft.Extensions.Options;
 
 using SongVault.Application.Abstractions;
 using SongVault.Application.Files;
+using SongVault.Application.Files.Splits;
 
 namespace SongVault.Infrastructure.Audio;
 
@@ -25,15 +26,7 @@ internal sealed class FfmpegAudioProcessor(IOptions<AudioPreviewOptions> options
         timeout.CancelAfter(settings.Timeout);
 
         using var process = new Process { StartInfo = StartInfo(settings, mp3OutputPath) };
-        try
-        {
-            process.Start();
-        }
-        catch (Win32Exception ex)
-        {
-            throw new InvalidOperationException(
-                $"ffmpeg introuvable (« {settings.FfmpegPath} ») : installez-le, ou indiquez son chemin dans AudioPreview:FfmpegPath.", ex);
-        }
+        StartOrExplain(process, settings);
 
         var waveform = new WaveformBuilder();
         try
@@ -55,17 +48,83 @@ internal sealed class FfmpegAudioProcessor(IOptions<AudioPreviewOptions> options
         return new AudioAnalysis(waveform.Build(), waveform.DurationMs);
     }
 
+    /// <summary>
+    /// Découpage (ADR 0050), toujours en un seul passage : une sortie par passage, chacune avec son début (-ss) et sa
+    /// durée (-t). ffmpeg ne peut pas sauter dans une entrée standard : il lit tout et jette ce qui est hors passage.
+    /// </summary>
+    public async Task SplitAsync(Stream source, IReadOnlyList<AudioCut> cuts, AudioCutFormat format, CancellationToken ct)
+    {
+        var settings = options.Value;
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeout.CancelAfter(settings.Timeout);
+
+        var start = Start(settings, redirectOutput: false);
+        foreach (var argument in (string[])[.. Input, .. cuts.SelectMany(cut => CutArguments(cut, format))])
+            start.ArgumentList.Add(argument);
+        using var process = new Process { StartInfo = start };
+        StartOrExplain(process, settings);
+        try
+        {
+            var feed = FeedAsync(source, process.StandardInput.BaseStream, timeout.Token);
+            var errors = ReadLastErrorAsync(process.StandardError, timeout.Token);
+            await Task.WhenAll(feed, errors);
+            await process.WaitForExitAsync(timeout.Token);
+
+            if (process.ExitCode != 0) throw new AudioProcessingException(Unreadable, await errors);
+        }
+        finally
+        {
+            if (!process.HasExited) process.Kill(entireProcessTree: true);
+        }
+    }
+
+    private static string[] CutArguments(AudioCut cut, AudioCutFormat format)
+    {
+        string[] codec = format switch
+        {
+            AudioCutFormat.Wav => ["-c:a", "copy", "-f", "wav"],
+            AudioCutFormat.Mp3 => ["-c:a", "copy", "-f", "mp3"],
+            AudioCutFormat.Flac => ["-c:a", "flac", "-f", "flac"],
+            _ => ["-c:a", "libmp3lame", "-b:a", $"{AudioSplitFormats.EncodedMp3BitrateKbps.ToString(CultureInfo.InvariantCulture)}k", "-f", "mp3"],
+        };
+        return
+        [
+            "-map", "0:a:0", "-vn", "-map_metadata", "-1",
+            "-ss", Seconds(cut.StartMs), "-t", Seconds(cut.DurationMs),
+            .. codec, cut.OutputPath,
+        ];
+    }
+
+    private static string Seconds(int ms) => (ms / 1000m).ToString("0.000", CultureInfo.InvariantCulture);
+
+    private static readonly string[] Input = ["-hide_banner", "-nostats", "-loglevel", "error", "-y", "-i", "pipe:0"];
+
+    private static ProcessStartInfo Start(AudioPreviewOptions settings, bool redirectOutput) => new(settings.FfmpegPath)
+    {
+        RedirectStandardInput = true,
+        RedirectStandardOutput = redirectOutput,
+        RedirectStandardError = true,
+        UseShellExecute = false,
+        CreateNoWindow = true,
+    };
+
+    private static void StartOrExplain(Process process, AudioPreviewOptions settings)
+    {
+        try
+        {
+            process.Start();
+        }
+        catch (Win32Exception ex)
+        {
+            throw new InvalidOperationException(
+                $"ffmpeg introuvable (« {settings.FfmpegPath} ») : installez-le, ou indiquez son chemin dans AudioPreview:FfmpegPath.", ex);
+        }
+    }
+
     private static ProcessStartInfo StartInfo(AudioPreviewOptions settings, string? mp3OutputPath)
     {
-        var start = new ProcessStartInfo(settings.FfmpegPath)
-        {
-            RedirectStandardInput = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-        };
-        string[] input = ["-hide_banner", "-nostats", "-loglevel", "error", "-y", "-i", "pipe:0"];
+        var start = Start(settings, redirectOutput: true);
+        var input = Input;
         // MP3 d'écoute : stéréo au plus (un WAV 5.1 aussi), 44,1 kHz, débit constant
         string[] mp3 = mp3OutputPath is null ? [] :
         [

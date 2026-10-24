@@ -9,7 +9,22 @@ public interface IAudioProcessor
     /// </summary>
     /// <exception cref="AudioProcessingException">Le fichier n'a pas pu être lu comme de l'audio.</exception>
     Task<AudioAnalysis> ProcessAsync(Stream source, string? mp3OutputPath, CancellationToken ct);
+
+    /// <summary>
+    /// Découpe <paramref name="source"/>, lu une seule fois du début à la fin, en un fichier par passage (ADR 0050).
+    /// </summary>
+    /// <exception cref="AudioProcessingException">Le fichier n'a pas pu être lu comme de l'audio.</exception>
+    Task SplitAsync(Stream source, IReadOnlyList<AudioCut> cuts, AudioCutFormat format, CancellationToken ct);
 }
+
+/// <summary>Un passage à écrire dans <paramref name="OutputPath"/>.</summary>
+public sealed record AudioCut(int StartMs, int DurationMs, string OutputPath);
+
+/// <summary>
+/// Format des passages (ADR 0050) : WAV et MP3 recopiés sans réencodage, FLAC réencodé sans perte (sa durée
+/// d'en-tête serait fausse sinon), tout le reste (WebM, Ogg, M4A d'un enregistrement du navigateur) en MP3.
+/// </summary>
+public enum AudioCutFormat { Wav, Mp3, Flac, Mp3Encoded }
 
 /// <param name="Peaks">AudioPreview.PeakCount points de 0 à 255.</param>
 public sealed record AudioAnalysis(byte[] Peaks, int DurationMs);

@@ -160,6 +160,14 @@ const router = createRouter({
       meta: { title: 'router.titles.tablature' },
     },
     {
+      // ADR 0050 : découper un enregistrement (une répétition entière) en morceaux
+      path: '/b/:bandId/songs/:songId/versions/:versionId/files/:fileId/split',
+      name: 'split-recording',
+      component: () => import('@/features/files/pages/SplitRecordingPage.vue'),
+      props: true,
+      meta: { title: 'router.titles.splitRecording' },
+    },
+    {
       path: '/b/:bandId/songs/:songId/versions/:versionId',
       name: 'version-detail',
       component: () => import('@/features/versions/pages/VersionDetailPage.vue'),
