@@ -15,6 +15,7 @@ import type { PlayedBar, SyncContext, TabSync } from '../sync/types'
 import { GUITAR_PRO_RESOURCES, STAFF_VIEWS, WIDE_SCREEN, ZOOMS, applyStaffView, fileStaves, layoutFor, type StaffView } from '../display'
 import { isGlobalShortcut } from '@/shared/utils/keyboard'
 import { loadFilePrefs, loadViewPrefs, saveFilePrefs, saveViewPrefs } from '../prefs'
+import { SOUND_FONT_URL } from '../soundFont'
 import { t } from '@/shared/i18n'
 
 /**
@@ -153,7 +154,7 @@ onMounted(async () => {
     core: { fontDirectory: '/font/' },                       // copiés à la racine du site par le plugin Vite
     display: { layoutMode: layoutFor(wideScreen?.matches ?? true), resources: GUITAR_PRO_RESOURCES, scale: zoom.value },
     player: {
-      playerMode: PlayerMode.EnabledSynthesizer, soundFont: '/soundfont/sonivox.sf2',
+      playerMode: PlayerMode.EnabledSynthesizer, soundFont: SOUND_FONT_URL,
       // #32 : alphaTab retient l'élément qui défile à sa création : en plein cadre, c'est la partition, pas la page
       ...(props.fill ? { scrollElement: desk.value! } : {}),
     },
@@ -594,7 +595,17 @@ function visibleBar(cursor: number): number {
   return cursor
 }
 
-defineExpose({ goToBar, position })
+/**
+ * #49 : le son d'une piste, rendu hors du temps réel par le synthétiseur d'alphaTab, pour en faire un fichier audio
+ * (TrackAudioExport, ADR 0049). La lecture s'arrête d'abord : on n'écoute pas pendant qu'on fabrique.
+ */
+function exportAudio(options: synth.AudioExportOptions) {
+  if (!api?.score) return Promise.reject(new Error('score'))
+  api.pause()
+  return api.exportAudio(options)
+}
+
+defineExpose({ goToBar, position, exportAudio, tracks, status })
 </script>
 
 <template>

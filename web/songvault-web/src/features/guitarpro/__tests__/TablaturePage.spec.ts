@@ -23,7 +23,22 @@ vi.mock('../components/GuitarProViewer.vue', () => ({
   default: defineComponent({
     name: 'GuitarProViewer',
     props: { src: String, label: String, sync: Object, fill: Boolean },
-    setup: (props) => () => h('div', { 'data-testid': 'viewer', 'data-fill': String(props.fill), 'data-sync': JSON.stringify(props.sync) }, props.src),
+    setup: (props, { expose }) => {
+      // #49 : ce que la page lit du lecteur pour créer les pistes audio
+      expose({ status: 'ready', tracks: [{ name: 'Guitare' }], exportAudio: () => Promise.reject(new Error('non rendu')) })
+      return () => h('div', { 'data-testid': 'viewer', 'data-fill': String(props.fill), 'data-sync': JSON.stringify(props.sync) }, props.src)
+    },
+  }),
+}))
+
+// #49 : le panneau de création des pistes, chargé à la demande par la page
+vi.mock('../components/TrackAudioExport.vue', () => ({
+  __esModule: true,
+  default: defineComponent({
+    name: 'TrackAudioExport',
+    props: { songId: String, versionId: String, fileName: String, tracks: Array },
+    emits: ['close'],
+    setup: (props) => () => h('div', { 'data-testid': 'track-export' }, JSON.stringify(props)),
   }),
 }))
 
@@ -92,5 +107,22 @@ describe('TablaturePage (#32)', () => {
     expect(links).toContainEqual({ name: 'version-compare', params: { songId: 's1' }, query: { a: '2', b: '3' } })
     expect(links).toContainEqual({ name: 'tablature', params: { songId: 's1', versionId: 'v1', fileId: 'riff' } })
     state.query = {}
+  })
+
+  it('#49 : ouvre la création des pistes audio pour un Member, pas pour un invité', async () => {
+    state.query = {}
+    state.files = [file('riff', 'Tablature')]
+    state.canWrite = false
+    expect(mountPage().find('[data-testid="tablature-export"]').exists()).toBe(false)
+
+    state.canWrite = true
+    const wrapper = mountPage()
+    await flushPromises()
+    await wrapper.get('[data-testid="tablature-export"]').trigger('click')
+    await flushPromises()
+    expect(JSON.parse(wrapper.get('[data-testid="track-export"]').text())).toEqual({
+      songId: 's1', versionId: 'v1', fileName: 'riff.gp', tracks: [{ name: 'Guitare' }],
+    })
+    expect(wrapper.find('[data-testid="viewer"]').exists()).toBe(true)          // le lecteur reste ouvert dessous
   })
 })

@@ -7,6 +7,7 @@ import { filesApi } from '@/features/files/api/filesApi'
 import { useBandStore } from '@/features/bands/stores/bandStore'
 import GuitarProViewer from '../components/GuitarProViewer.vue'
 import type { ComparedFile } from '../compare/useScoreCompare'
+import type { ExportAudio } from '../export/renderStem'
 import LoadingState from '@/shared/components/LoadingState.vue'
 import ErrorState from '@/shared/components/ErrorState.vue'
 import { ApiError, getErrorMessage } from '@/shared/api/ApiError'
@@ -19,9 +20,12 @@ import { t } from '@/shared/i18n'
  * la page est elle-même chargée à la demande par le routeur.
  * #36 : avec `?a={version A}&aFile={fichier A}` (« Afficher les modifs » de l'écran A/B), la partition montre
  * les différences depuis ce fichier de A, et leur liste est à côté (ADR 0042).
+ * #49 : « Créer les pistes audio » rend chaque piste du fichier en WAV et en fait les pistes séparées de la version
+ * (TrackAudioExport, ADR 0049) ; Member ou Owner seulement, comme tout envoi de fichier.
  */
 const props = defineProps<{ songId: string; versionId: string; fileId: string }>()
 const GuitarProCompare = defineAsyncComponent(() => import('../components/GuitarProCompare.vue'))
+const TrackAudioExport = defineAsyncComponent(() => import('../components/TrackAudioExport.vue'))
 const route = useRoute()
 
 const { song, version, siblings, isLoading, error, reload } = useVersion(() => props.songId, () => props.versionId)
@@ -50,6 +54,13 @@ const compareWith = computed<ComparedFile | null>(() => {
 })
 const numberA = computed(() => siblings.value.find((v) => v.id === compareWith.value?.versionId)?.number ?? null)
 const numberB = computed(() => version.value?.number ?? null)
+
+// #49 : pistes audio créées depuis le fichier, quand le lecteur l'a lu
+const viewer = ref<InstanceType<typeof GuitarProViewer> | null>(null)
+const exporting = ref(false)
+const canExport = computed(() => bands.can('write') && !compareWith.value && viewer.value?.status === 'ready'
+  && (viewer.value?.tracks.length ?? 0) > 0)
+const exportAudio: ExportAudio = (options) => viewer.value!.exportAudio(options)
 
 // Plein écran du navigateur, s'il le permet ; la page seule y passe
 const page = ref<HTMLElement | null>(null)
@@ -90,19 +101,26 @@ onBeforeUnmount(() => {
           · <RouterLink :to="{ name: 'tablature', params: { songId, versionId, fileId } }" data-testid="tablature-without-changes">{{ t('guitarpro.page.withoutChanges') }}</RouterLink>
         </small>
       </div>
+      <button v-if="canExport" type="button" class="secondary" data-testid="tablature-export"
+              :aria-expanded="exporting" @click="exporting = !exporting">
+        {{ t('guitarpro.export.open') }}
+      </button>
       <button v-if="canFullscreen && file" type="button" class="secondary" data-testid="tablature-fullscreen"
               :aria-pressed="isFullscreen" @click="toggleFullscreen">
         {{ isFullscreen ? t('guitarpro.page.exitFullscreen') : t('guitarpro.page.fullscreen') }}
       </button>
     </header>
 
+    <TrackAudioExport v-if="exporting && file && viewer" :song-id="songId" :version-id="versionId"
+                      :file-name="file.originalFileName" :tracks="viewer.tracks" :export-audio="exportAudio"
+                      @close="exporting = false" />
     <LoadingState v-if="isLoading" />
     <div v-else-if="isNotFound || (version && !file)" class="card" role="alert"><p>{{ t('guitarpro.page.notFound') }}</p></div>
     <ErrorState v-else-if="error" :message="getErrorMessage(error)" @retry="reload()" />
     <div v-else-if="file && !isReadable(file)" class="card" role="alert"><p>{{ t('guitarpro.page.unreadable') }}</p></div>
     <GuitarProCompare v-else-if="file && compareWith" :key="`${compareWith.fileId}-${file.id}`" class="viewer"
                       :song-id="songId" :a="compareWith" :b="{ versionId, fileId: file.id }" :label="file.originalFileName" />
-    <GuitarProViewer v-else-if="file" :key="file.id" class="viewer" fill
+    <GuitarProViewer v-else-if="file" ref="viewer" :key="file.id" class="viewer" fill
                      :src="filesApi.contentUrl(songId, versionId, file.id)" :label="file.originalFileName" :sync="sync" />
   </div>
 </template>
